@@ -1,0 +1,112 @@
+import { NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
+import { db, schema, isDatabaseConfigured } from '@/db';
+import { getCurrentUser } from '@/lib/auth';
+import { preferencesUpdateSchema } from '@/lib/validations';
+
+const DEFAULT_PREFERENCES = {
+  fontSize: 18,
+  lineHeight: 1.75,
+  readingTheme: 'dark',
+  fontFamily: 'serif',
+  distractionFree: false,
+};
+
+const inMemoryPreferences = new Map<string, any>();
+
+export async function GET() {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ preferences: DEFAULT_PREFERENCES });
+    }
+
+    if (isDatabaseConfigured() && db) {
+      const records = await db
+        .select()
+        .from(schema.readerPreferences)
+        .where(eq(schema.readerPreferences.userId, user.id))
+        .limit(1);
+
+      if (records.length > 0) {
+        const r = records[0];
+        return NextResponse.json({
+          preferences: {
+            fontSize: r.fontSize,
+            lineHeight: r.lineHeight,
+            readingTheme: r.readingTheme,
+            fontFamily: r.fontFamily,
+            distractionFree: r.distractionFree,
+          },
+        });
+      }
+    }
+
+    const fallback = inMemoryPreferences.get(user.id) || DEFAULT_PREFERENCES;
+    return NextResponse.json({ preferences: fallback });
+  } catch (err: any) {
+    console.error('Fetch preferences error:', err);
+    return NextResponse.json({ preferences: DEFAULT_PREFERENCES });
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const parseResult = preferencesUpdateSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.errors[0]?.message || 'Invalid preferences.' },
+        { status: 400 }
+      );
+    }
+
+    const updates = parseResult.data;
+    const now = new Date();
+
+    if (isDatabaseConfigured() && db) {
+      await db
+        .insert(schema.readerPreferences)
+        .values({
+          userId: user.id,
+          fontSize: updates.fontSize || DEFAULT_PREFERENCES.fontSize,
+          lineHeight: updates.lineHeight || DEFAULT_PREFERENCES.lineHeight,
+          readingTheme: updates.readingTheme || DEFAULT_PREFERENCES.readingTheme,
+          fontFamily: updates.fontFamily || DEFAULT_PREFERENCES.fontFamily,
+          distractionFree: updates.distractionFree ?? DEFAULT_PREFERENCES.distractionFree,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: schema.readerPreferences.userId,
+          set: {
+            ...(updates.fontSize !== undefined && { fontSize: updates.fontSize }),
+            ...(updates.lineHeight !== undefined && { lineHeight: updates.lineHeight }),
+            ...(updates.readingTheme !== undefined && { readingTheme: updates.readingTheme }),
+            ...(updates.fontFamily !== undefined && { fontFamily: updates.fontFamily }),
+            ...(updates.distractionFree !== undefined && { distractionFree: updates.distractionFree }),
+            updatedAt: now,
+          },
+        });
+
+      return NextResponse.json({ success: true, preferences: updates });
+    }
+
+    // In-memory fallback
+    const current = inMemoryPreferences.get(user.id) || DEFAULT_PREFERENCES;
+    const next = { ...current, ...updates };
+    inMemoryPreferences.set(user.id, next);
+
+    return NextResponse.json({ success: true, preferences: next });
+  } catch (err: any) {
+    console.error('Update preferences error:', err);
+    return NextResponse.json(
+      { error: 'An unexpected error occurred while saving reading preferences.' },
+      { status: 500 }
+    );
+  }
+}
