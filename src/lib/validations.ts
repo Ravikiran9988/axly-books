@@ -16,7 +16,7 @@ export const registerSchema = z.object({
     .min(8, { message: 'Password must be at least 8 characters long.' })
     .max(100, { message: 'Password is too long.' }),
   agreeTerms: z.literal(true, {
-    errorMap: () => ({ message: 'You must agree to the Terms of Use and Privacy Notice.' }),
+    message: 'You must agree to the Terms of Use and Privacy Notice.',
   }),
 });
 

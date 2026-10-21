@@ -1,4 +1,4 @@
-import { neon, Pool } from '@neondatabase/serverless';
+import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema';
 
@@ -8,7 +8,9 @@ export function isDatabaseConfigured(): boolean {
   return Boolean(
     databaseUrl &&
       databaseUrl.startsWith('postgres') &&
-      !databaseUrl.includes('placeholder_neon_database_url')
+      !databaseUrl.includes('placeholder_neon_database_url') &&
+      !databaseUrl.includes('placeholder_user') &&
+      !databaseUrl.includes('placeholder_password')
   );
 }
 

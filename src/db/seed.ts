@@ -10,7 +10,7 @@ import { PUBLISHED_BOOKS } from '../data/booksData';
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
 
-  if (!databaseUrl || !databaseUrl.startsWith('postgres') || databaseUrl.includes('placeholder_neon_database_url')) {
+  if (!databaseUrl || !databaseUrl.startsWith('postgres') || databaseUrl.includes('placeholder_neon_database_url') || databaseUrl.includes('placeholder_user') || databaseUrl.includes('placeholder_password')) {
     console.log('⚠️  DATABASE_URL is not set or contains placeholder. Skipping live Neon seed.');
     console.log('👉 To run the seed against your Neon PostgreSQL database, configure DATABASE_URL in .env.local and run: npm run db:seed');
     process.exit(0);

@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     const parseResult = progressUpdateSchema.safeParse(body);
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: parseResult.error.errors[0]?.message || 'Invalid progress data.' },
+        { error: parseResult.error.issues[0]?.message || 'Invalid progress data.' },
         { status: 400 }
       );
     }

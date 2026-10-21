@@ -61,7 +61,7 @@ export async function PUT(request: Request) {
     const parseResult = preferencesUpdateSchema.safeParse(body);
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: parseResult.error.errors[0]?.message || 'Invalid preferences.' },
+        { error: parseResult.error.issues[0]?.message || 'Invalid preferences.' },
         { status: 400 }
       );
     }
