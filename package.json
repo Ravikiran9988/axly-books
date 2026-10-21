@@ -1,6 +1,6 @@
 {
   "name": "axly-books",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,6 +9,8 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit push",
+    "db:seed": "tsx src/db/seed.ts",
     "test": "tsx tests/phase2.test.ts && tsx tests/e2e_integration.test.ts",
     "test:e2e": "tsx tests/e2e_integration.test.ts"
   },
