@@ -140,6 +140,41 @@ export default async function BookDetailPage({ params }: BookPageProps) {
             <p>{book.synopsis}</p>
           </div>
 
+          {/* Legal Rights & License Presentation */}
+          <div
+            style={{
+              padding: '1.25rem',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.4rem',
+              fontSize: '0.88rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                {book.copyrightNotice}
+              </span>
+              <span className="badge badge-cyan" style={{ fontSize: '0.72rem' }}>
+                CC BY-NC 4.0
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: 0 }}>
+              Licensed under{' '}
+              <a
+                href={book.licenseUrl || 'https://creativecommons.org/licenses/by-nc/4.0/'}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'var(--color-brand-cyan)', textDecoration: 'underline' }}
+              >
+                {book.license}
+              </a>
+              . Free online access for individual educational study and technical advancement.
+            </p>
+          </div>
+
           {/* Tags */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
             {book.tags.map((tag) => (

@@ -31,6 +31,9 @@ export const PUBLISHED_BOOKS: Book[] = [
     estimatedReadingTimeMinutes: 180,
     isFree: true,
     allowPdfDownload: false,
+    copyrightNotice: '© 2026 Medicharla Ravi Kiran',
+    license: 'Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)',
+    licenseUrl: 'https://creativecommons.org/licenses/by-nc/4.0/',
     chapters: [
       {
         id: 'ch-1',

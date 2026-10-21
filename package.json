@@ -9,8 +9,8 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:seed": "tsx src/db/seed.ts",
-    "test": "tsx tests/phase2.test.ts"
+    "test": "tsx tests/phase2.test.ts && tsx tests/e2e_integration.test.ts",
+    "test:e2e": "tsx tests/e2e_integration.test.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

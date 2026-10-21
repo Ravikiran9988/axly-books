@@ -16,6 +16,7 @@ import {
   Check,
   Code,
   Sparkles,
+  Copy,
 } from 'lucide-react';
 import { Book, Chapter } from '@/types/book';
 import { ReadingPreferences, ReadingTheme, ReadingFontFamily } from '@/types/reading';
@@ -56,6 +57,7 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   const articleRef = useRef<HTMLElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -76,11 +78,31 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
       book.slug,
       currentChapter.chapterNumber,
       currentChapter.slug,
-      percent
+      percent,
+      true // immediate save on chapter change
     );
 
+    // If anchor hash exists in URL, scroll to anchor; else scroll to top
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const el = document.querySelector(window.location.hash);
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 150);
+        return;
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [book.slug, book.totalChapters, currentChapter]);
+
+  const handleCopyCode = async (idx: number, code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedIdx(idx);
+      showToast('Code snippet copied to clipboard');
+      setTimeout(() => setCopiedIdx(null), 2000);
+    } catch {
+      showToast('Failed to copy code snippet');
+    }
+  };
 
   // Track scroll depth
   useEffect(() => {
@@ -438,9 +460,9 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
         <h1 className={styles.chapterTitle}>{currentChapter.title}</h1>
         <p className={styles.chapterSummary}>{currentChapter.summary}</p>
 
-        {/* Structured Sections */}
+        {/* Structured Sections with Stable Anchors */}
         {currentChapter.sections.map((section, idx) => (
-          <section key={idx} className={styles.contentSection}>
+          <section key={idx} id={`sec-${idx + 1}`} className={styles.contentSection}>
             <h2 className={styles.sectionHeading}>{section.title}</h2>
             <p className={styles.paragraph}>{section.content}</p>
 
@@ -454,12 +476,40 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
               </div>
             )}
 
-            {/* Optional Code Snippet */}
+            {/* Optional Code Snippet with Copy Control */}
             {section.codeSnippet && (
               <div className={styles.codeBox}>
                 <div className={styles.codeHeader}>
                   <span>{section.codeSnippet.language}</span>
-                  <span>Interactive Listing</span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCode(idx, section.codeSnippet!.code)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--reader-subtle)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontSize: '0.75rem',
+                      padding: '0.2rem 0.4rem',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
+                    aria-label="Copy code listing"
+                  >
+                    {copiedIdx === idx ? (
+                      <>
+                        <Check size={13} color="var(--color-brand-cyan)" />
+                        <span style={{ color: 'var(--color-brand-cyan)' }}>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={13} />
+                        <span>Copy Code</span>
+                      </>
+                    )}
+                  </button>
                 </div>
                 <pre className={styles.codeContent}>
                   <code>{section.codeSnippet.code}</code>

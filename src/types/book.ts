@@ -39,6 +39,9 @@ export interface Book {
   estimatedReadingTimeMinutes: number;
   isFree: boolean;
   allowPdfDownload: boolean;
+  copyrightNotice: string;
+  license: string;
+  licenseUrl?: string;
   chapters: Chapter[];
 }
 
