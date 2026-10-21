@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:seed": "tsx src/db/seed.ts",
+    "test": "tsx tests/phase2.test.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

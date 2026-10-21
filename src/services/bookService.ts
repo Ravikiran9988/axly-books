@@ -11,10 +11,30 @@ export interface ChapterNavigationResult {
 export const bookService = {
   /**
    * Retrieves all available books, applying optional filters and sorting.
-   * Ready to be swapped with a fetch call in Phase 2.
+   * Leverages backend API when available in client runtime with reliable fallback.
    */
   async getBooks(filter?: BookFilter): Promise<Book[]> {
     let result = [...PUBLISHED_BOOKS];
+
+    // Attempt client API call if in browser
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams();
+        if (filter?.searchQuery) params.set('q', filter.searchQuery);
+        if (filter?.category && filter.category !== 'All') params.set('category', filter.category);
+        if (filter?.sortBy) params.set('sort', filter.sortBy);
+
+        const res = await fetch(`/api/books?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.books) && data.books.length > 0) {
+            return data.books;
+          }
+        }
+      } catch {
+        // Fallback to local verified catalogue
+      }
+    }
 
     if (filter?.searchQuery) {
       const q = filter.searchQuery.toLowerCase().trim();
@@ -51,6 +71,18 @@ export const bookService = {
    * Retrieve single book by its slug.
    */
   async getBookBySlug(slug: string): Promise<Book | null> {
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch(`/api/books/${encodeURIComponent(slug)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.book) return data.book;
+        }
+      } catch {
+        // Fallback to local
+      }
+    }
+
     const book = getBookBySlug(slug);
     return book || null;
   },
@@ -62,7 +94,7 @@ export const bookService = {
     bookSlug: string,
     chapterSlugOrNumber: string | number
   ): Promise<ChapterNavigationResult | null> {
-    const book = getBookBySlug(bookSlug);
+    const book = await this.getBookBySlug(bookSlug);
     if (!book) return null;
 
     let index = -1;

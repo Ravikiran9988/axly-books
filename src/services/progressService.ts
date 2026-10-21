@@ -16,6 +16,33 @@ type ProgressListener = () => void;
 
 class ProgressService {
   private listeners: Set<ProgressListener> = new Set();
+  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private localProgress: Record<string, ReadingProgress> = {};
+  private localBookmarks: Bookmark[] = [];
+  private localPreferences: ReadingPreferences = DEFAULT_PREFERENCES;
+  private isSynced = false;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      this.initLocal();
+      this.syncFromServer();
+    }
+  }
+
+  private initLocal() {
+    try {
+      const pRaw = localStorage.getItem(PROGRESS_KEY);
+      if (pRaw) this.localProgress = JSON.parse(pRaw);
+
+      const bRaw = localStorage.getItem(BOOKMARKS_KEY);
+      if (bRaw) this.localBookmarks = JSON.parse(bRaw);
+
+      const prefRaw = localStorage.getItem(PREFERENCES_KEY);
+      if (prefRaw) this.localPreferences = { ...DEFAULT_PREFERENCES, ...JSON.parse(prefRaw) };
+    } catch (e) {
+      // Ignore local storage parse error
+    }
+  }
 
   public subscribe(listener: ProgressListener): () => void {
     this.listeners.add(listener);
@@ -34,55 +61,99 @@ class ProgressService {
     });
   }
 
-  // --- Reading Preferences ---
-  public getPreferences(): ReadingPreferences {
-    if (typeof window === 'undefined') return DEFAULT_PREFERENCES;
+  /**
+   * Syncs reading progress, bookmarks, and preferences from backend API
+   */
+  public async syncFromServer(): Promise<void> {
     try {
-      const data = localStorage.getItem(PREFERENCES_KEY);
-      if (!data) return DEFAULT_PREFERENCES;
-      return { ...DEFAULT_PREFERENCES, ...JSON.parse(data) };
+      const [progRes, bmRes, prefRes] = await Promise.allSettled([
+        fetch('/api/progress', { cache: 'no-store' }),
+        fetch('/api/bookmarks', { cache: 'no-store' }),
+        fetch('/api/preferences', { cache: 'no-store' }),
+      ]);
+
+      if (progRes.status === 'fulfilled' && progRes.value.ok) {
+        const data = await progRes.value.json();
+        if (data.progress) {
+          this.localProgress = { ...this.localProgress, ...data.progress };
+          localStorage.setItem(PROGRESS_KEY, JSON.stringify(this.localProgress));
+        }
+      }
+
+      if (bmRes.status === 'fulfilled' && bmRes.value.ok) {
+        const data = await bmRes.value.json();
+        if (Array.isArray(data.bookmarks)) {
+          this.localBookmarks = data.bookmarks;
+          localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(this.localBookmarks));
+        }
+      }
+
+      if (prefRes.status === 'fulfilled' && prefRes.value.ok) {
+        const data = await prefRes.value.json();
+        if (data.preferences) {
+          this.localPreferences = {
+            ...this.localPreferences,
+            theme: data.preferences.readingTheme || this.localPreferences.theme,
+            fontSize: data.preferences.fontSize || this.localPreferences.fontSize,
+            lineHeight: data.preferences.lineHeight || this.localPreferences.lineHeight,
+            fontFamily: data.preferences.fontFamily || this.localPreferences.fontFamily,
+            distractionFree: data.preferences.distractionFree ?? this.localPreferences.distractionFree,
+          };
+          localStorage.setItem(PREFERENCES_KEY, JSON.stringify(this.localPreferences));
+        }
+      }
+
+      this.isSynced = true;
+      this.notify();
     } catch {
-      return DEFAULT_PREFERENCES;
+      // Offline fallback: rely on local cache
     }
   }
 
+  // --- Reading Preferences ---
+  public getPreferences(): ReadingPreferences {
+    return this.localPreferences;
+  }
+
   public savePreferences(updates: Partial<ReadingPreferences>): ReadingPreferences {
-    if (typeof window === 'undefined') return DEFAULT_PREFERENCES;
-    const current = this.getPreferences();
-    const updated = { ...current, ...updates };
-    localStorage.setItem(PREFERENCES_KEY, JSON.stringify(updated));
-    this.notify();
-    return updated;
+    this.localPreferences = { ...this.localPreferences, ...updates };
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(this.localPreferences));
+      this.notify();
+
+      // Sync to server asynchronously
+      fetch('/api/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fontSize: updates.fontSize,
+          lineHeight: updates.lineHeight,
+          readingTheme: updates.theme,
+          fontFamily: updates.fontFamily,
+          distractionFree: updates.distractionFree,
+        }),
+      }).catch(() => {});
+    }
+
+    return this.localPreferences;
   }
 
   // --- Reading Progress ---
   public getProgress(bookSlug: string): ReadingProgress | null {
-    if (typeof window === 'undefined') return null;
-    try {
-      const data = localStorage.getItem(PROGRESS_KEY);
-      if (!data) return null;
-      const all: Record<string, ReadingProgress> = JSON.parse(data);
-      return all[bookSlug] || null;
-    } catch {
-      return null;
-    }
+    return this.localProgress[bookSlug] || null;
   }
 
   public getAllProgress(): Record<string, ReadingProgress> {
-    if (typeof window === 'undefined') return {};
-    try {
-      const data = localStorage.getItem(PROGRESS_KEY);
-      return data ? JSON.parse(data) : {};
-    } catch {
-      return {};
-    }
+    return this.localProgress;
   }
 
   public saveProgress(
     bookSlug: string,
     chapterNumber: number,
     chapterSlug: string,
-    percentComplete: number
+    percentComplete: number,
+    immediate: boolean = false
   ): ReadingProgress {
     const record: ReadingProgress = {
       bookSlug,
@@ -92,11 +163,39 @@ class ProgressService {
       lastReadTimestamp: Date.now(),
     };
 
+    this.localProgress[bookSlug] = record;
     if (typeof window !== 'undefined') {
-      const current = this.getAllProgress();
-      current[bookSlug] = record;
-      localStorage.setItem(PROGRESS_KEY, JSON.stringify(current));
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify(this.localProgress));
       this.notify();
+
+      // Clear existing debounce timer for this book
+      const existing = this.debounceTimers.get(bookSlug);
+      if (existing) clearTimeout(existing);
+
+      const sendUpdate = async () => {
+        try {
+          await fetch('/api/progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              bookSlug,
+              chapterSlug,
+              chapterNumber,
+              progressPercentage: record.percentComplete,
+            }),
+          });
+        } catch {
+          // Graceful network retry/fallback
+        }
+      };
+
+      if (immediate) {
+        sendUpdate();
+      } else {
+        // Debounce frequent scroll updates by 2.5 seconds
+        const timer = setTimeout(sendUpdate, 2500);
+        this.debounceTimers.set(bookSlug, timer);
+      }
     }
 
     return record;
@@ -104,29 +203,23 @@ class ProgressService {
 
   // --- Bookmarks ---
   public getBookmarks(bookSlug?: string): Bookmark[] {
-    if (typeof window === 'undefined') return [];
-    try {
-      const data = localStorage.getItem(BOOKMARKS_KEY);
-      const list: Bookmark[] = data ? JSON.parse(data) : [];
-      if (bookSlug) {
-        return list.filter((b) => b.bookSlug === bookSlug);
-      }
-      return list;
-    } catch {
-      return [];
+    if (bookSlug) {
+      return this.localBookmarks.filter((b) => b.bookSlug === bookSlug);
     }
+    return this.localBookmarks;
   }
 
-  public addBookmark(
+  public async addBookmark(
     bookSlug: string,
     bookTitle: string,
     chapterNumber: number,
     chapterSlug: string,
     chapterTitle: string,
     excerpt?: string
-  ): Bookmark {
-    const list = this.getBookmarks();
-    const existing = list.find((b) => b.bookSlug === bookSlug && b.chapterSlug === chapterSlug);
+  ): Promise<Bookmark> {
+    const existing = this.localBookmarks.find(
+      (b) => b.bookSlug === bookSlug && b.chapterSlug === chapterSlug
+    );
     if (existing) return existing;
 
     const newBookmark: Bookmark = {
@@ -140,35 +233,78 @@ class ProgressService {
       excerpt,
     };
 
-    list.unshift(newBookmark);
+    this.localBookmarks.unshift(newBookmark);
     if (typeof window !== 'undefined') {
-      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(list));
+      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(this.localBookmarks));
       this.notify();
+
+      // Sync to server
+      try {
+        const res = await fetch('/api/bookmarks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookSlug,
+            chapterSlug,
+            chapterNumber,
+            note: excerpt,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.bookmark?.id) {
+            newBookmark.id = data.bookmark.id;
+          }
+        }
+      } catch {
+        // Preserved in local storage
+      }
     }
+
     return newBookmark;
   }
 
-  public removeBookmark(id: string): void {
-    const list = this.getBookmarks().filter((b) => b.id !== id);
+  public async removeBookmark(id: string): Promise<void> {
+    this.localBookmarks = this.localBookmarks.filter((b) => b.id !== id);
     if (typeof window !== 'undefined') {
-      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(list));
+      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(this.localBookmarks));
       this.notify();
+
+      try {
+        await fetch(`/api/bookmarks?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+        });
+      } catch {
+        // Ignored
+      }
     }
   }
 
-  public removeBookmarkByChapter(bookSlug: string, chapterSlug: string): void {
-    const list = this.getBookmarks().filter(
+  public async removeBookmarkByChapter(bookSlug: string, chapterSlug: string): Promise<void> {
+    this.localBookmarks = this.localBookmarks.filter(
       (b) => !(b.bookSlug === bookSlug && b.chapterSlug === chapterSlug)
     );
     if (typeof window !== 'undefined') {
-      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(list));
+      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(this.localBookmarks));
       this.notify();
+
+      try {
+        await fetch(
+          `/api/bookmarks?bookSlug=${encodeURIComponent(bookSlug)}&chapterSlug=${encodeURIComponent(
+            chapterSlug
+          )}`,
+          { method: 'DELETE' }
+        );
+      } catch {
+        // Ignored
+      }
     }
   }
 
   public isBookmarked(bookSlug: string, chapterSlug: string): boolean {
-    const list = this.getBookmarks(bookSlug);
-    return list.some((b) => b.chapterSlug === chapterSlug);
+    return this.localBookmarks.some(
+      (b) => b.bookSlug === bookSlug && b.chapterSlug === chapterSlug
+    );
   }
 }
 
