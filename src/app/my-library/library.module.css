@@ -1,0 +1,225 @@
+.container {
+  padding: 4rem 0 6rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 3rem;
+}
+
+.title {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.subtitle {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+}
+
+.section {
+  margin-bottom: 4rem;
+}
+
+.sectionTitle {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Continue Reading Cards Grid */
+.inProgressGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 1.75rem;
+}
+
+.progressCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  transition: all var(--transition-fast);
+}
+
+.progressCard:hover {
+  border-color: var(--border-accent);
+  background: var(--bg-surface-elevated);
+}
+
+.miniCover {
+  width: 90px;
+  height: 135px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.miniCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.progressDetails {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.5rem;
+}
+
+.bookName {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chapterStatus {
+  font-size: 0.85rem;
+  color: var(--color-brand-cyan);
+}
+
+.progressBarWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.25rem 0;
+}
+
+.progressLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.progressTrack {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
+  border-radius: var(--radius-full);
+}
+
+/* Bookmarks List */
+.bookmarksList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bookmarkItem {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  transition: all var(--transition-fast);
+}
+
+.bookmarkItem:hover {
+  border-color: var(--border-accent);
+  background: var(--bg-surface-elevated);
+}
+
+.bookmarkLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bookmarkIcon {
+  color: var(--color-brand-cyan);
+  flex-shrink: 0;
+}
+
+.bookmarkTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.bookmarkBook {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.bookmarkActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Empty State */
+.emptyState {
+  padding: 4rem 2rem;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-xl);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.emptyIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--bg-surface-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.emptyTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.emptyDesc {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  max-width: 440px;
+}
+
+@media (max-width: 600px) {
+  .progressCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .miniCover {
+    width: 70px;
+    height: 105px;
+  }
+  .bookmarkItem {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

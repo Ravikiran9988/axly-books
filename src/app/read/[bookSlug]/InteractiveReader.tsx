@@ -1,0 +1,523 @@
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  ArrowLeft,
+  Bookmark,
+  Sliders,
+  List,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2,
+  Check,
+  Code,
+  Sparkles,
+} from 'lucide-react';
+import { Book, Chapter } from '@/types/book';
+import { ReadingPreferences, ReadingTheme, ReadingFontFamily } from '@/types/reading';
+import { progressService } from '@/services/progressService';
+import styles from './reader.module.css';
+
+interface InteractiveReaderProps {
+  book: Book;
+  initialChapterSlug?: string;
+}
+
+export default function InteractiveReader({ book }: InteractiveReaderProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const chapterParam = searchParams ? searchParams.get('chapter') : null;
+
+  // Find active chapter based on query param or first chapter
+  const activeChapterIndex = Math.max(
+    0,
+    book.chapters.findIndex((c) => c.slug === chapterParam)
+  );
+  const currentChapter = book.chapters[activeChapterIndex] || book.chapters[0];
+  const prevChapter = activeChapterIndex > 0 ? book.chapters[activeChapterIndex - 1] : null;
+  const nextChapter =
+    activeChapterIndex < book.chapters.length - 1 ? book.chapters[activeChapterIndex + 1] : null;
+
+  // Preferences & State
+  const [prefs, setPrefs] = useState<ReadingPreferences>({
+    theme: 'dark',
+    fontSize: 18,
+    lineHeight: 1.75,
+    fontFamily: 'serif',
+    distractionFree: false,
+  });
+
+  const [tocOpen, setTocOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  const articleRef = useRef<HTMLElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Load preferences from service
+  useEffect(() => {
+    const saved = progressService.getPreferences();
+    setPrefs(saved);
+  }, []);
+
+  // Update bookmark status & save reading progress on chapter switch
+  useEffect(() => {
+    setIsBookmarked(progressService.isBookmarked(book.slug, currentChapter.slug));
+
+    // Calculate percent complete based on chapter number
+    const percent = Math.round((currentChapter.chapterNumber / book.totalChapters) * 100);
+    progressService.saveProgress(
+      book.slug,
+      currentChapter.chapterNumber,
+      currentChapter.slug,
+      percent
+    );
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [book.slug, book.totalChapters, currentChapter]);
+
+  // Track scroll depth
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      setScrollProgress(Math.min(100, Math.max(0, progress)));
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Avoid firing if focused in an input
+      if (['input', 'textarea'].includes((e.target as HTMLElement).tagName.toLowerCase())) return;
+
+      if (e.key === 'ArrowLeft' && prevChapter) {
+        router.push(`/read/${book.slug}?chapter=${prevChapter.slug}`);
+      } else if (e.key === 'ArrowRight' && nextChapter) {
+        router.push(`/read/${book.slug}?chapter=${nextChapter.slug}`);
+      } else if (e.key.toLowerCase() === 'd') {
+        toggleDistractionFree();
+      } else if (e.key.toLowerCase() === 'b') {
+        handleToggleBookmark();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [book.slug, prevChapter, nextChapter, isBookmarked]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  const updatePreference = (updates: Partial<ReadingPreferences>) => {
+    const next = progressService.savePreferences(updates);
+    setPrefs(next);
+  };
+
+  const handleToggleBookmark = () => {
+    if (isBookmarked) {
+      progressService.removeBookmarkByChapter(book.slug, currentChapter.slug);
+      setIsBookmarked(false);
+      showToast('Bookmark removed');
+    } else {
+      progressService.addBookmark(
+        book.slug,
+        book.title,
+        currentChapter.chapterNumber,
+        currentChapter.slug,
+        currentChapter.title,
+        currentChapter.summary
+      );
+      setIsBookmarked(true);
+      showToast(`Chapter ${currentChapter.chapterNumber} bookmarked`);
+    }
+  };
+
+  const toggleDistractionFree = () => {
+    const next = !prefs.distractionFree;
+    updatePreference({ distractionFree: next });
+    if (next) {
+      showToast('Distraction-free mode enabled (Press D or click top-right to exit)');
+    }
+  };
+
+  // Font family resolution
+  const getFontFamilyStyle = () => {
+    switch (prefs.fontFamily) {
+      case 'sans':
+        return 'var(--font-sans)';
+      case 'mono':
+        return 'var(--font-mono)';
+      case 'serif':
+      default:
+        return 'var(--font-serif)';
+    }
+  };
+
+  // Theme class name
+  const themeClass =
+    prefs.theme === 'light'
+      ? styles.themeLight
+      : prefs.theme === 'sepia'
+      ? styles.themeSepia
+      : styles.themeDark;
+
+  return (
+    <div className={`${styles.readerRoot} ${themeClass}`}>
+      {/* Distraction Free Exit Button */}
+      {prefs.distractionFree && (
+        <button
+          type="button"
+          className={styles.distractionFreeExitBtn}
+          onClick={toggleDistractionFree}
+          aria-label="Exit distraction-free mode"
+        >
+          <Minimize2 size={14} />
+          <span>Exit Focus Mode</span>
+        </button>
+      )}
+
+      {/* Top Toolbar */}
+      <header
+        className={`${styles.topToolbar} ${
+          prefs.distractionFree ? styles.distractionFreeHidden : ''
+        }`}
+      >
+        <div className={styles.toolbarLeft}>
+          <Link
+            href={`/books/${book.slug}`}
+            className={styles.backBtn}
+            title="Return to book overview"
+          >
+            <ArrowLeft size={16} />
+            <span>Overview</span>
+          </Link>
+
+          <div className={styles.bookMetaTitle}>
+            <span className={styles.bookTitleHeader}>{book.title}</span>
+            <span className={styles.chapterTitleHeader}>
+              Ch {currentChapter.chapterNumber}: {currentChapter.title}
+            </span>
+          </div>
+        </div>
+
+        <div className={styles.toolbarRight}>
+          {/* Table of contents toggle */}
+          <button
+            type="button"
+            className={`${styles.toolBtn} ${tocOpen ? styles.toolBtnActive : ''}`}
+            onClick={() => setTocOpen(!tocOpen)}
+            title="Table of Contents"
+            aria-label="Table of Contents"
+          >
+            <List size={18} />
+          </button>
+
+          {/* Bookmark toggle */}
+          <button
+            type="button"
+            className={`${styles.toolBtn} ${isBookmarked ? styles.toolBtnActive : ''}`}
+            onClick={handleToggleBookmark}
+            title={isBookmarked ? 'Bookmarked' : 'Add Bookmark'}
+            aria-label={isBookmarked ? 'Bookmarked' : 'Add Bookmark'}
+          >
+            <Bookmark size={18} fill={isBookmarked ? 'currentColor' : 'none'} />
+          </button>
+
+          {/* Distraction free mode toggle */}
+          <button
+            type="button"
+            className={styles.toolBtn}
+            onClick={toggleDistractionFree}
+            title="Toggle Distraction-Free Mode (Shortcut: D)"
+            aria-label="Distraction-free mode"
+          >
+            <Maximize2 size={18} />
+          </button>
+
+          {/* Reader settings toggle */}
+          <div style={{ position: 'relative' }} ref={settingsRef}>
+            <button
+              type="button"
+              className={`${styles.toolBtn} ${settingsOpen ? styles.toolBtnActive : ''}`}
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              title="Reading Preferences"
+              aria-label="Reading Preferences"
+            >
+              <Sliders size={18} />
+            </button>
+
+            {/* Reading Settings Drawer */}
+            {settingsOpen && (
+              <div className={styles.settingsPanel}>
+                {/* Theme Selector */}
+                <div className={styles.settingRow}>
+                  <span className={styles.settingLabel}>Theme</span>
+                  <div className={styles.themeSelector}>
+                    <button
+                      type="button"
+                      className={`${styles.themeBtn} ${styles.themeBtnDark} ${
+                        prefs.theme === 'dark' ? styles.themeBtnActive : ''
+                      }`}
+                      onClick={() => updatePreference({ theme: 'dark' })}
+                    >
+                      Dark
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.themeBtn} ${styles.themeBtnLight} ${
+                        prefs.theme === 'light' ? styles.themeBtnActive : ''
+                      }`}
+                      onClick={() => updatePreference({ theme: 'light' })}
+                    >
+                      Light
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.themeBtn} ${styles.themeBtnSepia} ${
+                        prefs.theme === 'sepia' ? styles.themeBtnActive : ''
+                      }`}
+                      onClick={() => updatePreference({ theme: 'sepia' })}
+                    >
+                      Sepia
+                    </button>
+                  </div>
+                </div>
+
+                {/* Font Size Adjustment */}
+                <div className={styles.settingRow}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span className={styles.settingLabel}>Font Size</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--reader-subtle)' }}>
+                      {prefs.fontSize}px
+                    </span>
+                  </div>
+                  <div className={styles.sliderRow}>
+                    <span style={{ fontSize: '0.75rem' }}>A</span>
+                    <input
+                      type="range"
+                      min={15}
+                      max={24}
+                      value={prefs.fontSize}
+                      onChange={(e) => updatePreference({ fontSize: Number(e.target.value) })}
+                      className={styles.slider}
+                    />
+                    <span style={{ fontSize: '1.05rem', fontWeight: 600 }}>A</span>
+                  </div>
+                </div>
+
+                {/* Line Spacing Adjustment */}
+                <div className={styles.settingRow}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span className={styles.settingLabel}>Line Spacing</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--reader-subtle)' }}>
+                      {prefs.lineHeight.toFixed(2)}x
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1.4}
+                    max={2.2}
+                    step={0.1}
+                    value={prefs.lineHeight}
+                    onChange={(e) => updatePreference({ lineHeight: Number(e.target.value) })}
+                    className={styles.slider}
+                  />
+                </div>
+
+                {/* Typography Style */}
+                <div className={styles.settingRow}>
+                  <span className={styles.settingLabel}>Font Style</span>
+                  <div className={styles.fontSelector}>
+                    <button
+                      type="button"
+                      className={`${styles.fontBtn} ${
+                        prefs.fontFamily === 'serif' ? styles.fontBtnActive : ''
+                      }`}
+                      onClick={() => updatePreference({ fontFamily: 'serif' })}
+                      style={{ fontFamily: 'var(--font-serif)' }}
+                    >
+                      Editorial
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.fontBtn} ${
+                        prefs.fontFamily === 'sans' ? styles.fontBtnActive : ''
+                      }`}
+                      onClick={() => updatePreference({ fontFamily: 'sans' })}
+                      style={{ fontFamily: 'var(--font-sans)' }}
+                    >
+                      Modern
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.fontBtn} ${
+                        prefs.fontFamily === 'mono' ? styles.fontBtnActive : ''
+                      }`}
+                      onClick={() => updatePreference({ fontFamily: 'mono' })}
+                      style={{ fontFamily: 'var(--font-mono)' }}
+                    >
+                      Mono
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Scroll Progress Bar */}
+        <div className={styles.progressBarTop}>
+          <div className={styles.progressBarFillTop} style={{ width: `${scrollProgress}%` }} />
+        </div>
+      </header>
+
+      {/* Table of Contents Drawer */}
+      {tocOpen && (
+        <>
+          <div className={styles.tocBackdrop} onClick={() => setTocOpen(false)} />
+          <div className={styles.tocDrawer}>
+            <div className={styles.tocDrawerHeader}>
+              <span className={styles.tocDrawerTitle}>Table of Contents</span>
+              <button
+                type="button"
+                className={styles.toolBtn}
+                onClick={() => setTocOpen(false)}
+                aria-label="Close table of contents"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className={styles.tocDrawerList}>
+              {book.chapters.map((ch) => {
+                const isCurrent = ch.slug === currentChapter.slug;
+                return (
+                  <Link
+                    key={ch.id}
+                    href={`/read/${book.slug}?chapter=${ch.slug}`}
+                    className={`${styles.tocItem} ${isCurrent ? styles.tocItemCurrent : ''}`}
+                    onClick={() => setTocOpen(false)}
+                  >
+                    <span style={{ fontWeight: 700, width: '22px' }}>{ch.chapterNumber}.</span>
+                    <span style={{ flex: 1 }}>{ch.title}</span>
+                    {isCurrent && <Check size={16} />}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Main Chapter Column */}
+      <article
+        ref={articleRef}
+        className={styles.mainArticle}
+        style={{
+          fontFamily: getFontFamilyStyle(),
+          fontSize: `${prefs.fontSize}px`,
+          lineHeight: prefs.lineHeight,
+        }}
+      >
+        <div className={styles.chapterBadge}>
+          Chapter {currentChapter.chapterNumber} of {book.totalChapters}
+        </div>
+
+        <h1 className={styles.chapterTitle}>{currentChapter.title}</h1>
+        <p className={styles.chapterSummary}>{currentChapter.summary}</p>
+
+        {/* Structured Sections */}
+        {currentChapter.sections.map((section, idx) => (
+          <section key={idx} className={styles.contentSection}>
+            <h2 className={styles.sectionHeading}>{section.title}</h2>
+            <p className={styles.paragraph}>{section.content}</p>
+
+            {/* Optional Conceptual Callout */}
+            {section.callout && (
+              <div className={styles.calloutBox}>
+                <strong style={{ display: 'block', marginBottom: '0.25rem' }}>
+                  {section.callout.type.toUpperCase()}:
+                </strong>
+                <span>{section.callout.text}</span>
+              </div>
+            )}
+
+            {/* Optional Code Snippet */}
+            {section.codeSnippet && (
+              <div className={styles.codeBox}>
+                <div className={styles.codeHeader}>
+                  <span>{section.codeSnippet.language}</span>
+                  <span>Interactive Listing</span>
+                </div>
+                <pre className={styles.codeContent}>
+                  <code>{section.codeSnippet.code}</code>
+                </pre>
+              </div>
+            )}
+          </section>
+        ))}
+
+        {/* Bottom Chapter Navigation */}
+        <nav className={styles.bottomNav} aria-label="Chapter navigation">
+          {prevChapter ? (
+            <Link
+              href={`/read/${book.slug}?chapter=${prevChapter.slug}`}
+              className={styles.navPrev}
+            >
+              <ChevronLeft size={18} />
+              <div>
+                <span style={{ fontSize: '0.75rem', display: 'block', opacity: 0.8 }}>
+                  Previous
+                </span>
+                <span>Ch {prevChapter.chapterNumber}: {prevChapter.title.slice(0, 24)}...</span>
+              </div>
+            </Link>
+          ) : (
+            <div className={`${styles.navPrev} ${styles.navDisabled}`}>
+              <ChevronLeft size={18} />
+              <span>Beginning of Book</span>
+            </div>
+          )}
+
+          {nextChapter ? (
+            <Link
+              href={`/read/${book.slug}?chapter=${nextChapter.slug}`}
+              className={styles.navNext}
+            >
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.75rem', display: 'block', opacity: 0.8 }}>Next</span>
+                <span>Ch {nextChapter.chapterNumber}: {nextChapter.title.slice(0, 24)}...</span>
+              </div>
+              <ChevronRight size={18} />
+            </Link>
+          ) : (
+            <div className={`${styles.navNext} ${styles.navDisabled}`}>
+              <span>End of Book</span>
+              <ChevronRight size={18} />
+            </div>
+          )}
+        </nav>
+      </article>
+
+      {/* Floating Notification Toast */}
+      {toastMessage && (
+        <div className={styles.toast}>
+          <Bookmark size={15} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+    </div>
+  );
+}

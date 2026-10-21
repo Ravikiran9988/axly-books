@@ -1,0 +1,111 @@
+.aboutContainer {
+  padding: 4rem 0 6rem;
+}
+
+.heroHeader {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.heroTag {
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-brand-cyan);
+}
+
+.heroTitle {
+  font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.heroSubtitle {
+  font-size: 1.15rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.valuesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-bottom: 4.5rem;
+}
+
+.valueCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 2.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.valueIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-brand-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-brand-cyan);
+}
+
+.valueTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.valueText {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.storyBlock {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 860px;
+  margin: 0 auto 4rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+
+.storyTitle {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.disclaimerBanner {
+  background: rgba(14, 21, 36, 0.4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  text-align: center;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .storyBlock {
+    padding: 2rem 1.5rem;
+  }
+}

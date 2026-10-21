@@ -1,0 +1,188 @@
+import React from 'react';
+import { notFound } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
+import {
+  BookOpen,
+  Clock,
+  Calendar,
+  Layers,
+  ArrowRight,
+  ShieldCheck,
+  ChevronRight,
+  Sparkles,
+} from 'lucide-react';
+import { bookService } from '@/services/bookService';
+import { PUBLISHED_BOOKS } from '@/data/booksData';
+import BookActions from './BookActions';
+import styles from './page.module.css';
+
+export function generateStaticParams() {
+  return PUBLISHED_BOOKS.map((b) => ({
+    slug: b.slug,
+  }));
+}
+
+interface BookPageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: BookPageProps) {
+  const { slug } = await params;
+  const book = await bookService.getBookBySlug(slug);
+  if (!book) return { title: 'Book Not Found · AXLY' };
+
+  return {
+    title: `${book.title} — AXLY Books`,
+    description: book.description,
+  };
+}
+
+export default async function BookDetailPage({ params }: BookPageProps) {
+  const { slug } = await params;
+  const book = await bookService.getBookBySlug(slug);
+
+  if (!book) {
+    notFound();
+  }
+
+  const hours = Math.round(book.estimatedReadingTimeMinutes / 60);
+
+  return (
+    <div className={`container ${styles.container}`}>
+      {/* Breadcrumb */}
+      <nav
+        aria-label="Breadcrumb"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          fontSize: '0.85rem',
+          color: 'var(--text-muted)',
+          marginBottom: '2rem',
+        }}
+      >
+        <Link href="/" style={{ color: 'var(--text-secondary)' }}>
+          Home
+        </Link>
+        <ChevronRight size={14} />
+        <Link href="/books" style={{ color: 'var(--text-secondary)' }}>
+          Books
+        </Link>
+        <ChevronRight size={14} />
+        <span style={{ color: 'var(--color-brand-cyan)' }}>{book.title}</span>
+      </nav>
+
+      {/* Main Book Hero */}
+      <div className={styles.bookHero}>
+        {/* Cover Column */}
+        <div className={styles.coverSide}>
+          <div className={styles.coverFrame}>
+            <Image
+              src={book.coverImage}
+              alt={`Cover of ${book.title}`}
+              width={340}
+              height={510}
+              className={styles.coverImg}
+              priority
+            />
+          </div>
+
+          {/* Interactive Start/Continue Reading CTA (Client Component) */}
+          <BookActions book={book} />
+        </div>
+
+        {/* Info Column */}
+        <div className={styles.infoSide}>
+          <div className={styles.tagsRow}>
+            <span className="badge badge-cyan">{book.publicationStatus}</span>
+            <span className="badge badge-muted">{book.category}</span>
+            <span className="badge badge-muted">{book.edition}</span>
+          </div>
+
+          <div>
+            <h1 className={styles.mainTitle}>{book.title}</h1>
+            <p className={styles.mainSubtitle}>{book.subtitle}</p>
+          </div>
+
+          <p className={styles.authorLine}>
+            Authored by{' '}
+            <Link href={`/author/${book.authorSlug}`}>
+              {book.author} ({book.authorRealName})
+            </Link>
+          </p>
+
+          {/* Key Metadata Grid */}
+          <div className={styles.metaGrid}>
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Total Chapters</span>
+              <span className={styles.metaVal}>{book.totalChapters} Chapters</span>
+            </div>
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Reading Time</span>
+              <span className={styles.metaVal}>~{hours} Hours</span>
+            </div>
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Edition</span>
+              <span className={styles.metaVal}>{book.edition}</span>
+            </div>
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Access</span>
+              <span className={styles.metaVal} style={{ color: 'var(--color-brand-cyan)' }}>
+                100% Free
+              </span>
+            </div>
+          </div>
+
+          {/* Description & Detailed Synopsis */}
+          <div className={styles.synopsisSection}>
+            <h2 className={styles.synopsisTitle}>About this Publication</h2>
+            <p>{book.synopsis}</p>
+          </div>
+
+          {/* Tags */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+            {book.tags.map((tag) => (
+              <span key={tag} className="badge badge-muted" style={{ fontSize: '0.8rem' }}>
+                #{tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Table of Contents */}
+      <section className={styles.tocSection}>
+        <h2 className={styles.tocTitle}>Table of Contents</h2>
+        <p className={styles.tocDesc}>
+          {book.totalChapters} comprehensive chapters covering foundations to state-of-the-art
+          Generative AI. Select any chapter to begin reading immediately.
+        </p>
+
+        <div className={styles.tocList}>
+          {book.chapters.map((chapter) => (
+            <Link
+              key={chapter.id}
+              href={`/read/${book.slug}?chapter=${chapter.slug}`}
+              className={styles.chapterItem}
+            >
+              <div className={styles.chapterLeft}>
+                <div className={styles.chapterNumber}>{chapter.chapterNumber}</div>
+                <div className={styles.chapterInfo}>
+                  <span className={styles.chapterTitle}>{chapter.title}</span>
+                  <span className={styles.chapterSummary}>{chapter.summary}</span>
+                </div>
+              </div>
+
+              <div className={styles.chapterRight}>
+                <Clock size={14} />
+                <span>{chapter.readingTimeMinutes} min read</span>
+                <ChevronRight size={16} />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
