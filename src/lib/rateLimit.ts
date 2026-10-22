@@ -6,46 +6,56 @@ interface RateLimitRecord {
   resetAt: number;
 }
 
-// In-memory token bucket / sliding window store for test & development fallbacks
+const UNAVAILABLE_RETRY_AFTER_SECONDS = 60;
+
+// In-memory token bucket / sliding window store for local development and tests only.
 const ipStore = new Map<string, RateLimitRecord>();
 
-// Cleanup stale in-memory entries every 5 minutes without keeping event loop alive
 if (typeof setInterval !== 'undefined') {
   const cleanupTimer = setInterval(() => {
     const now = Date.now();
     for (const [key, record] of ipStore.entries()) {
-      if (now > record.resetAt) {
-        ipStore.delete(key);
-      }
+      if (now > record.resetAt) ipStore.delete(key);
     }
   }, 5 * 60 * 1000);
-  if (cleanupTimer && typeof cleanupTimer.unref === 'function') {
-    cleanupTimer.unref();
-  }
+
+  if (typeof cleanupTimer.unref === 'function') cleanupTimer.unref();
 }
 
 export interface RateLimitResult {
   isAllowed: boolean;
   remaining: number;
   retryAfterSeconds: number;
+  /**
+   * True when a coordinated rate-limit decision could not be made.
+   * Sensitive endpoints should return 503 rather than treating this as a normal 429.
+   */
+  unavailable?: boolean;
+}
+
+function unavailableRateLimitResult(): RateLimitResult {
+  return {
+    isAllowed: false,
+    remaining: 0,
+    retryAfterSeconds: UNAVAILABLE_RETRY_AFTER_SECONDS,
+    unavailable: true,
+  };
 }
 
 /**
- * Synchronous in-memory rate check (ideal for test environments and unit checks).
+ * Process-local limiter for development and deterministic unit tests.
+ * Do not use this as the production enforcement mechanism.
  */
 export function checkRateLimit(
   identifier: string,
-  maxAttempts: number = 10,
-  windowMs: number = 15 * 60 * 1000
+  maxAttempts = 10,
+  windowMs = 15 * 60 * 1000
 ): RateLimitResult {
   const now = Date.now();
   const record = ipStore.get(identifier);
 
   if (!record || now > record.resetAt) {
-    ipStore.set(identifier, {
-      count: 1,
-      resetAt: now + windowMs,
-    });
+    ipStore.set(identifier, { count: 1, resetAt: now + windowMs });
     return {
       isAllowed: true,
       remaining: Math.max(0, maxAttempts - 1),
@@ -54,11 +64,10 @@ export function checkRateLimit(
   }
 
   if (record.count >= maxAttempts) {
-    const retryAfter = Math.ceil((record.resetAt - now) / 1000);
     return {
       isAllowed: false,
       remaining: 0,
-      retryAfterSeconds: Math.max(1, retryAfter),
+      retryAfterSeconds: Math.max(1, Math.ceil((record.resetAt - now) / 1000)),
     };
   }
 
@@ -71,100 +80,104 @@ export function checkRateLimit(
 }
 
 /**
- * Shared production rate limiter.
- * Executes an atomic PostgreSQL upsert and increment query against the Neon `rate_limits` table.
- * Avoids check-then-update race conditions under high concurrency across serverless functions.
+ * Shared production limiter.
+ * The PostgreSQL upsert and increment happen atomically so concurrent serverless
+ * requests cannot bypass the configured threshold through a check-then-update race.
+ *
+ * Production fails closed when Neon or the rate-limit table is unavailable.
+ * Local development/tests retain the process-local fallback.
  */
 export async function checkRateLimitAsync(
   identifier: string,
-  maxAttempts: number = 10,
-  windowMs: number = 15 * 60 * 1000
+  maxAttempts = 10,
+  windowMs = 15 * 60 * 1000
 ): Promise<RateLimitResult> {
-  if (isDatabaseConfigured() && db) {
-    try {
-      const now = new Date();
-      const resetAt = new Date(now.getTime() + windowMs);
-
-      // Atomic UPSERT + increment in a single statement
-      const result = await db.execute<{
-        count: number | string;
-        reset_at: string | Date;
-      }>(sql`
-        INSERT INTO "rate_limits" ("key", "count", "reset_at", "updated_at")
-        VALUES (${identifier}, 1, ${resetAt.toISOString()}, ${now.toISOString()})
-        ON CONFLICT ("key") DO UPDATE
-        SET 
-          "count" = CASE 
-            WHEN "rate_limits"."reset_at" <= ${now.toISOString()}::timestamptz THEN 1
-            ELSE "rate_limits"."count" + 1
-          END,
-          "reset_at" = CASE 
-            WHEN "rate_limits"."reset_at" <= ${now.toISOString()}::timestamptz THEN ${resetAt.toISOString()}::timestamptz
-            ELSE "rate_limits"."reset_at"
-          END,
-          "updated_at" = ${now.toISOString()}::timestamptz
-        RETURNING "count", "reset_at";
-      `);
-
-      const rawRows =
-        (result as unknown as { rows?: Array<{ count: number | string; reset_at: string | Date }> })
-          ?.rows || (Array.isArray(result) ? result : []);
-
-      if (rawRows.length > 0) {
-        const row = rawRows[0];
-        const currentCount = Number(row.count);
-        const resetTime = new Date(row.reset_at).getTime();
-        const isAllowed = currentCount <= maxAttempts;
-        const retryAfter = isAllowed
-          ? 0
-          : Math.max(1, Math.ceil((resetTime - Date.now()) / 1000));
-
-        return {
-          isAllowed,
-          remaining: Math.max(0, maxAttempts - currentCount),
-          retryAfterSeconds: retryAfter,
-        };
-      }
-    } catch (err: unknown) {
-      console.warn(
-        '[SECURITY] Coordinated rate limit check failed; utilizing emergency local instance throttle.',
-        err instanceof Error ? err.message : err
-      );
+  if (!isDatabaseConfigured() || !db) {
+    if (process.env.NODE_ENV === 'production') {
+      return unavailableRateLimitResult();
     }
+    return checkRateLimit(identifier, maxAttempts, windowMs);
   }
 
-  return checkRateLimit(identifier, maxAttempts, windowMs);
+  try {
+    const now = new Date();
+    const resetAt = new Date(now.getTime() + windowMs);
+
+    const result = await db.execute<{
+      count: number | string;
+      reset_at: string | Date;
+    }>(sql`
+      INSERT INTO "rate_limits" ("key", "count", "reset_at", "updated_at")
+      VALUES (${identifier}, 1, ${resetAt.toISOString()}, ${now.toISOString()})
+      ON CONFLICT ("key") DO UPDATE
+      SET
+        "count" = CASE
+          WHEN "rate_limits"."reset_at" <= ${now.toISOString()}::timestamptz THEN 1
+          ELSE "rate_limits"."count" + 1
+        END,
+        "reset_at" = CASE
+          WHEN "rate_limits"."reset_at" <= ${now.toISOString()}::timestamptz THEN ${resetAt.toISOString()}::timestamptz
+          ELSE "rate_limits"."reset_at"
+        END,
+        "updated_at" = ${now.toISOString()}::timestamptz
+      RETURNING "count", "reset_at";
+    `);
+
+    const rawRows =
+      (result as unknown as { rows?: Array<{ count: number | string; reset_at: string | Date }> })
+        ?.rows || (Array.isArray(result) ? result : []);
+
+    if (rawRows.length === 0) {
+      throw new Error('Rate-limit query returned no decision row.');
+    }
+
+    const row = rawRows[0];
+    const currentCount = Number(row.count);
+    const resetTime = new Date(row.reset_at).getTime();
+
+    if (!Number.isFinite(currentCount) || !Number.isFinite(resetTime)) {
+      throw new Error('Rate-limit query returned invalid data.');
+    }
+
+    const isAllowed = currentCount <= maxAttempts;
+    return {
+      isAllowed,
+      remaining: Math.max(0, maxAttempts - currentCount),
+      retryAfterSeconds: isAllowed
+        ? 0
+        : Math.max(1, Math.ceil((resetTime - Date.now()) / 1000)),
+    };
+  } catch (err: unknown) {
+    const errorName = err instanceof Error ? err.name : 'UnknownError';
+    console.error(`[SECURITY] Shared rate limiter failed (${errorName}).`);
+
+    if (process.env.NODE_ENV === 'production') {
+      // Never weaken a sensitive endpoint's production limit on DB failure.
+      return unavailableRateLimitResult();
+    }
+
+    return checkRateLimit(identifier, maxAttempts, windowMs);
+  }
 }
 
 /**
- * Resolves client IP address, prioritizing trusted platform headers
- * (such as Vercel or Cloudflare infrastructure headers) before parsing forwarding headers.
+ * Resolve the client IP in a hosting-aware manner. Prefer platform-provided
+ * headers and validate the result; configure trusted proxy handling at deploy time.
  */
 export function getClientIp(headers: Headers): string {
-  // Trusted platform-assigned client IP headers
   const vercelIp = headers.get('x-vercel-ip');
-  if (vercelIp && isValidIpFormat(vercelIp.trim())) {
-    return vercelIp.trim();
-  }
+  if (vercelIp && isValidIpFormat(vercelIp.trim())) return vercelIp.trim();
 
   const cfIp = headers.get('cf-connecting-ip');
-  if (cfIp && isValidIpFormat(cfIp.trim())) {
-    return cfIp.trim();
-  }
+  if (cfIp && isValidIpFormat(cfIp.trim())) return cfIp.trim();
 
   const realIp = headers.get('x-real-ip');
-  if (realIp && isValidIpFormat(realIp.trim())) {
-    return realIp.trim();
-  }
+  if (realIp && isValidIpFormat(realIp.trim())) return realIp.trim();
 
   const forwarded = headers.get('x-forwarded-for');
   if (forwarded) {
-    // Take the first comma-separated address and validate it
-    const parts = forwarded.split(',');
-    const candidate = parts[0]?.trim();
-    if (candidate && isValidIpFormat(candidate)) {
-      return candidate;
-    }
+    const candidate = forwarded.split(',')[0]?.trim();
+    if (candidate && isValidIpFormat(candidate)) return candidate;
   }
 
   return '127.0.0.1';
@@ -172,7 +185,6 @@ export function getClientIp(headers: Headers): string {
 
 function isValidIpFormat(ip: string): boolean {
   if (!ip || ip.length > 45) return false;
-  // Basic IPv4 or IPv6 check without regex vulnerability
   const isIpv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
   const isIpv6 = ip.includes(':') && /^[0-9a-fA-F:]+$/.test(ip);
   return isIpv4 || isIpv6;
