@@ -9,6 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![Database](https://img.shields.io/badge/Neon-PostgreSQL-green?style=flat&logo=postgresql)](https://neon.tech/)
 [![ORM](https://img.shields.io/badge/Drizzle-ORM-orange?style=flat)](https://orm.drizzle.team/)
+[![Storage](https://img.shields.io/badge/Storage-Vercel%20Blob-black?style=flat)](https://vercel.com/storage/blob)
 [![Security](https://img.shields.io/badge/RBAC-Admin%20%7C%20Reader-emerald?style=flat)](#)
 [![License](https://img.shields.io/badge/Content-CC%20BY--NC%204.0-brightgreen)](#)
 
@@ -21,6 +22,7 @@
 - Persistent cross-device reading progress, chapter bookmarks, and reader dashboard.
 - A fully isolated **Administrator Content Management System (CMS)** with draft segregation, chapter reordering, and technical code snippet/callout management.
 - Robust Role-Based Access Control (**RBAC**) separating general readers from platform administrators.
+- **100% Free Access Policy:** The platform strictly prohibits advertisements, paywalls, subscriptions, or book sales.
 
 ---
 
@@ -37,27 +39,29 @@
 
 ```mermaid
 graph TD
-    Client["Client Browser (React 19 / Turbopack)"] --> AppShell["AppShell & Next.js Router"]
+    Client["Client Browser (React 19 / App Router)"] --> AppShell["AppShell & Next.js Router"]
     AppShell --> PublicRoutes["Public / Reader Routes (/books, /read, /dashboard)"]
     AppShell --> AdminRoutes["Admin CMS Routes (/admin, /admin/books)"]
     
     PublicRoutes --> API["API Layer (/api/*)"]
     AdminRoutes --> AdminAPI["Admin API Layer (/api/admin/*)"]
     
-    API --> RateLimit["Distributed Rate Limiting (Neon / In-Memory)"]
+    API --> RateLimit["Atomic PostgreSQL Rate Limiting"]
     AdminAPI --> RateLimit
     
     RateLimit --> AuthGuard["Server Security Guards (requireAuth, requireAdmin)"]
     AuthGuard --> DrizzleORM["Drizzle ORM Schema & Queries"]
     DrizzleORM --> NeonDB["Neon Serverless PostgreSQL"]
+    AdminAPI --> ObjectStorage["Vercel Blob Persistent Storage"]
 ```
 
 - **Framework:** Next.js 16.4.2 (App Router with Cache Components & Partial Prerendering)
 - **Frontend:** React 19, Vanilla CSS Design System with curated design tokens, glassmorphism, responsive drawers
 - **Language:** TypeScript 5.0 (Strict mode enabled)
 - **Database:** Neon Serverless PostgreSQL (`@neondatabase/serverless`)
-- **ORM & Migrations:** Drizzle ORM (`drizzle-orm`, `drizzle-kit`)
-- **Authentication & Security:** bcrypt password hashing (12 salt rounds), SHA-256 session token hashing, HTTP-only SameSite cookies, sliding-window distributed rate limiting, Zod schema validations
+- **ORM & Migrations:** Drizzle ORM (`drizzle-orm`, `drizzle-kit`) with versioned migrations
+- **Object Storage:** Vercel Blob (`@vercel/blob`) with deep content magic-bytes verification
+- **Authentication & Security:** bcrypt password hashing (12 salt rounds), SHA-256 session token hashing, HTTP-only SameSite cookies, atomic sliding-window distributed rate limiting, Zod schema validations
 
 ---
 
@@ -69,11 +73,12 @@ The application strictly differentiates permissions between **`reader`** and **`
 | :--- | :---: | :---: |
 | Browse published book catalogue (`/books`) | ✅ | ✅ |
 | Read published chapters (`/read/[bookSlug]`) | ✅ | ✅ |
-| Preview unpublished / draft books | ❌ | ✅ |
+| Preview unpublished / draft books | ❌ (404 Not Found) | ✅ |
 | Personal Reader Dashboard (`/dashboard`) | ✅ | ✅ |
 | Save personal reading progress & bookmarks | ✅ | ✅ |
 | Access Admin CMS Dashboard (`/admin`) | ❌ (Redirected to `/dashboard`) | ✅ |
 | Manage Books (Create, Edit, Delete) (`/admin/books`) | ❌ (403 Forbidden) | ✅ |
+| Upload Cover Images (`/api/admin/upload`) | ❌ (403 Forbidden) | ✅ |
 | Manage Chapters & Sections (`/admin/books/[id]/chapters`) | ❌ (403 Forbidden) | ✅ |
 | Toggle Book Publication Status (Draft vs Published) | ❌ (403 Forbidden) | ✅ |
 | Reorder Chapter Indexing | ❌ (403 Forbidden) | ✅ |
@@ -81,31 +86,45 @@ The application strictly differentiates permissions between **`reader`** and **`
 
 ### Server-Enforced Security Guards
 All admin operations and sensitive reader endpoints are guarded on the server by centralized helpers in `src/lib/auth.ts`:
-- `requireAuth()`: Ensures a valid, unexpired session exists.
-- `requireAdmin()`: Validates that the session belongs to a user with `role === 'admin'`. Rejects unauthenticated callers with 401 and non-admin readers with 403.
+- `requireAuth(request?)`: Ensures a valid, unexpired session exists.
+- `requireAdmin(request?)`: Validates that the session belongs to a user with `role === 'admin'`. Rejects unauthenticated callers with 401 and non-admin readers with 403.
 - `assertRecordOwnership(userId, ownerId)`: Strictly prevents cross-user modification of progress or bookmarks.
 
 ---
 
-## 5. CLI Administrator Provisioning
+## 5. Persistent Object Storage (Image Uploads)
 
-For maximum security, admin privileges cannot be granted through public registration or UI toggles. Admin promotion is executed strictly via a secure, audited CLI script:
-
-```bash
-# Elevate an existing registered reader to Administrator
-npm run admin:promote -- admin@axly.in
-```
-
-### CLI Promotion Workflow:
-1. Verifies connectivity to the configured Neon PostgreSQL database.
-2. Normalizes email address (case-insensitive trim).
-3. Validates that the target user exists.
-4. Performs an idempotent role update to `'admin'`.
-5. Logs confirmation with user ID, name, email, and timestamp.
+Cover images for books and technical diagrams use **Vercel Blob** (`@vercel/blob`):
+1. **Endpoint:** `POST /api/admin/upload` (multipart form-data).
+2. **Access Control:** Strictly restricted to authenticated Administrators via `requireAdmin()`.
+3. **Deep Content Inspection:** Inspects binary magic bytes before accepting files:
+   - JPEG: `0xFF 0xD8 0xFF`
+   - PNG: `0x89 0x50 0x4E 0x47 0x0D 0x0A 0x1A 0x0A`
+   - WebP: `RIFF...WEBP` (`0x52 0x49 0x46 0x46` and `0x57 0x45 0x42 0x50`)
+4. **Collision Protection:** Filenames are sanitized and appended with timestamps and cryptographic random hex suffixes (e.g. `covers/title-timestamp-randomhex.png`).
+5. **Graceful Degrade:** If `BLOB_READ_WRITE_TOKEN` is unset, the endpoint returns an honest HTTP 503 explaining that uploads are disabled, while preserving direct image URL editing in the CMS.
 
 ---
 
-## 6. Database Setup, Migrations & Seeding
+## 6. CLI Administrator Provisioning
+
+For maximum security, admin privileges cannot be granted through public registration or client-side toggles. Admin promotion is executed strictly via a secure, audited CLI script:
+
+```bash
+# Elevate an existing registered reader to Administrator
+npm run admin:promote -- ravikiran@axly.in
+```
+
+### CLI Promotion Workflow:
+1. Connects to the real configured Neon PostgreSQL database.
+2. Normalizes email address (case-insensitive trim).
+3. Validates that the target user account exists.
+4. Performs an idempotent role update to `'admin'`.
+5. Logs confirmation with user ID, name, email, and timestamp without exposing secrets.
+
+---
+
+## 7. Database Setup, Migrations & Seeding
 
 ### Environment Setup
 Copy the environment template:
@@ -118,35 +137,35 @@ DATABASE_URL="postgresql://user:password@endpoint-pooler.region.aws.neon.tech/db
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
-### Running Migrations & Seeding
+### Versioned Migration & Verification Workflow
 ```bash
 # Generate SQL migrations based on schema updates
 npm run db:generate
 
-# Apply pending migrations to Neon PostgreSQL
+# Apply versioned migrations from ./drizzle using Neon serverless migrator
 npm run db:migrate
+
+# Audit and verify database connectivity, tables, constraints, and admin existence
+npm run db:verify
 
 # Seed official publication and chapter data (Idempotent: will not overwrite manual admin edits)
 npm run db:seed
-
-# Inspect database visually via Drizzle Studio
-npm run db:studio
 ```
 
 ---
 
-## 7. Quality Assurance & Automated Verification
+## 8. Quality Assurance & Automated Tests
 
-The project includes an end-to-end automated test harness covering all Phase 2 backend functionality, RBAC boundaries, cryptographic functions, and validation schemas:
+The repository maintains an automated test harness covering cryptographic functions, validation schemas, user journeys, and genuine HTTP route execution:
 
 ```bash
-# Run all automated test suites
+# Run all automated test suites (Phase 2 unit tests, E2E journey tests, and genuine route integration tests)
 npm test
 
 # Run ESLint validation (0 errors, 0 warnings enforced)
 npm run lint
 
-# Run TypeScript strict type-check
+# Run TypeScript strict type-check (0 errors)
 npx tsc --noEmit
 
 # Compile production build with Next.js Turbopack
@@ -155,41 +174,48 @@ npm run build
 
 ---
 
-## 8. Deployment Guide (Vercel & Neon)
+## 9. Deployment Runbook (Vercel & Neon)
 
 ### Step 1: Provision Neon PostgreSQL
 1. Create a project at [https://console.neon.tech](https://console.neon.tech).
 2. Copy the **Pooled Connection String** (`sslmode=require`).
 
-### Step 2: Configure Vercel Project
-1. Link your GitHub repository `Ravikiran9988/axly-books` to Vercel.
+### Step 2: Apply Migrations & Seed Baseline Data
+Run migrations and baseline seeding against your live Neon database:
+```bash
+DATABASE_URL="<your-neon-pooled-url>" npm run db:migrate
+DATABASE_URL="<your-neon-pooled-url>" npm run db:verify
+DATABASE_URL="<your-neon-pooled-url>" npm run db:seed
+```
+
+### Step 3: Configure Vercel Project
+1. Import repository `Ravikiran9988/axly-books` into Vercel.
 2. Under **Project Settings > Environment Variables**, add:
-   - `DATABASE_URL`: Your Neon pooled connection string.
-   - `NEXT_PUBLIC_APP_URL`: `https://books.axly.in`
-   - `RESEND_API_KEY`: API key from [Resend](https://resend.com) (for password reset emails).
-   - `EMAIL_FROM`: `AXLY Books <books@axly.in>`
-   - `BLOB_READ_WRITE_TOKEN`: Vercel Blob token (for asset uploads).
-   - `NODE_ENV`: `production`
+   - `DATABASE_URL`: Your Neon pooled connection string (Mandatory).
+   - `NEXT_PUBLIC_APP_URL`: `https://books.axly.in` (Mandatory).
+   - `BLOB_READ_WRITE_TOKEN`: Token from Vercel Storage Blob (Optional, for cover uploads).
+   - `RESEND_API_KEY`: API key from Resend (Optional, for password recovery emails).
+   - `EMAIL_FROM`: `AXLY Books <noreply@books.axly.in>` (Optional).
+   - `NODE_ENV`: `production`.
 
-### Step 3: Run Database Migrations & Seed
-In your local terminal or CI/CD pipeline targeting the production database:
-```bash
-DATABASE_URL="<production-neon-url>" npm run db:migrate
-DATABASE_URL="<production-neon-url>" npm run db:seed
-```
+### Step 4: Provision Administrator Account
+1. Open `https://books.axly.in/register` and register the owner's account (e.g. `ravikiran@axly.in`).
+2. Run the promotion script targeting the live database:
+   ```bash
+   DATABASE_URL="<your-neon-pooled-url>" npm run admin:promote -- ravikiran@axly.in
+   ```
+3. Log in at `https://books.axly.in/login` and navigate to `https://books.axly.in/admin` to manage books.
 
-### Step 4: Provision Initial Administrator
-```bash
-DATABASE_URL="<production-neon-url>" npm run admin:promote -- <your-admin-email>
-```
-
-### Step 5: Configure Custom Domain
-1. In Vercel, navigate to **Domains** and add `books.axly.in`.
-2. Configure DNS CNAME record: `books.axly.in` -> `cname.vercel-dns.com`.
+### Step 5: Connect Custom Domain
+1. In Vercel, navigate to **Settings > Domains** and add `books.axly.in`.
+2. Configure DNS CNAME record at your DNS provider:
+   - Host: `books`
+   - Type: `CNAME`
+   - Target: `cname.vercel-dns.com`
 
 ---
 
-## 9. Author & Legal Identity
+## 10. Author & Legal Identity
 
 - **Author / Pen Name:** Slayer
 - **Full Legal Name:** Medicharla Ravi Kiran
