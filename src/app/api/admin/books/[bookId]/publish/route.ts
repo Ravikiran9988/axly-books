@@ -7,7 +7,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ bookId: string }> }
 ) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }

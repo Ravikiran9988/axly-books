@@ -131,16 +131,27 @@ export async function validateSessionToken(rawToken: string): Promise<Authentica
 /**
  * Retrieves the currently authenticated user from incoming HTTP cookies.
  */
-export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
+export async function getCurrentUser(request?: Request): Promise<AuthenticatedUser | null> {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-    if (!sessionCookie?.value) return null;
-
-    return await validateSessionToken(sessionCookie.value);
+    if (sessionCookie?.value) {
+      return await validateSessionToken(sessionCookie.value);
+    }
   } catch {
-    return null;
+    // cookies() may throw outside Next.js request context (e.g. during integration tests)
   }
+
+  // Fallback to parsing Cookie header from incoming request if provided
+  if (request) {
+    const cookieHeader = request.headers.get('cookie') || '';
+    const match = cookieHeader.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
+    if (match && match[1]) {
+      return await validateSessionToken(match[1].trim());
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -161,10 +172,10 @@ export async function destroySession(rawToken: string): Promise<void> {
  * Reusable server-side helper to require an authenticated user.
  * Returns either `{ user }` or `{ errorResponse }` with HTTP 401.
  */
-export async function requireAuth(): Promise<
+export async function requireAuth(request?: Request): Promise<
   { user: AuthenticatedUser } | { errorResponse: NextResponse }
 > {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser(request);
   if (!user) {
     return {
       errorResponse: NextResponse.json(
@@ -180,10 +191,10 @@ export async function requireAuth(): Promise<
  * Reusable server-side helper to require an administrator role.
  * Returns either `{ user }` or `{ errorResponse }` with HTTP 401 or HTTP 403.
  */
-export async function requireAdmin(): Promise<
+export async function requireAdmin(request?: Request): Promise<
   { user: AuthenticatedUser } | { errorResponse: NextResponse }
 > {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser(request);
   if (!user) {
     return {
       errorResponse: NextResponse.json(

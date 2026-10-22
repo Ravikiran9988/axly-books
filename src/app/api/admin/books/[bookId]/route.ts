@@ -5,10 +5,10 @@ import { requireAdmin } from '@/lib/auth';
 import { bookUpdateSchema } from '@/lib/validations';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ bookId: string }> }
 ) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }
@@ -54,7 +54,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ bookId: string }> }
 ) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }
@@ -136,10 +136,10 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ bookId: string }> }
 ) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }

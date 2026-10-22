@@ -6,8 +6,8 @@ import { requireAdmin } from '@/lib/auth';
 import { bookCreateSchema } from '@/lib/validations';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 
-export async function GET() {
-  const auth = await requireAdmin();
+export async function GET(request: Request) {
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }
@@ -46,7 +46,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }

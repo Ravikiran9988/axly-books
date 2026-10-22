@@ -4,8 +4,8 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 
-export async function GET() {
-  const auth = await requireAdmin();
+export async function GET(request: Request) {
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }

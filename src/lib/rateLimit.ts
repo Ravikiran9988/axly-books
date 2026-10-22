@@ -1,5 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { db, schema, isDatabaseConfigured } from '@/db';
+import { sql } from 'drizzle-orm';
+import { db, isDatabaseConfigured } from '@/db';
 
 interface RateLimitRecord {
   count: number;
@@ -72,8 +72,8 @@ export function checkRateLimit(
 
 /**
  * Shared production rate limiter.
- * Leverages Neon PostgreSQL `rate_limits` table when database is configured,
- * ensuring coordinated throttling across horizontal/serverless instances.
+ * Executes an atomic PostgreSQL upsert and increment query against the Neon `rate_limits` table.
+ * Avoids check-then-update race conditions under high concurrency across serverless functions.
  */
 export async function checkRateLimitAsync(
   identifier: string,
@@ -83,65 +83,53 @@ export async function checkRateLimitAsync(
   if (isDatabaseConfigured() && db) {
     try {
       const now = new Date();
-      const existing = await db
-        .select()
-        .from(schema.rateLimits)
-        .where(eq(schema.rateLimits.key, identifier))
-        .limit(1);
+      const resetAt = new Date(now.getTime() + windowMs);
 
-      if (existing.length === 0 || existing[0].resetAt <= now) {
-        const resetAt = new Date(now.getTime() + windowMs);
-        await db
-          .insert(schema.rateLimits)
-          .values({
-            key: identifier,
-            count: 1,
-            resetAt,
-            updatedAt: now,
-          })
-          .onConflictDoUpdate({
-            target: schema.rateLimits.key,
-            set: {
-              count: 1,
-              resetAt,
-              updatedAt: now,
-            },
-          });
+      // Atomic UPSERT + increment in a single statement
+      const result = await db.execute<{
+        count: number | string;
+        reset_at: string | Date;
+      }>(sql`
+        INSERT INTO "rate_limits" ("key", "count", "reset_at", "updated_at")
+        VALUES (${identifier}, 1, ${resetAt.toISOString()}, ${now.toISOString()})
+        ON CONFLICT ("key") DO UPDATE
+        SET 
+          "count" = CASE 
+            WHEN "rate_limits"."reset_at" <= ${now.toISOString()}::timestamptz THEN 1
+            ELSE "rate_limits"."count" + 1
+          END,
+          "reset_at" = CASE 
+            WHEN "rate_limits"."reset_at" <= ${now.toISOString()}::timestamptz THEN ${resetAt.toISOString()}::timestamptz
+            ELSE "rate_limits"."reset_at"
+          END,
+          "updated_at" = ${now.toISOString()}::timestamptz
+        RETURNING "count", "reset_at";
+      `);
+
+      const rawRows =
+        (result as unknown as { rows?: Array<{ count: number | string; reset_at: string | Date }> })
+          ?.rows || (Array.isArray(result) ? result : []);
+
+      if (rawRows.length > 0) {
+        const row = rawRows[0];
+        const currentCount = Number(row.count);
+        const resetTime = new Date(row.reset_at).getTime();
+        const isAllowed = currentCount <= maxAttempts;
+        const retryAfter = isAllowed
+          ? 0
+          : Math.max(1, Math.ceil((resetTime - Date.now()) / 1000));
 
         return {
-          isAllowed: true,
-          remaining: Math.max(0, maxAttempts - 1),
-          retryAfterSeconds: 0,
+          isAllowed,
+          remaining: Math.max(0, maxAttempts - currentCount),
+          retryAfterSeconds: retryAfter,
         };
       }
-
-      const record = existing[0];
-      if (record.count >= maxAttempts) {
-        const retryAfter = Math.ceil((new Date(record.resetAt).getTime() - now.getTime()) / 1000);
-        return {
-          isAllowed: false,
-          remaining: 0,
-          retryAfterSeconds: Math.max(1, retryAfter),
-        };
-      }
-
-      const nextCount = record.count + 1;
-      await db
-        .update(schema.rateLimits)
-        .set({
-          count: nextCount,
-          updatedAt: now,
-        })
-        .where(eq(schema.rateLimits.key, identifier));
-
-      return {
-        isAllowed: true,
-        remaining: Math.max(0, maxAttempts - nextCount),
-        retryAfterSeconds: 0,
-      };
-    } catch {
-      // If DB transiently errors during rate check, fall back to in-memory check
-      return checkRateLimit(identifier, maxAttempts, windowMs);
+    } catch (err: unknown) {
+      console.warn(
+        '[SECURITY] Coordinated rate limit check failed; utilizing emergency local instance throttle.',
+        err instanceof Error ? err.message : err
+      );
     }
   }
 

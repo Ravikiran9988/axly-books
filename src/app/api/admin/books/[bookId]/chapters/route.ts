@@ -6,10 +6,10 @@ import { requireAdmin } from '@/lib/auth';
 import { chapterCreateSchema } from '@/lib/validations';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ bookId: string }> }
 ) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }
@@ -53,7 +53,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ bookId: string }> }
 ) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }
