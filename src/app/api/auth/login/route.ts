@@ -90,18 +90,9 @@ export async function POST(request: Request) {
 
     // Create session and set HTTP-only cookie
     const rawSessionToken = await createSession(userRecord.id);
-    const cookieStore = await cookies();
-    cookieStore.set(SESSION_COOKIE_NAME, rawSessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: SESSION_MAX_AGE_SECONDS,
-    });
-
     const role = userRecord.role === 'admin' ? 'admin' : 'reader';
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: {
         id: userRecord.id,
@@ -111,6 +102,29 @@ export async function POST(request: Request) {
         createdAt: userRecord.createdAt.toISOString(),
       },
     });
+
+    response.cookies.set(SESSION_COOKIE_NAME, rawSessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: SESSION_MAX_AGE_SECONDS,
+    });
+
+    try {
+      const cookieStore = await cookies();
+      cookieStore.set(SESSION_COOKIE_NAME, rawSessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: SESSION_MAX_AGE_SECONDS,
+      });
+    } catch {
+      // In standalone test context, response.cookies applies Set-Cookie header
+    }
+
+    return response;
   } catch (err: unknown) {
     console.error('Login error:', err);
     return NextResponse.json(

@@ -51,7 +51,7 @@ function detectImageMimeType(buffer: Uint8Array): 'image/jpeg' | 'image/png' | '
 
 export async function POST(request: Request) {
   // 1. Strict Administrator Authorization Check
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }
