@@ -17,6 +17,12 @@ export async function POST(request: Request) {
   try {
     const ip = getClientIp(request.headers);
     const rateCheck = await checkRateLimitAsync(`register_${ip}`, 8, 15 * 60 * 1000);
+    if (rateCheck.unavailable) {
+      return NextResponse.json(
+        { error: 'Security rate limiting is temporarily unavailable. Please try again shortly.' },
+        { status: 503, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
+      );
+    }
     if (!rateCheck.isAllowed) {
       return NextResponse.json(
         {
