@@ -95,10 +95,18 @@ export async function GET(request: Request) {
       booksList.sort((a, b) => (b.publishedYear || 2026) - (a.publishedYear || 2026));
     }
 
+    const mappedBooks = booksList.map((b) => ({
+      ...b,
+      coverImage: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
+      coverImageUrl: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
+      author: b.authorName || 'Slayer',
+      publicationStatus: b.status || 'Available Free',
+    }));
+
     return NextResponse.json({
       success: true,
-      books: booksList,
-      count: booksList.length,
+      books: mappedBooks,
+      count: mappedBooks.length,
     });
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'digest' in err) {

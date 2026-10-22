@@ -246,8 +246,10 @@
 }
 
 .themeBtnActive {
-  outline: 2px solid var(--color-brand-blue);
+  outline: 2px solid #2563eb;
   outline-offset: 1px;
+  border-color: #2563eb;
+  font-weight: 700;
 }
 
 .sliderRow {

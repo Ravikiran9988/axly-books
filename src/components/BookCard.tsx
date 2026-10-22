@@ -40,12 +40,11 @@ export default function BookCard({ book }: BookCardProps) {
           <span className="badge badge-cyan">Free Online</span>
         </div>
         <Image
-          src={book.coverImage}
+          src={book.coverImage || '/images/ml-deep-learning-cover.jpg'}
           alt={`Cover of ${book.title}`}
           width={320}
           height={480}
           className={styles.coverImage}
-          priority
         />
       </Link>
 

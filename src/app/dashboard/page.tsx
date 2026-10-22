@@ -308,7 +308,7 @@ export default async function ReaderDashboardPage() {
           </div>
           <div className={styles.continueCard}>
             <Image
-              src={PUBLISHED_BOOKS[0].coverImage}
+              src={PUBLISHED_BOOKS[0].coverImage || '/images/ml-deep-learning-cover.jpg'}
               alt={PUBLISHED_BOOKS[0].title}
               width={100}
               height={140}

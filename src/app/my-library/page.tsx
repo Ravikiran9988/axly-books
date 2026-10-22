@@ -77,7 +77,7 @@ export default function MyLibraryPage() {
                 <div key={book.id} className={styles.progressCard}>
                   <div className={styles.miniCover}>
                     <Image
-                      src={book.coverImage}
+                      src={book.coverImage || '/images/ml-deep-learning-cover.jpg'}
                       alt={book.title}
                       width={90}
                       height={135}

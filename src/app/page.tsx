@@ -75,11 +75,12 @@ export default function HomePage() {
                 aria-label={`View ${featuredBook.title}`}
               >
                 <Image
-                  src={featuredBook.coverImage}
+                  src={featuredBook.coverImage || '/images/ml-deep-learning-cover.jpg'}
                   alt={`Cover of ${featuredBook.title}`}
                   width={340}
                   height={510}
                   className={styles.bookImage}
+                  style={{ width: '100%', height: 'auto' }}
                   priority
                 />
               </Link>

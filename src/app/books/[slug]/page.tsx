@@ -70,11 +70,12 @@ export default async function BookDetailPage({ params }: BookPageProps) {
         <div className={styles.coverSide}>
           <div className={styles.coverFrame}>
             <Image
-              src={book.coverImage}
+              src={book.coverImage || '/images/ml-deep-learning-cover.jpg'}
               alt={`Cover of ${book.title}`}
               width={340}
               height={510}
               className={styles.coverImg}
+              style={{ width: '100%', height: 'auto' }}
               priority
             />
           </div>

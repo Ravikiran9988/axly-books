@@ -41,27 +41,18 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
   const nextChapter =
     activeChapterIndex < book.chapters.length - 1 ? book.chapters[activeChapterIndex + 1] : null;
 
-  // Preferences & State
-  const [prefs, setPrefs] = useState<ReadingPreferences>(() => {
-    if (typeof window === 'undefined') {
-      return {
-        theme: 'light',
-        fontSize: 18,
-        lineHeight: 1.75,
-        fontFamily: 'serif',
-        distractionFree: false,
-      };
-    }
-    return progressService.getPreferences();
+  // Preferences & State (Initialized with safe defaults for SSR hydration)
+  const [prefs, setPrefs] = useState<ReadingPreferences>({
+    theme: 'light',
+    fontSize: 18,
+    lineHeight: 1.75,
+    fontFamily: 'serif',
+    distractionFree: false,
   });
 
   const [tocOpen, setTocOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [, setBookmarkVersion] = useState(0);
-  const isBookmarked =
-    typeof window !== 'undefined'
-      ? progressService.isBookmarked(book.slug, currentChapter.slug)
-      : false;
+  const [isBookmarked, setIsBookmarked] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -74,14 +65,17 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
     setTimeout(() => setToastMessage(null), 2500);
   }, []);
 
-  // Subscribe to progress and preferences updates
+  // Sync preferences and bookmark status from local/server storage on mount and updates
   useEffect(() => {
+    setPrefs(progressService.getPreferences());
+    setIsBookmarked(progressService.isBookmarked(book.slug, currentChapter.slug));
+
     const unsubscribe = progressService.subscribe(() => {
-      setBookmarkVersion((v) => v + 1);
       setPrefs(progressService.getPreferences());
+      setIsBookmarked(progressService.isBookmarked(book.slug, currentChapter.slug));
     });
     return () => unsubscribe();
-  }, []);
+  }, [book.slug, currentChapter.slug]);
 
   // Save reading progress on chapter switch
   useEffect(() => {
@@ -138,7 +132,7 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
     const currentlyBookmarked = progressService.isBookmarked(book.slug, currentChapter.slug);
     if (currentlyBookmarked) {
       progressService.removeBookmarkByChapter(book.slug, currentChapter.slug);
-      setBookmarkVersion((v) => v + 1);
+      setIsBookmarked(false);
       showToast('Bookmark removed');
     } else {
       progressService.addBookmark(
@@ -149,7 +143,7 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
         currentChapter.title,
         currentChapter.summary
       );
-      setBookmarkVersion((v) => v + 1);
+      setIsBookmarked(true);
       showToast(`Chapter ${currentChapter.chapterNumber} bookmarked`);
     }
   }, [book.slug, book.title, currentChapter.chapterNumber, currentChapter.slug, currentChapter.title, currentChapter.summary, showToast]);
@@ -301,21 +295,21 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
                   <div className={styles.themeSelector}>
                     <button
                       type="button"
-                      className={`${styles.themeBtn} ${styles.themeBtnDark} ${
-                        prefs.theme === 'dark' ? styles.themeBtnActive : ''
-                      }`}
-                      onClick={() => updatePreference({ theme: 'dark' })}
-                    >
-                      Dark
-                    </button>
-                    <button
-                      type="button"
                       className={`${styles.themeBtn} ${styles.themeBtnLight} ${
                         prefs.theme === 'light' ? styles.themeBtnActive : ''
                       }`}
                       onClick={() => updatePreference({ theme: 'light' })}
                     >
                       Light
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.themeBtn} ${styles.themeBtnDark} ${
+                        prefs.theme === 'dark' ? styles.themeBtnActive : ''
+                      }`}
+                      onClick={() => updatePreference({ theme: 'dark' })}
+                    >
+                      Dark
                     </button>
                     <button
                       type="button"

@@ -162,7 +162,7 @@ export default function ProfilePage() {
               <span className={styles.prefDesc}>Select background surface and contrast</span>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {(['dark', 'light', 'sepia'] as const).map((t) => (
+              {(['light', 'dark', 'sepia'] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
