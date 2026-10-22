@@ -14,6 +14,14 @@ export async function PATCH(
 
   try {
     const { bookId } = await params;
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const now = new Date();
 

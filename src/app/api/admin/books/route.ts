@@ -13,6 +13,13 @@ export async function GET() {
   }
 
   try {
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
+    }
+
     if (isDatabaseConfigured() && db) {
       const booksList = await db
         .select()
