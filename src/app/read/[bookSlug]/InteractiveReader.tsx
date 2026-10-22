@@ -45,7 +45,7 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
   const [prefs, setPrefs] = useState<ReadingPreferences>(() => {
     if (typeof window === 'undefined') {
       return {
-        theme: 'dark',
+        theme: 'light',
         fontSize: 18,
         lineHeight: 1.75,
         fontFamily: 'serif',

@@ -15,7 +15,7 @@ interface PreferencesData {
 const DEFAULT_PREFERENCES: PreferencesData = {
   fontSize: 18,
   lineHeight: 1.75,
-  readingTheme: 'dark',
+  readingTheme: 'light',
   fontFamily: 'serif',
   distractionFree: false,
 };

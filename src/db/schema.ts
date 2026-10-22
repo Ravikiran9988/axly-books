@@ -193,7 +193,7 @@ export const readerPreferences = pgTable('reader_preferences', {
     .references(() => users.id, { onDelete: 'cascade' }),
   fontSize: integer('font_size').default(18).notNull(),
   lineHeight: real('line_spacing').default(1.75).notNull(),
-  readingTheme: text('reading_theme').default('dark').notNull(),
+  readingTheme: text('reading_theme').default('light').notNull(),
   fontFamily: text('font_family').default('serif').notNull(),
   distractionFree: boolean('distraction_free').default(false).notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

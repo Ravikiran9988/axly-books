@@ -5,7 +5,7 @@ const PROGRESS_KEY = 'axly_reading_progress';
 const BOOKMARKS_KEY = 'axly_bookmarks';
 
 const DEFAULT_PREFERENCES: ReadingPreferences = {
-  theme: 'dark',
+  theme: 'light',
   fontSize: 18,
   lineHeight: 1.75,
   fontFamily: 'serif',

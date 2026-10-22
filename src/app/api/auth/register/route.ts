@@ -90,7 +90,7 @@ export async function POST(request: Request) {
         userId,
         fontSize: 18,
         lineHeight: 1.75,
-        readingTheme: 'dark',
+        readingTheme: 'light',
         fontFamily: 'serif',
         distractionFree: false,
         updatedAt: now,
