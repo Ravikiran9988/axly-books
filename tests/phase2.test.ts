@@ -19,7 +19,7 @@ import {
   bookCreateSchema,
   chapterCreateSchema,
 } from '../src/lib/validations';
-import { checkRateLimit } from '../src/lib/rateLimit';
+import { checkRateLimit, checkRateLimitAsync } from '../src/lib/rateLimit';
 
 async function runTests() {
   console.log('🧪 Running AXLY Phase 2 Backend, RBAC & Security Automated Tests...\n');
@@ -250,6 +250,33 @@ async function runTests() {
     assert(throttled.retryAfterSeconds > 0, 'Must provide retry-after seconds');
 
     console.log('  ✔ Sliding window rate limiting successfully throttles brute-force attempts.');
+  }
+
+  // --- Test Suite 7: Production Rate-Limiter Fail-Closed Behavior ---
+  console.log('\n▶ Test Suite 7: Production Rate-Limiter Fail-Closed Behavior');
+  {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousDatabaseUrl = process.env.DATABASE_URL;
+
+    try {
+      // Remove database configuration just for this check. checkRateLimitAsync
+      // must reject sensitive requests instead of using an instance-local limiter.
+      delete process.env.DATABASE_URL;
+      process.env.NODE_ENV = 'production';
+
+      const unavailable = await checkRateLimitAsync('test-production-limiter-unavailable', 5, 60_000);
+      assert.strictEqual(unavailable.isAllowed, false, 'Limiter failure must not allow a production request');
+      assert.strictEqual(unavailable.unavailable, true, 'Limiter failure must be reported as unavailable');
+      assert.strictEqual(unavailable.retryAfterSeconds > 0, true, 'Unavailable response should include retry delay');
+
+      console.log('  ✔ Production fails closed when the shared rate-limit database is not configured.');
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousNodeEnv;
+
+      if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = previousDatabaseUrl;
+    }
   }
 
   console.log('\n✨ ALL PHASE 2 AUTOMATED TESTS PASSED SUCCESSFULLY! (100% OK)');
