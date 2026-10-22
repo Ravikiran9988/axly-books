@@ -4,7 +4,6 @@ import {
   Mail,
   GraduationCap,
   Code2,
-  Sparkles,
   BookOpen,
   Feather,
   Compass,

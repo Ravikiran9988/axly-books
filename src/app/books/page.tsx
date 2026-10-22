@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronDown, BookX, RotateCcw, Sparkles } from 'lucide-react';
+import { Search, ChevronDown, BookX, RotateCcw, BookOpen } from 'lucide-react';
 import { Book } from '@/types/book';
 import { bookService } from '@/services/bookService';
 import BookCard from '@/components/BookCard';
@@ -45,7 +45,7 @@ export default function BooksPage() {
     <div className="container" style={{ paddingBottom: '4rem' }}>
       <div className={styles.libraryHeader}>
         <div className="badge badge-cyan" style={{ width: 'fit-content' }}>
-          <Sparkles size={12} />
+          <BookOpen size={12} />
           <span>AXLY Digital Library</span>
         </div>
         <h1 className={styles.libraryTitle}>All Published Books</h1>
