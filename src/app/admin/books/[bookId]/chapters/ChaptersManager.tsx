@@ -581,7 +581,7 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
                               type="button"
                               onClick={() => handleRemoveSection(idx)}
                               className={styles.btnAction}
-                              style={{ color: '#fca5a5' }}
+                              style={{ color: 'var(--status-error)' }}
                             >
                               <X size={14} />
                               <span>Remove</span>
@@ -692,7 +692,7 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
           <div className={styles.modalContent} style={{ maxWidth: '480px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--status-error)' }}>
               <AlertTriangle size={24} />
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Confirm Chapter Deletion
               </h3>
             </div>

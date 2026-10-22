@@ -10,7 +10,8 @@ import {
   ArrowRight,
   Library,
   Settings,
-  Sparkles,
+  Shield,
+  Compass,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { db, schema, isDatabaseConfigured } from '@/db';
@@ -133,7 +134,7 @@ export default async function ReaderDashboardPage() {
           </Link>
           {user.role === 'admin' && (
             <Link href="/admin" className="btn btn-primary btn-sm">
-              <Sparkles size={16} />
+              <Shield size={16} />
               <span>Admin Dashboard</span>
             </Link>
           )}
@@ -301,7 +302,7 @@ export default async function ReaderDashboardPage() {
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              <Sparkles size={20} color="var(--color-brand-cyan)" />
+              <Compass size={20} color="var(--color-brand-blue)" />
               <span>Recommended Start</span>
             </h2>
           </div>

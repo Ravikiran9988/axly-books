@@ -659,7 +659,7 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
           <div className={styles.modalContent} style={{ maxWidth: '480px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--status-error)' }}>
               <AlertTriangle size={24} />
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Confirm Book Deletion
               </h3>
             </div>
