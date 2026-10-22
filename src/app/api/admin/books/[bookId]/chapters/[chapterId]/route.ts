@@ -48,6 +48,14 @@ export async function PUT(
 
   try {
     const { chapterId } = await params;
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
+    }
+
     const body = await request.json();
     const parseResult = chapterUpdateSchema.safeParse(body);
     if (!parseResult.success) {
@@ -164,6 +172,13 @@ export async function DELETE(
 
   try {
     const { chapterId } = await params;
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
+    }
 
     if (isDatabaseConfigured() && db) {
       const existing = await db
