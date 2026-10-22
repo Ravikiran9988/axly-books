@@ -154,14 +154,15 @@
 }
 
 .toolBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-brand-cyan);
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--color-brand-blue);
+  border-color: var(--color-brand-blue);
 }
 
 .toolBtnActive {
-  background: var(--color-brand-glow);
-  color: var(--color-brand-cyan);
-  border-color: var(--color-brand-cyan);
+  background: #eff6ff;
+  color: var(--color-brand-blue);
+  border-color: var(--color-brand-blue);
 }
 
 /* Reading Progress Bar at Top */
@@ -176,7 +177,7 @@
 
 .progressBarFillTop {
   height: 100%;
-  background: var(--color-brand-cyan);
+  background: var(--color-brand-blue);
   transition: width 150ms ease-out;
 }
 
@@ -245,7 +246,7 @@
 }
 
 .themeBtnActive {
-  outline: 2px solid var(--color-brand-cyan);
+  outline: 2px solid var(--color-brand-blue);
   outline-offset: 1px;
 }
 
@@ -258,7 +259,7 @@
 .slider {
   flex: 1;
   cursor: pointer;
-  accent-color: var(--color-brand-cyan);
+  accent-color: var(--color-brand-blue);
 }
 
 .fontSelector {
@@ -279,9 +280,9 @@
 }
 
 .fontBtnActive {
-  background: var(--color-brand-glow);
-  color: var(--color-brand-cyan);
-  border-color: var(--color-brand-cyan);
+  background: #eff6ff;
+  color: var(--color-brand-blue);
+  border-color: var(--color-brand-blue);
 }
 
 /* Sidebar TOC Drawer */
@@ -353,8 +354,8 @@
 }
 
 .tocItemCurrent {
-  background: var(--color-brand-glow);
-  color: var(--color-brand-cyan);
+  background: #eff6ff;
+  color: var(--color-brand-blue);
   font-weight: 600;
 }
 
@@ -491,9 +492,9 @@
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--reader-surface);
-  border: 1px solid var(--color-brand-cyan);
-  box-shadow: var(--shadow-lg), 0 0 15px rgba(56, 189, 248, 0.2);
+  background: #0f172a;
+  border: 1px solid #334155;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
   padding: 0.75rem 1.25rem;
   border-radius: var(--radius-full);
   display: flex;
@@ -501,8 +502,10 @@
   gap: 0.6rem;
   color: #ffffff;
   font-size: 0.88rem;
+  font-weight: 500;
   z-index: 100;
   animation: popUp 200ms ease-out;
+  max-width: 90vw;
 }
 
 @keyframes popUp {
@@ -515,3 +518,39 @@
     transform: translate(-50%, 0);
   }
 }
+
+@media (max-width: 640px) {
+  .topToolbar {
+    padding: 0.6rem 0.75rem;
+    gap: 0.5rem;
+  }
+  .toolbarBookTitle {
+    max-width: 140px;
+    font-size: 0.85rem;
+  }
+  .settingsPanel {
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    max-width: calc(100vw - 1rem);
+    top: calc(100% + 4px);
+  }
+  .mainArticle {
+    padding: 2rem 1rem 4rem;
+  }
+  .bottomNav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .navPrev, .navNext {
+    justify-content: center;
+    width: 100%;
+    padding: 0.85rem 1rem;
+  }
+  .tocDrawer {
+    width: 100%;
+    max-width: 100vw;
+  }
+}
+

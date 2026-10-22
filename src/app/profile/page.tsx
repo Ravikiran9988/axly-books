@@ -151,7 +151,7 @@ export default function ProfilePage() {
       {/* Reading Preferences Card */}
       <div className={styles.cardSection}>
         <h2 className={styles.cardTitle}>
-          <Sliders size={20} color="var(--color-brand-cyan)" />
+          <Sliders size={20} color="var(--color-brand-blue)" />
           <span>Reading Environment Defaults</span>
         </h2>
 

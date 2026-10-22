@@ -255,3 +255,17 @@
     gap: 2.5rem;
   }
 }
+
+@media (max-width: 640px) {
+  .linksBar {
+    flex-direction: column;
+    width: 100%;
+  }
+  .linksBar > * {
+    width: 100%;
+    justify-content: center;
+  }
+  .philosophyGrid {
+    grid-template-columns: 1fr;
+  }
+}

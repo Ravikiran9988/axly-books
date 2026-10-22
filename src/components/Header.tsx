@@ -243,7 +243,7 @@ export default function Header({ onOpenSearch }: HeaderProps) {
                     href="/admin"
                     className={styles.mobileNavLink}
                     onClick={() => setMobileMenuOpen(false)}
-                    style={{ color: 'var(--color-brand-cyan)', fontWeight: 600 }}
+                    style={{ color: 'var(--color-brand-blue)', fontWeight: 600 }}
                   >
                     Admin CMS
                   </Link>
