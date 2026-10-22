@@ -262,7 +262,7 @@ async function runTests() {
       // Remove database configuration just for this check. checkRateLimitAsync
       // must reject sensitive requests instead of using an instance-local limiter.
       delete process.env.DATABASE_URL;
-      process.env.NODE_ENV = 'production';
+      Object.defineProperty(process.env, 'NODE_ENV', { value: 'production', configurable: true, writable: true });
 
       const unavailable = await checkRateLimitAsync('test-production-limiter-unavailable', 5, 60_000);
       assert.strictEqual(unavailable.isAllowed, false, 'Limiter failure must not allow a production request');
@@ -271,8 +271,8 @@ async function runTests() {
 
       console.log('  ✔ Production fails closed when the shared rate-limit database is not configured.');
     } finally {
-      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
-      else process.env.NODE_ENV = previousNodeEnv;
+      if (previousNodeEnv === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
+      else Object.defineProperty(process.env, 'NODE_ENV', { value: previousNodeEnv, configurable: true, writable: true });
 
       if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
       else process.env.DATABASE_URL = previousDatabaseUrl;
