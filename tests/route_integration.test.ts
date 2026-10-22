@@ -423,15 +423,15 @@ async function runRealRouteIntegrationTests() {
       try {
         delete process.env.RESEND_API_KEY;
         delete process.env.DATABASE_URL;
-        process.env.NODE_ENV = 'development';
+        Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, writable: true });
         return await forgotPasswordHandler(forgotReq);
       } finally {
         if (previousResendKey === undefined) delete process.env.RESEND_API_KEY;
         else process.env.RESEND_API_KEY = previousResendKey;
         if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
         else process.env.DATABASE_URL = previousDatabaseUrl;
-        if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
-        else process.env.NODE_ENV = previousNodeEnv;
+        if (previousNodeEnv === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
+        else Object.defineProperty(process.env, 'NODE_ENV', { value: previousNodeEnv, configurable: true, writable: true });
       }
     })();
     assert.strictEqual(forgotRes.status, 202, 'Forgot password request must return generic 202 Accepted');
@@ -469,7 +469,7 @@ async function runRealRouteIntegrationTests() {
     const existingResetHashes = [...inMemoryStore.resets.keys()].sort();
 
     try {
-      process.env.NODE_ENV = 'development';
+      Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, writable: true });
       delete process.env.DATABASE_URL;
       process.env.RESEND_API_KEY = 're_test_provider_failure';
       process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
@@ -491,8 +491,8 @@ async function runRealRouteIntegrationTests() {
       console.log('  ✔ Resend non-2xx response is checked; undelivered token is invalidated without account enumeration.');
     } finally {
       globalThis.fetch = originalFetch;
-      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
-      else process.env.NODE_ENV = previousNodeEnv;
+      if (previousNodeEnv === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
+      else Object.defineProperty(process.env, 'NODE_ENV', { value: previousNodeEnv, configurable: true, writable: true });
       if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
       else process.env.DATABASE_URL = previousDatabaseUrl;
       if (previousResendKey === undefined) delete process.env.RESEND_API_KEY;
