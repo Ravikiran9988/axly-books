@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const sort = searchParams.get('sort') || 'recent';
 
     // Check if requesting user is an administrator
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(request);
     const isAdmin = user?.role === 'admin';
 
     let booksList: Array<{

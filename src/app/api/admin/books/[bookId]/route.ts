@@ -3,6 +3,7 @@ import { eq, or, asc } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 import { bookUpdateSchema } from '@/lib/validations';
+import { PUBLISHED_BOOKS } from '@/data/booksData';
 
 export async function GET(
   request: Request,
@@ -15,6 +16,13 @@ export async function GET(
 
   try {
     const { bookId } = await params;
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
+    }
 
     if (isDatabaseConfigured() && db) {
       const records = await db
@@ -43,7 +51,15 @@ export async function GET(
       });
     }
 
-    return NextResponse.json({ error: 'Database required.' }, { status: 503 });
+    const fallbackBook = PUBLISHED_BOOKS.find((b) => b.id === bookId || b.slug === bookId);
+    if (!fallbackBook) {
+      return NextResponse.json({ error: 'Book not found.' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      book: fallbackBook,
+    });
   } catch (err: unknown) {
     console.error('Admin get book error:', err);
     return NextResponse.json({ error: 'Failed to retrieve book.' }, { status: 500 });

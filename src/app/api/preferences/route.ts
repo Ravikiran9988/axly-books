@@ -22,9 +22,9 @@ const DEFAULT_PREFERENCES: PreferencesData = {
 
 const inMemoryPreferences = new Map<string, PreferencesData>();
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ preferences: DEFAULT_PREFERENCES });
     }
@@ -67,7 +67,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

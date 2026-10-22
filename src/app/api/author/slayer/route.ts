@@ -69,7 +69,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(request);
     // Author profile management is restricted to the administrator
     if (!user || user.role !== 'admin') {
       return NextResponse.json(

@@ -5,12 +5,12 @@ import { getBookBySlug } from '@/data/booksData';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const { slug } = await params;
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(request);
     const isAdmin = user?.role === 'admin';
 
     if (isDatabaseConfigured() && db) {
