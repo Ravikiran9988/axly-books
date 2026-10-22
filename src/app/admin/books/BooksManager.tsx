@@ -16,6 +16,7 @@ import {
   Lock,
   X,
   AlertTriangle,
+  Upload,
 } from 'lucide-react';
 import styles from '../admin.module.css';
 
@@ -52,6 +53,37 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
   const [editingBook, setEditingBook] = useState<BookItem | null>(null);
   const [deletingBook, setDeletingBook] = useState<BookItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const data = new FormData();
+      data.append('file', file);
+
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: data,
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        showToast('error', json.error || 'Failed to upload image.');
+        return;
+      }
+
+      setFormData((prev) => ({ ...prev, coverImageUrl: json.url }));
+      showToast('success', 'Cover image uploaded and URL updated successfully!');
+    } catch {
+      showToast('error', 'Network error during file upload.');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -515,16 +547,40 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
 
                 <div className={`form-group ${styles.formFull}`}>
                   <label className="form-label">Cover Image URL *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.coverImageUrl}
-                    onChange={(e) => setFormData({ ...formData, coverImageUrl: e.target.value })}
-                    placeholder="/images/ml-deep-learning-cover.jpg or https://..."
-                    className="form-input"
-                  />
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      required
+                      value={formData.coverImageUrl}
+                      onChange={(e) => setFormData({ ...formData, coverImageUrl: e.target.value })}
+                      placeholder="/images/ml-deep-learning-cover.jpg or https://..."
+                      className="form-input"
+                      style={{ flex: 1 }}
+                    />
+                    <label
+                      className="btn btn-secondary btn-sm"
+                      style={{
+                        cursor: isUploading ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        margin: 0,
+                      }}
+                    >
+                      <Upload size={14} />
+                      <span>{isUploading ? 'Uploading...' : 'Upload File'}</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleFileUpload}
+                        disabled={isUploading}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                  </div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
-                    Tip: Enter an HTTPS link or local image path in public folder.
+                    Enter an HTTPS link/local path, or click &ldquo;Upload File&rdquo; to store in Vercel Blob (JPEG, PNG, WebP up to 5MB).
                   </span>
                 </div>
 

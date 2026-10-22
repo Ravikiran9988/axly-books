@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
+    "@vercel/blob": "^2.8.2",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.4",
     "lucide-react": "^1.61.0",
