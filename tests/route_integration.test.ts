@@ -415,7 +415,25 @@ async function runRealRouteIntegrationTests() {
     const forgotReq = createJsonRequest('http://localhost:3000/api/auth/forgot-password', 'POST', {
       email: readerEmail,
     });
-    const forgotRes = await forgotPasswordHandler(forgotReq);
+    // Keep tests hermetic even if a developer has a real Resend key in their shell.
+    const forgotRes = await (async () => {
+      const previousResendKey = process.env.RESEND_API_KEY;
+      const previousDatabaseUrl = process.env.DATABASE_URL;
+      const previousNodeEnv = process.env.NODE_ENV;
+      try {
+        delete process.env.RESEND_API_KEY;
+        delete process.env.DATABASE_URL;
+        process.env.NODE_ENV = 'development';
+        return await forgotPasswordHandler(forgotReq);
+      } finally {
+        if (previousResendKey === undefined) delete process.env.RESEND_API_KEY;
+        else process.env.RESEND_API_KEY = previousResendKey;
+        if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+        else process.env.DATABASE_URL = previousDatabaseUrl;
+        if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = previousNodeEnv;
+      }
+    })();
     assert.strictEqual(forgotRes.status, 202, 'Forgot password request must return generic 202 Accepted');
     const forgotData = await forgotRes.json();
     assert.strictEqual(forgotData.requestAccepted, true, 'Request acceptance must be distinct from email delivery');
