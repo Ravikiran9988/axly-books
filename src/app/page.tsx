@@ -7,7 +7,6 @@ import {
   Bookmark,
   Sliders,
   CheckCircle2,
-  Sparkles,
   ExternalLink,
   Code2,
 } from 'lucide-react';
