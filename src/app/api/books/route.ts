@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -9,12 +11,64 @@ export async function GET(request: Request) {
     const category = searchParams.get('category');
     const sort = searchParams.get('sort') || 'recent';
 
-    let booksList: any[] = [];
+    // Check if requesting user is an administrator
+    const user = await getCurrentUser();
+    const isAdmin = user?.role === 'admin';
+
+    let booksList: Array<{
+      id: string;
+      slug: string;
+      title: string;
+      subtitle: string;
+      description: string;
+      synopsis?: string;
+      authorName?: string;
+      coverImageUrl: string;
+      category: string;
+      tags: string[];
+      edition: string;
+      publishedYear: number;
+      status: string;
+      isFree: boolean;
+      isPublished: boolean;
+      totalChapters: number;
+      estimatedReadingTimeMinutes: number;
+      allowPdfDownload: boolean;
+    }> = [];
 
     if (isDatabaseConfigured() && db) {
-      booksList = await db.select().from(schema.books);
+      if (isAdmin) {
+        // Admin can request all books
+        booksList = await db.select().from(schema.books);
+      } else {
+        // Public and normal readers only see published books
+        booksList = await db
+          .select()
+          .from(schema.books)
+          .where(eq(schema.books.isPublished, true));
+      }
     } else {
-      booksList = [...PUBLISHED_BOOKS];
+      // In-memory / data fallback
+      booksList = PUBLISHED_BOOKS.map((b) => ({
+        id: b.id,
+        slug: b.slug,
+        title: b.title,
+        subtitle: b.subtitle,
+        description: b.description,
+        synopsis: b.synopsis,
+        authorName: b.author,
+        coverImageUrl: b.coverImage,
+        category: b.category,
+        tags: b.tags,
+        edition: b.edition,
+        publishedYear: b.publishedYear,
+        status: b.publicationStatus,
+        isFree: b.isFree,
+        isPublished: b.isPublished ?? true,
+        totalChapters: b.totalChapters,
+        estimatedReadingTimeMinutes: b.estimatedReadingTimeMinutes,
+        allowPdfDownload: b.allowPdfDownload,
+      })).filter((b) => (isAdmin ? true : b.isPublished));
     }
 
     // Apply filtering
@@ -46,9 +100,17 @@ export async function GET(request: Request) {
       books: booksList,
       count: booksList.length,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'digest' in err) {
+      throw err;
+    }
     console.error('Fetch books error:', err);
-    // Graceful fallback to verified fixtures
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'An unexpected error occurred while loading books.' },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({
       success: true,
       books: PUBLISHED_BOOKS,

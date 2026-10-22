@@ -1,8 +1,10 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { eq, and, gt } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
+import { UserRole } from '@/types/user';
 
 export const SESSION_COOKIE_NAME = 'axly_session';
 export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
@@ -11,14 +13,27 @@ export interface AuthenticatedUser {
   id: string;
   displayName: string;
   email: string;
-  role: string;
+  role: UserRole;
   createdAt: Date;
 }
 
-// In-memory fallback session and user store when DATABASE_URL is not yet configured
-const inMemoryUsers = new Map<string, any>();
+export interface InMemoryUserRecord {
+  id: string;
+  displayName: string;
+  email: string;
+  passwordHash: string;
+  role: UserRole;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+// In-memory fallback session and user store for local unit testing and development when DATABASE_URL is unconfigured
+const inMemoryUsers = new Map<string, InMemoryUserRecord>();
 const inMemorySessions = new Map<string, { userId: string; expiresAt: Date }>();
-const inMemoryPasswordResets = new Map<string, { userId: string; expiresAt: Date; used: boolean }>();
+const inMemoryPasswordResets = new Map<
+  string,
+  { userId: string; expiresAt: Date; used: boolean }
+>();
 
 export function hashToken(rawToken: string): string {
   return crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -53,7 +68,11 @@ export async function createSession(userId: string): Promise<string> {
       expiresAt,
     });
   } else {
-    // In-memory fallback for local development without DB configured
+    // In production, persistent storage is strictly required
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Database is not configured. Sessions cannot be persisted in production.');
+    }
+    // In-memory fallback for local tests/development
     inMemorySessions.set(tokenHash, { userId, expiresAt });
   }
 
@@ -82,15 +101,18 @@ export async function validateSessionToken(rawToken: string): Promise<Authentica
     if (matching.length === 0) return null;
 
     const u = matching[0].user;
+    const role: UserRole = u.role === 'admin' ? 'admin' : 'reader';
     return {
       id: u.id,
       displayName: u.displayName,
       email: u.email,
-      role: u.role,
+      role,
       createdAt: u.createdAt,
     };
   } else {
-    // In-memory fallback
+    if (process.env.NODE_ENV === 'production') {
+      return null;
+    }
     const session = inMemorySessions.get(tokenHash);
     if (!session || session.expiresAt <= now) return null;
     const user = inMemoryUsers.get(session.userId);
@@ -100,7 +122,7 @@ export async function validateSessionToken(rawToken: string): Promise<Authentica
       id: user.id,
       displayName: user.displayName,
       email: user.email,
-      role: user.role || 'reader',
+      role: user.role === 'admin' ? 'admin' : 'reader',
       createdAt: user.createdAt,
     };
   }
@@ -115,14 +137,14 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
     const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
     if (!sessionCookie?.value) return null;
 
-    return validateSessionToken(sessionCookie.value);
-  } catch (err) {
+    return await validateSessionToken(sessionCookie.value);
+  } catch {
     return null;
   }
 }
 
 /**
- * Destroys a session, invalidating the session token.
+ * Destroys a session on the server, invalidating the session token.
  */
 export async function destroySession(rawToken: string): Promise<void> {
   if (!rawToken) return;
@@ -135,7 +157,66 @@ export async function destroySession(rawToken: string): Promise<void> {
   }
 }
 
-// Helpers for in-memory mock store access
+/**
+ * Reusable server-side helper to require an authenticated user.
+ * Returns either `{ user }` or `{ errorResponse }` with HTTP 401.
+ */
+export async function requireAuth(): Promise<
+  { user: AuthenticatedUser } | { errorResponse: NextResponse }
+> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return {
+      errorResponse: NextResponse.json(
+        { error: 'Authentication required. Please log in to proceed.' },
+        { status: 401 }
+      ),
+    };
+  }
+  return { user };
+}
+
+/**
+ * Reusable server-side helper to require an administrator role.
+ * Returns either `{ user }` or `{ errorResponse }` with HTTP 401 or HTTP 403.
+ */
+export async function requireAdmin(): Promise<
+  { user: AuthenticatedUser } | { errorResponse: NextResponse }
+> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return {
+      errorResponse: NextResponse.json(
+        { error: 'Authentication required. Please log in with administrator credentials.' },
+        { status: 401 }
+      ),
+    };
+  }
+  if (user.role !== 'admin') {
+    return {
+      errorResponse: NextResponse.json(
+        { error: 'Forbidden: Administrator privileges are required to perform this action.' },
+        { status: 403 }
+      ),
+    };
+  }
+  return { user };
+}
+
+/**
+ * Verifies that the requesting user owns the specific record,
+ * or possesses the administrator role for override privileges.
+ */
+export function assertRecordOwnership(
+  resourceOwnerId: string,
+  requestingUserId: string,
+  requestingUserRole?: UserRole
+): boolean {
+  if (requestingUserRole === 'admin') return true;
+  return resourceOwnerId === requestingUserId;
+}
+
+// Helpers for test suite and development mock store access
 export const inMemoryStore = {
   users: inMemoryUsers,
   sessions: inMemorySessions,

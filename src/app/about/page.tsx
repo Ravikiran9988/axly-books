@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { BookOpen, Sparkles, Navigation, BookmarkCheck, HeartHandshake, ArrowRight } from 'lucide-react';
+import { BookOpen, Navigation, BookmarkCheck, HeartHandshake, ArrowRight } from 'lucide-react';
 import styles from './about.module.css';
 
 export const metadata = {

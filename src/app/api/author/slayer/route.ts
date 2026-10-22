@@ -61,7 +61,7 @@ export async function GET() {
     }
 
     return NextResponse.json({ success: true, author: inMemoryAuthor });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Fetch author error:', err);
     return NextResponse.json({ success: true, author: inMemoryAuthor });
   }
@@ -70,10 +70,10 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const user = await getCurrentUser();
-    // Author profile management is restricted to authorized role or author account
-    if (!user || user.role !== 'author') {
+    // Author profile management is restricted to the administrator
+    if (!user || user.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Forbidden: Author privileges required to modify public biography.' },
+        { error: 'Forbidden: Administrator privileges required to modify author biography.' },
         { status: 403 }
       );
     }
@@ -99,7 +99,7 @@ export async function PUT(request: Request) {
     }
 
     return NextResponse.json({ success: true, author: { ...inMemoryAuthor, ...updates } });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Update author error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred while saving author profile.' },

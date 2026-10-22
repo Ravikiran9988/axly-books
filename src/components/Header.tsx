@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Search, User, LogIn, LogOut, Menu, X, ChevronDown, BookmarkCheck } from 'lucide-react';
+import { Search, User, LogIn, LogOut, Menu, X, ChevronDown, BookmarkCheck, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { AuthState } from '@/types/user';
 import styles from './Header.module.css';
@@ -127,6 +127,27 @@ export default function Header({ onOpenSearch }: HeaderProps) {
 
               {dropdownOpen && (
                 <div className={styles.userDropdown} role="menu">
+                  {authState.user.role === 'admin' && (
+                    <Link
+                      href="/admin"
+                      className={styles.dropdownItem}
+                      onClick={() => setDropdownOpen(false)}
+                      role="menuitem"
+                      style={{ color: 'var(--color-brand-cyan)' }}
+                    >
+                      <ShieldCheck size={16} />
+                      <span>Admin CMS</span>
+                    </Link>
+                  )}
+                  <Link
+                    href="/dashboard"
+                    className={styles.dropdownItem}
+                    onClick={() => setDropdownOpen(false)}
+                    role="menuitem"
+                  >
+                    <LayoutDashboard size={16} />
+                    <span>Reader Dashboard</span>
+                  </Link>
                   <Link
                     href="/my-library"
                     className={styles.dropdownItem}
@@ -217,6 +238,23 @@ export default function Header({ onOpenSearch }: HeaderProps) {
             </Link>
             {authState.isAuthenticated && (
               <>
+                {authState.user?.role === 'admin' && (
+                  <Link
+                    href="/admin"
+                    className={styles.mobileNavLink}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{ color: 'var(--color-brand-cyan)', fontWeight: 600 }}
+                  >
+                    Admin CMS
+                  </Link>
+                )}
+                <Link
+                  href="/dashboard"
+                  className={styles.mobileNavLink}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Reader Dashboard
+                </Link>
                 <Link
                   href="/my-library"
                   className={styles.mobileNavLink}

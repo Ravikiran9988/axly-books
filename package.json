@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit push",
     "db:seed": "tsx src/db/seed.ts",
+    "admin:promote": "tsx scripts/promoteAdmin.ts",
     "test": "tsx tests/phase2.test.ts && tsx tests/e2e_integration.test.ts",
     "test:e2e": "tsx tests/e2e_integration.test.ts"
   },

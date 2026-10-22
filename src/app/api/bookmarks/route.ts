@@ -5,13 +5,32 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { getCurrentUser } from '@/lib/auth';
 import { bookmarkCreateSchema } from '@/lib/validations';
 
-const inMemoryBookmarks = new Map<string, any[]>();
+interface StoredBookmarkItem {
+  id: string;
+  bookSlug: string;
+  bookTitle: string;
+  chapterNumber: number;
+  chapterSlug: string;
+  chapterTitle: string;
+  anchor?: string | null;
+  note?: string | null;
+  createdAt: number;
+}
+
+const inMemoryBookmarks = new Map<string, StoredBookmarkItem[]>();
 
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -50,11 +69,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, bookmarks });
     }
 
-    // In-memory fallback
+    // In-memory fallback for local development
     const list = inMemoryBookmarks.get(user.id) || [];
     const filtered = bookSlug ? list.filter((b) => b.bookSlug === bookSlug) : list;
     return NextResponse.json({ success: true, bookmarks: filtered });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Fetch bookmarks error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred while loading bookmarks.' },
@@ -68,6 +87,13 @@ export async function POST(request: Request) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
     }
 
     const body = await request.json();
@@ -142,15 +168,15 @@ export async function POST(request: Request) {
     // In-memory fallback
     const list = inMemoryBookmarks.get(user.id) || [];
     const bookmarkId = `bm_${crypto.randomUUID()}`;
-    const newBookmark = {
+    const newBookmark: StoredBookmarkItem = {
       id: bookmarkId,
       bookSlug,
       bookTitle: body.bookTitle || bookSlug,
       chapterNumber: body.chapterNumber || 1,
       chapterSlug,
       chapterTitle: body.chapterTitle || `Chapter ${body.chapterNumber || 1}`,
-      anchor,
-      note,
+      anchor: anchor || null,
+      note: note || null,
       createdAt: now.getTime(),
     };
 
@@ -158,7 +184,7 @@ export async function POST(request: Request) {
     inMemoryBookmarks.set(user.id, list);
 
     return NextResponse.json({ success: true, bookmark: newBookmark }, { status: 201 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Create bookmark error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred while adding bookmark.' },
@@ -172,6 +198,13 @@ export async function DELETE(request: Request) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -197,13 +230,19 @@ export async function DELETE(request: Request) {
           .where(eq(schema.books.slug, bookSlug))
           .limit(1);
 
-        const chapterRecords = bookRecords.length > 0
-          ? await db
-              .select({ id: schema.chapters.id })
-              .from(schema.chapters)
-              .where(and(eq(schema.chapters.bookId, bookRecords[0].id), eq(schema.chapters.slug, chapterSlug)))
-              .limit(1)
-          : [];
+        const chapterRecords =
+          bookRecords.length > 0
+            ? await db
+                .select({ id: schema.chapters.id })
+                .from(schema.chapters)
+                .where(
+                  and(
+                    eq(schema.chapters.bookId, bookRecords[0].id),
+                    eq(schema.chapters.slug, chapterSlug)
+                  )
+                )
+                .limit(1)
+            : [];
 
         if (chapterRecords.length > 0) {
           await db
@@ -231,7 +270,7 @@ export async function DELETE(request: Request) {
     inMemoryBookmarks.set(user.id, updated);
 
     return NextResponse.json({ success: true, message: 'Bookmark removed.' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Delete bookmark error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred while deleting bookmark.' },

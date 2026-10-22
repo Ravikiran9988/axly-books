@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Search, X, BookOpen, FileText } from 'lucide-react';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import styles from './SearchModal.module.css';
@@ -15,7 +14,6 @@ interface SearchModalProps {
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
 
   useEffect(() => {
     if (isOpen) {

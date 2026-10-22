@@ -14,12 +14,11 @@ interface BookCardProps {
 }
 
 export default function BookCard({ book }: BookCardProps) {
-  const [progress, setProgress] = useState<ReadingProgress | null>(null);
+  const [progress, setProgress] = useState<ReadingProgress | null>(() => {
+    return typeof window !== 'undefined' ? progressService.getProgress(book.slug) : null;
+  });
 
   useEffect(() => {
-    const p = progressService.getProgress(book.slug);
-    setProgress(p);
-
     const unsubscribe = progressService.subscribe(() => {
       setProgress(progressService.getProgress(book.slug));
     });

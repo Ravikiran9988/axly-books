@@ -4,16 +4,30 @@ import { eq, and } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { getCurrentUser } from '@/lib/auth';
 import { progressUpdateSchema } from '@/lib/validations';
-import { getBookBySlug } from '@/data/booksData';
+
+interface StoredProgressItem {
+  bookSlug: string;
+  lastChapterNumber: number;
+  lastChapterSlug: string;
+  percentComplete: number;
+  lastReadTimestamp: number;
+}
 
 // In-memory progress store for unconfigured database development
-const inMemoryProgress = new Map<string, any>();
+const inMemoryProgress = new Map<string, Record<string, StoredProgressItem>>();
 
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -64,7 +78,7 @@ export async function GET(request: Request) {
           .innerJoin(schema.chapters, eq(schema.readingProgress.chapterId, schema.chapters.id))
           .where(eq(schema.readingProgress.userId, user.id));
 
-        const result: Record<string, any> = {};
+        const result: Record<string, StoredProgressItem> = {};
         records.forEach((r) => {
           result[r.book.slug] = {
             bookSlug: r.book.slug,
@@ -85,7 +99,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ progress: userProgress[bookSlug] || null });
     }
     return NextResponse.json({ progress: userProgress });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Fetch progress error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred while loading reading progress.' },
@@ -99,6 +113,13 @@ export async function POST(request: Request) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
     }
 
     const body = await request.json();
@@ -138,7 +159,7 @@ export async function POST(request: Request) {
       }
       const chapter = chapterRecords[0];
 
-      // Upsert progress record for (userId, bookId)
+      // Upsert progress record for (userId, bookId) enforcing single-record model
       await db
         .insert(schema.readingProgress)
         .values({
@@ -177,7 +198,7 @@ export async function POST(request: Request) {
 
     // In-memory fallback
     const userProgress = inMemoryProgress.get(user.id) || {};
-    const updatedRecord = {
+    const updatedRecord: StoredProgressItem = {
       bookSlug,
       lastChapterNumber: chapterNumber,
       lastChapterSlug: chapterSlug,
@@ -191,7 +212,7 @@ export async function POST(request: Request) {
       success: true,
       progress: updatedRecord,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Update progress error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred while saving reading progress.' },

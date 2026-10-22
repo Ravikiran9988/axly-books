@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, LogIn, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { authService } from '@/services/authService';
 import styles from '../auth.module.css';
 

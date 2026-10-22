@@ -4,7 +4,15 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { getCurrentUser } from '@/lib/auth';
 import { preferencesUpdateSchema } from '@/lib/validations';
 
-const DEFAULT_PREFERENCES = {
+interface PreferencesData {
+  fontSize: number;
+  lineHeight: number;
+  readingTheme: string;
+  fontFamily: string;
+  distractionFree: boolean;
+}
+
+const DEFAULT_PREFERENCES: PreferencesData = {
   fontSize: 18,
   lineHeight: 1.75,
   readingTheme: 'dark',
@@ -12,13 +20,20 @@ const DEFAULT_PREFERENCES = {
   distractionFree: false,
 };
 
-const inMemoryPreferences = new Map<string, any>();
+const inMemoryPreferences = new Map<string, PreferencesData>();
 
 export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ preferences: DEFAULT_PREFERENCES });
+    }
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
     }
 
     if (isDatabaseConfigured() && db) {
@@ -44,7 +59,7 @@ export async function GET() {
 
     const fallback = inMemoryPreferences.get(user.id) || DEFAULT_PREFERENCES;
     return NextResponse.json({ preferences: fallback });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Fetch preferences error:', err);
     return NextResponse.json({ preferences: DEFAULT_PREFERENCES });
   }
@@ -55,6 +70,13 @@ export async function PUT(request: Request) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured.' },
+        { status: 503 }
+      );
     }
 
     const body = await request.json();
@@ -88,7 +110,9 @@ export async function PUT(request: Request) {
             ...(updates.lineHeight !== undefined && { lineHeight: updates.lineHeight }),
             ...(updates.readingTheme !== undefined && { readingTheme: updates.readingTheme }),
             ...(updates.fontFamily !== undefined && { fontFamily: updates.fontFamily }),
-            ...(updates.distractionFree !== undefined && { distractionFree: updates.distractionFree }),
+            ...(updates.distractionFree !== undefined && {
+              distractionFree: updates.distractionFree,
+            }),
             updatedAt: now,
           },
         });
@@ -98,11 +122,17 @@ export async function PUT(request: Request) {
 
     // In-memory fallback
     const current = inMemoryPreferences.get(user.id) || DEFAULT_PREFERENCES;
-    const next = { ...current, ...updates };
+    const next: PreferencesData = {
+      fontSize: updates.fontSize ?? current.fontSize,
+      lineHeight: updates.lineHeight ?? current.lineHeight,
+      readingTheme: updates.readingTheme ?? current.readingTheme,
+      fontFamily: updates.fontFamily ?? current.fontFamily,
+      distractionFree: updates.distractionFree ?? current.distractionFree,
+    };
     inMemoryPreferences.set(user.id, next);
 
     return NextResponse.json({ success: true, preferences: next });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Update preferences error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred while saving reading preferences.' },

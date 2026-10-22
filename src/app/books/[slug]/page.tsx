@@ -2,16 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import {
-  BookOpen,
-  Clock,
-  Calendar,
-  Layers,
-  ArrowRight,
-  ShieldCheck,
-  ChevronRight,
-  Sparkles,
-} from 'lucide-react';
+import { Clock, ChevronRight } from 'lucide-react';
 import { bookService } from '@/services/bookService';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import BookActions from './BookActions';

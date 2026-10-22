@@ -18,7 +18,7 @@ export async function GET() {
         createdAt: user.createdAt.toISOString(),
       },
     });
-  } catch (err: any) {
+  } catch {
     return NextResponse.json({ user: null });
   }
 }

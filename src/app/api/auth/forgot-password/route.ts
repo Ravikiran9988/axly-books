@@ -4,15 +4,17 @@ import { eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { forgotPasswordSchema } from '@/lib/validations';
 import { hashToken, generateSecureToken, inMemoryStore } from '@/lib/auth';
-import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request.headers);
-    const rateCheck = checkRateLimit(`forgot_pw_${ip}`, 5, 15 * 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`forgot_pw_${ip}`, 5, 15 * 60 * 1000);
     if (!rateCheck.isAllowed) {
       return NextResponse.json(
-        { error: `Too many password reset requests. Please try again in ${rateCheck.retryAfterSeconds} seconds.` },
+        {
+          error: `Too many password reset requests. Please try again in ${rateCheck.retryAfterSeconds} seconds.`,
+        },
         { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
       );
     }
@@ -28,6 +30,19 @@ export async function POST(request: Request) {
 
     const { email } = parseResult.data;
     const normalizedEmail = email.toLowerCase().trim();
+
+    // In production, check if an email provider (e.g. Resend) is configured
+    const isEmailConfigured = Boolean(process.env.RESEND_API_KEY || process.env.SMTP_HOST);
+
+    if (process.env.NODE_ENV === 'production' && !isEmailConfigured) {
+      return NextResponse.json(
+        {
+          error:
+            'Password recovery email delivery is currently not configured on this server. Please contact author Slayer at ravikiran@axly.in for password recovery assistance.',
+        },
+        { status: 503 }
+      );
+    }
 
     let userId: string | null = null;
 
@@ -70,16 +85,44 @@ export async function POST(request: Request) {
         });
       }
 
-      // Note: In production Phase 2 with transactional email provider (e.g. Resend / SendGrid),
-      // the link with rawResetToken is emailed to the reader.
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const resetUrl = `${appUrl}/reset-password?token=${rawResetToken}`;
+
+      if (isEmailConfigured && process.env.RESEND_API_KEY) {
+        try {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: process.env.EMAIL_FROM || 'AXLY Books <onboarding@resend.dev>',
+              to: [normalizedEmail],
+              subject: 'Reset your AXLY Books Password',
+              html: `<p>Hello,</p><p>We received a request to reset your password on AXLY Books.</p><p><a href="${resetUrl}">Click here to reset your password</a></p><p>This link is valid for 1 hour. If you did not request this, please ignore this email.</p>`,
+            }),
+          });
+        } catch (emailErr) {
+          console.error('Failed to dispatch reset email via provider:', emailErr);
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        // In local development, print link to console for immediate developer access
+        console.log(`\n🔑 [DEV ONLY] Password reset link for ${normalizedEmail}:`);
+        console.log(`   ${resetUrl}\n`);
+      }
     }
 
-    // Always return safe, generic message to prevent account enumeration
+    // Honest messaging
+    const message = isEmailConfigured
+      ? 'If an account exists with this email address, password recovery instructions have been dispatched.'
+      : 'Password recovery request registered. (Development notice: email provider is not configured; check server console for reset link).';
+
     return NextResponse.json({
       success: true,
-      message: 'If an account exists with this email address, password recovery instructions have been dispatched.',
+      message,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Password reset request error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred while processing your request.' },

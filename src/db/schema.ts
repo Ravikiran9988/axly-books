@@ -84,6 +84,7 @@ export const books = pgTable('books', {
   publishedYear: integer('published_year').default(2026).notNull(),
   status: text('status').default('Available Free').notNull(),
   isFree: boolean('is_free').default(true).notNull(),
+  isPublished: boolean('is_published').default(true).notNull(),
   totalChapters: integer('total_chapters').default(0).notNull(),
   estimatedReadingTimeMinutes: integer('estimated_reading_time_minutes').default(0).notNull(),
   allowPdfDownload: boolean('allow_pdf_download').default(false).notNull(),
@@ -114,6 +115,7 @@ export const chapters = pgTable(
       >()
       .notNull(),
     estimatedReadingTimeMinutes: integer('estimated_reading_time_minutes').default(0).notNull(),
+    isPublished: boolean('is_published').default(true).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -122,6 +124,14 @@ export const chapters = pgTable(
     uniqueIndex('book_chapter_slug_idx').on(table.bookId, table.slug),
   ]
 );
+
+// --- Rate Limits Table (Shared Multi-Instance Persistence) ---
+export const rateLimits = pgTable('rate_limits', {
+  key: text('key').primaryKey(),
+  count: integer('count').default(1).notNull(),
+  resetAt: timestamp('reset_at', { withTimezone: true }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
 
 // --- Reading Progress Table ---
 export const readingProgress = pgTable(

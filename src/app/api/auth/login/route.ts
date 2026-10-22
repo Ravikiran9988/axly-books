@@ -10,15 +10,17 @@ import {
   SESSION_MAX_AGE_SECONDS,
   inMemoryStore,
 } from '@/lib/auth';
-import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request.headers);
-    const rateCheck = checkRateLimit(`login_${ip}`, 10, 15 * 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`login_${ip}`, 10, 15 * 60 * 1000);
     if (!rateCheck.isAllowed) {
       return NextResponse.json(
-        { error: `Too many login attempts. Please try again in ${rateCheck.retryAfterSeconds} seconds.` },
+        {
+          error: `Too many login attempts. Please try again in ${rateCheck.retryAfterSeconds} seconds.`,
+        },
         { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
       );
     }
@@ -34,6 +36,13 @@ export async function POST(request: Request) {
 
     const { email, password } = parseResult.data;
     const normalizedEmail = email.toLowerCase().trim();
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured. Login is unavailable.' },
+        { status: 503 }
+      );
+    }
 
     let userRecord: {
       id: string;
@@ -90,17 +99,19 @@ export async function POST(request: Request) {
       maxAge: SESSION_MAX_AGE_SECONDS,
     });
 
+    const role = userRecord.role === 'admin' ? 'admin' : 'reader';
+
     return NextResponse.json({
       success: true,
       user: {
         id: userRecord.id,
         displayName: userRecord.displayName,
         email: userRecord.email,
-        role: userRecord.role,
+        role,
         createdAt: userRecord.createdAt.toISOString(),
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Login error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred during login. Please try again.' },

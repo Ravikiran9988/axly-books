@@ -13,11 +13,12 @@ interface BookActionsProps {
 }
 
 export default function BookActions({ book }: BookActionsProps) {
-  const [progress, setProgress] = useState<ReadingProgress | null>(null);
+  const [progress, setProgress] = useState<ReadingProgress | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return progressService.getProgress(book.slug);
+  });
 
   useEffect(() => {
-    setProgress(progressService.getProgress(book.slug));
-
     const unsubscribe = progressService.subscribe(() => {
       setProgress(progressService.getProgress(book.slug));
     });

@@ -1,6 +1,4 @@
 import React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import {
   ExternalLink,
   Mail,
@@ -10,7 +8,6 @@ import {
   BookOpen,
   Feather,
   Compass,
-  ArrowRight,
 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '@/components/SocialIcons';
 import { PUBLISHED_BOOKS } from '@/data/booksData';

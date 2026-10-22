@@ -21,7 +21,7 @@ export async function POST() {
     });
 
     return NextResponse.json({ success: true, message: 'Logged out successfully.' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Logout error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred during logout.' },

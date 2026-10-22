@@ -11,15 +11,17 @@ import {
   SESSION_MAX_AGE_SECONDS,
   inMemoryStore,
 } from '@/lib/auth';
-import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request.headers);
-    const rateCheck = checkRateLimit(`register_${ip}`, 8, 15 * 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`register_${ip}`, 8, 15 * 60 * 1000);
     if (!rateCheck.isAllowed) {
       return NextResponse.json(
-        { error: `Too many registration attempts. Please try again in ${rateCheck.retryAfterSeconds} seconds.` },
+        {
+          error: `Too many registration attempts. Please try again in ${rateCheck.retryAfterSeconds} seconds.`,
+        },
         { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
       );
     }
@@ -34,10 +36,18 @@ export async function POST(request: Request) {
     const { displayName, email, password } = parseResult.data;
     const normalizedEmail = email.toLowerCase().trim();
 
+    // In production, persistent Neon PostgreSQL database is strictly required
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Persistent database service is not configured. Registration is unavailable.' },
+        { status: 503 }
+      );
+    }
+
     // Check duplicate email
     if (isDatabaseConfigured() && db) {
       const existing = await db
-        .select()
+        .select({ id: schema.users.id })
         .from(schema.users)
         .where(eq(schema.users.email, normalizedEmail))
         .limit(1);
@@ -64,6 +74,7 @@ export async function POST(request: Request) {
     const now = new Date();
 
     if (isDatabaseConfigured() && db) {
+      // Role is ALWAYS forced to 'reader' on server regardless of client input
       await db.insert(schema.users).values({
         id: userId,
         displayName,
@@ -120,7 +131,7 @@ export async function POST(request: Request) {
       },
       { status: 201 }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Registration error:', err);
     return NextResponse.json(
       { error: 'An unexpected error occurred while registering. Please try again.' },

@@ -90,7 +90,7 @@ class AuthService {
       this.currentUser = data.user;
       this.notify();
       return { success: true, user: data.user };
-    } catch (err: any) {
+    } catch {
       return {
         success: false,
         error: 'Network connection failed. Please check your internet connection.',
@@ -117,7 +117,7 @@ class AuthService {
       this.currentUser = data.user;
       this.notify();
       return { success: true, user: data.user };
-    } catch (err: any) {
+    } catch {
       return {
         success: false,
         error: 'Network connection failed. Please check your internet connection.',

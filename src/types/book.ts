@@ -5,6 +5,7 @@ export interface Chapter {
   slug: string;
   readingTimeMinutes: number;
   summary: string;
+  isPublished?: boolean;
   sections: {
     title: string;
     content: string;
@@ -38,6 +39,7 @@ export interface Book {
   totalChapters: number;
   estimatedReadingTimeMinutes: number;
   isFree: boolean;
+  isPublished?: boolean;
   allowPdfDownload: boolean;
   copyrightNotice: string;
   license: string;

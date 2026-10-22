@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronDown, BookX, RotateCcw, Filter, Sparkles } from 'lucide-react';
+import { Search, ChevronDown, BookX, RotateCcw, Sparkles } from 'lucide-react';
 import { Book } from '@/types/book';
 import { bookService } from '@/services/bookService';
 import BookCard from '@/components/BookCard';

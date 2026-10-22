@@ -39,7 +39,7 @@ class ProgressService {
 
       const prefRaw = localStorage.getItem(PREFERENCES_KEY);
       if (prefRaw) this.localPreferences = { ...DEFAULT_PREFERENCES, ...JSON.parse(prefRaw) };
-    } catch (e) {
+    } catch {
       // Ignore local storage parse error
     }
   }

@@ -10,9 +10,17 @@ import { PUBLISHED_BOOKS } from '../data/booksData';
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
 
-  if (!databaseUrl || !databaseUrl.startsWith('postgres') || databaseUrl.includes('placeholder_neon_database_url') || databaseUrl.includes('placeholder_user') || databaseUrl.includes('placeholder_password')) {
+  if (
+    !databaseUrl ||
+    !databaseUrl.startsWith('postgres') ||
+    databaseUrl.includes('placeholder_neon_database_url') ||
+    databaseUrl.includes('placeholder_user') ||
+    databaseUrl.includes('placeholder_password')
+  ) {
     console.log('⚠️  DATABASE_URL is not set or contains placeholder. Skipping live Neon seed.');
-    console.log('👉 To run the seed against your Neon PostgreSQL database, configure DATABASE_URL in .env.local and run: npm run db:seed');
+    console.log(
+      '👉 To run the seed against your Neon PostgreSQL database, configure DATABASE_URL in .env.local and run: npm run db:seed'
+    );
     process.exit(0);
   }
 
@@ -22,7 +30,7 @@ async function main() {
 
   const now = new Date();
 
-  // 1. Seed or Update Slayer Author Profile
+  // 1. Seed Slayer Author Profile
   console.log('👤 Seeding Slayer Author Profile...');
   const authorId = 'author_slayer';
   await db
@@ -51,19 +59,23 @@ I believe knowledge becomes more valuable when it is communicated clearly and ma
       writingPhilosophy: [
         {
           title: 'Make Knowledge Accessible',
-          description: 'Eliminate gatekeeping by publishing clear, free online editions that any curious student or professional can study.',
+          description:
+            'Eliminate gatekeeping by publishing clear, free online editions that any curious student or professional can study.',
         },
         {
           title: 'Explain Ideas Clearly & Systematically',
-          description: 'Build bottom-up conceptual foundations, guiding the reader logically without abrupt jumps in complexity.',
+          description:
+            'Build bottom-up conceptual foundations, guiding the reader logically without abrupt jumps in complexity.',
         },
         {
           title: 'Connect Theory with Practical Code',
-          description: 'Every abstract mathematical principle is anchored with vector operations and production-ready Python implementations.',
+          description:
+            'Every abstract mathematical principle is anchored with vector operations and production-ready Python implementations.',
         },
         {
           title: 'Encourage Continuous Learning',
-          description: 'Demystify evolving breakthroughs such as Transformers and modern LLMs to empower builders in this new era of software.',
+          description:
+            'Demystify evolving breakthroughs such as Transformers and modern LLMs to empower builders in this new era of software.',
         },
       ],
       createdAt: now,
@@ -79,8 +91,8 @@ I believe knowledge becomes more valuable when it is communicated clearly and ma
       },
     });
 
-  // 2. Seed Published Books & Chapters
-  console.log('📚 Seeding Published Books...');
+  // 2. Seed Published Books & Chapters (Safe & Idempotent: does NOT overwrite admin edits)
+  console.log('📚 Seeding Published Books (Idempotent: preserving custom administrator edits)...');
   for (const book of PUBLISHED_BOOKS) {
     await db
       .insert(schema.books)
@@ -100,30 +112,19 @@ I believe knowledge becomes more valuable when it is communicated clearly and ma
         publishedYear: book.publishedYear,
         status: book.publicationStatus,
         isFree: book.isFree,
+        isPublished: true,
         totalChapters: book.totalChapters,
         estimatedReadingTimeMinutes: book.estimatedReadingTimeMinutes,
         allowPdfDownload: book.allowPdfDownload,
         createdAt: now,
         updatedAt: now,
       })
-      .onConflictDoUpdate({
+      .onConflictDoNothing({
         target: schema.books.slug,
-        set: {
-          title: book.title,
-          subtitle: book.subtitle,
-          description: book.description,
-          synopsis: book.synopsis,
-          coverImageUrl: book.coverImage,
-          category: book.category,
-          tags: book.tags,
-          totalChapters: book.totalChapters,
-          estimatedReadingTimeMinutes: book.estimatedReadingTimeMinutes,
-          updatedAt: now,
-        },
       });
 
-    // 3. Seed Chapters for this book
-    console.log(`📖 Seeding ${book.chapters.length} chapters for "${book.title}"...`);
+    // 3. Seed Chapters for this book (idempotent, does not overwrite admin edits)
+    console.log(`📖 Ensuring ${book.chapters.length} core chapters exist for "${book.title}"...`);
     for (const ch of book.chapters) {
       await db
         .insert(schema.chapters)
@@ -136,24 +137,17 @@ I believe knowledge becomes more valuable when it is communicated clearly and ma
           summary: ch.summary,
           content: ch.sections,
           estimatedReadingTimeMinutes: ch.readingTimeMinutes,
+          isPublished: true,
           createdAt: now,
           updatedAt: now,
         })
-        .onConflictDoUpdate({
+        .onConflictDoNothing({
           target: [schema.chapters.bookId, schema.chapters.slug],
-          set: {
-            title: ch.title,
-            chapterNumber: ch.chapterNumber,
-            summary: ch.summary,
-            content: ch.sections,
-            estimatedReadingTimeMinutes: ch.readingTimeMinutes,
-            updatedAt: now,
-          },
         });
     }
   }
 
-  console.log('✅ Database seeded successfully with verified author & publication records!');
+  console.log('✅ Database seeded safely! Preserved all administrator content while ensuring baseline books.');
 }
 
 main().catch((err) => {

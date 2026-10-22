@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -14,12 +14,10 @@ import {
   Maximize2,
   Minimize2,
   Check,
-  Code,
-  Sparkles,
   Copy,
 } from 'lucide-react';
-import { Book, Chapter } from '@/types/book';
-import { ReadingPreferences, ReadingTheme, ReadingFontFamily } from '@/types/reading';
+import { Book } from '@/types/book';
+import { ReadingPreferences } from '@/types/reading';
 import { progressService } from '@/services/progressService';
 import styles from './reader.module.css';
 
@@ -44,17 +42,26 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
     activeChapterIndex < book.chapters.length - 1 ? book.chapters[activeChapterIndex + 1] : null;
 
   // Preferences & State
-  const [prefs, setPrefs] = useState<ReadingPreferences>({
-    theme: 'dark',
-    fontSize: 18,
-    lineHeight: 1.75,
-    fontFamily: 'serif',
-    distractionFree: false,
+  const [prefs, setPrefs] = useState<ReadingPreferences>(() => {
+    if (typeof window === 'undefined') {
+      return {
+        theme: 'dark',
+        fontSize: 18,
+        lineHeight: 1.75,
+        fontFamily: 'serif',
+        distractionFree: false,
+      };
+    }
+    return progressService.getPreferences();
   });
 
   const [tocOpen, setTocOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [, setBookmarkVersion] = useState(0);
+  const isBookmarked =
+    typeof window !== 'undefined'
+      ? progressService.isBookmarked(book.slug, currentChapter.slug)
+      : false;
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -62,17 +69,22 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
   const articleRef = useRef<HTMLElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
 
-  // Load preferences from service
-  useEffect(() => {
-    const saved = progressService.getPreferences();
-    setPrefs(saved);
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
   }, []);
 
-  // Update bookmark status & save reading progress on chapter switch
+  // Subscribe to progress and preferences updates
   useEffect(() => {
-    setIsBookmarked(progressService.isBookmarked(book.slug, currentChapter.slug));
+    const unsubscribe = progressService.subscribe(() => {
+      setBookmarkVersion((v) => v + 1);
+      setPrefs(progressService.getPreferences());
+    });
+    return () => unsubscribe();
+  }, []);
 
-    // Calculate percent complete based on chapter number
+  // Save reading progress on chapter switch
+  useEffect(() => {
     const percent = Math.round((currentChapter.chapterNumber / book.totalChapters) * 100);
     progressService.saveProgress(
       book.slug,
@@ -91,7 +103,7 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
       }
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [book.slug, book.totalChapters, currentChapter]);
+  }, [book.slug, book.totalChapters, currentChapter.chapterNumber, currentChapter.slug]);
 
   const handleCopyCode = async (idx: number, code: string) => {
     try {
@@ -117,6 +129,42 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const updatePreference = (updates: Partial<ReadingPreferences>) => {
+    const next = progressService.savePreferences(updates);
+    setPrefs(next);
+  };
+
+  const handleToggleBookmark = useCallback(() => {
+    const currentlyBookmarked = progressService.isBookmarked(book.slug, currentChapter.slug);
+    if (currentlyBookmarked) {
+      progressService.removeBookmarkByChapter(book.slug, currentChapter.slug);
+      setBookmarkVersion((v) => v + 1);
+      showToast('Bookmark removed');
+    } else {
+      progressService.addBookmark(
+        book.slug,
+        book.title,
+        currentChapter.chapterNumber,
+        currentChapter.slug,
+        currentChapter.title,
+        currentChapter.summary
+      );
+      setBookmarkVersion((v) => v + 1);
+      showToast(`Chapter ${currentChapter.chapterNumber} bookmarked`);
+    }
+  }, [book.slug, book.title, currentChapter.chapterNumber, currentChapter.slug, currentChapter.title, currentChapter.summary, showToast]);
+
+  const toggleDistractionFree = useCallback(() => {
+    setPrefs((prev) => {
+      const next = !prev.distractionFree;
+      const updated = progressService.savePreferences({ distractionFree: next });
+      if (next) {
+        showToast('Distraction-free mode enabled (Press D or click top-right to exit)');
+      }
+      return updated;
+    });
+  }, [showToast]);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -136,44 +184,7 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [book.slug, prevChapter, nextChapter, isBookmarked]);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
-  };
-
-  const updatePreference = (updates: Partial<ReadingPreferences>) => {
-    const next = progressService.savePreferences(updates);
-    setPrefs(next);
-  };
-
-  const handleToggleBookmark = () => {
-    if (isBookmarked) {
-      progressService.removeBookmarkByChapter(book.slug, currentChapter.slug);
-      setIsBookmarked(false);
-      showToast('Bookmark removed');
-    } else {
-      progressService.addBookmark(
-        book.slug,
-        book.title,
-        currentChapter.chapterNumber,
-        currentChapter.slug,
-        currentChapter.title,
-        currentChapter.summary
-      );
-      setIsBookmarked(true);
-      showToast(`Chapter ${currentChapter.chapterNumber} bookmarked`);
-    }
-  };
-
-  const toggleDistractionFree = () => {
-    const next = !prefs.distractionFree;
-    updatePreference({ distractionFree: next });
-    if (next) {
-      showToast('Distraction-free mode enabled (Press D or click top-right to exit)');
-    }
-  };
+  }, [book.slug, prevChapter, nextChapter, router, toggleDistractionFree, handleToggleBookmark]);
 
   // Font family resolution
   const getFontFamilyStyle = () => {

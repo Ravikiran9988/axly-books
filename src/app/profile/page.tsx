@@ -5,12 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   User,
-  Mail,
-  Calendar,
   LogOut,
   Sliders,
-  Shield,
-  ArrowRight,
   BookmarkCheck,
 } from 'lucide-react';
 import { authService } from '@/services/authService';

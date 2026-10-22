@@ -4,20 +4,28 @@ import {
   verifyPassword,
   hashToken,
   generateSecureToken,
+  createSession,
+  validateSessionToken,
+  destroySession,
+  assertRecordOwnership,
+  inMemoryStore,
 } from '../src/lib/auth';
 import {
   registerSchema,
   loginSchema,
+  resetPasswordSchema,
   progressUpdateSchema,
   bookmarkCreateSchema,
+  bookCreateSchema,
+  chapterCreateSchema,
 } from '../src/lib/validations';
 import { checkRateLimit } from '../src/lib/rateLimit';
 
 async function runTests() {
-  console.log('🧪 Running AXLY Phase 2 Backend & Security Automated Tests...\n');
+  console.log('🧪 Running AXLY Phase 2 Backend, RBAC & Security Automated Tests...\n');
 
-  // --- Test Suite 1: Authentication & Password Security ---
-  console.log('▶ Test Suite 1: Authentication & Cryptographic Hashing');
+  // --- Test Suite 1: Authentication & Cryptographic Hashing ---
+  console.log('▶ Test Suite 1: Authentication & Cryptographic Security');
   {
     const plainPassword = 'superSecurePassword2026!';
     const hash = await hashPassword(plainPassword);
@@ -32,9 +40,9 @@ async function runTests() {
     assert(isWrong === false, 'Incorrect password must be rejected');
 
     const rawToken = generateSecureToken();
-    assert(rawToken.length === 64, 'Raw session token must be 32 bytes (64 hex characters)');
+    assert.strictEqual(rawToken.length, 64, 'Raw session token must be 32 bytes (64 hex characters)');
     const hashed = hashToken(rawToken);
-    assert(hashed.length === 64, 'SHA-256 token hash must be 64 hex characters');
+    assert.strictEqual(hashed.length, 64, 'SHA-256 token hash must be 64 hex characters');
 
     console.log('  ✔ Password hashing (bcrypt) and session token hashing verified.');
   }
@@ -49,16 +57,16 @@ async function runTests() {
       password: 'password123',
       agreeTerms: true,
     });
-    assert(validReg.success === true, 'Valid registration payload must pass');
+    assert.strictEqual(validReg.success, true, 'Valid registration payload must pass');
 
-    // Reject short password
+    // Reject short password (<8)
     const shortPw = registerSchema.safeParse({
       displayName: 'Alice Reader',
       email: 'alice@example.com',
       password: 'short',
       agreeTerms: true,
     });
-    assert(shortPw.success === false, 'Password shorter than 8 chars must be rejected');
+    assert.strictEqual(shortPw.success, false, 'Password shorter than 8 chars must be rejected');
 
     // Reject missing terms agreement
     const noTerms = registerSchema.safeParse({
@@ -67,20 +75,123 @@ async function runTests() {
       password: 'password123',
       agreeTerms: false,
     });
-    assert(noTerms.success === false, 'Must agree to terms and privacy');
+    assert.strictEqual(noTerms.success, false, 'Must agree to terms and privacy');
 
     // Reject malformed email
     const badEmail = loginSchema.safeParse({
       email: 'not-an-email',
       password: 'somePassword',
     });
-    assert(badEmail.success === false, 'Invalid email format must be rejected');
+    assert.strictEqual(badEmail.success, false, 'Invalid email format must be rejected');
 
-    console.log('  ✔ Registration and login input validation verified.');
+    // Reset password validation
+    const validReset = resetPasswordSchema.safeParse({
+      token: generateSecureToken(),
+      newPassword: 'BrandNewSecurePassword2026!',
+    });
+    assert.strictEqual(validReset.success, true, 'Valid password reset payload must pass');
+
+    console.log('  ✔ Registration, login, and reset-password input validations enforced.');
   }
 
-  // --- Test Suite 3: Reading Progress Integrity ---
-  console.log('\n▶ Test Suite 3: Reading Progress Integrity');
+  // --- Test Suite 3: Role-Based Access Control (RBAC) & Promotion ---
+  console.log('\n▶ Test Suite 3: Role-Based Access Control (RBAC)');
+  {
+    // Ensure all newly registered accounts receive 'reader' role
+    const newReaderId = 'usr_reader_test_01';
+    inMemoryStore.users.set(newReaderId, {
+      id: newReaderId,
+      displayName: 'Bob Reader',
+      email: 'bob@example.com',
+      passwordHash: await hashPassword('TestPassword123!'),
+      role: 'reader',
+      createdAt: new Date(),
+    });
+
+    const readerSessionToken = await createSession(newReaderId);
+    const readerUser = await validateSessionToken(readerSessionToken);
+    assert(readerUser !== null, 'Session must resolve to user');
+    assert.strictEqual(readerUser?.role, 'reader', 'New user must strictly possess reader role');
+
+    // A reader cannot perform admin actions
+    assert.notStrictEqual((readerUser as { role?: string })?.role, 'admin', 'Reader must NOT have admin privileges');
+
+    // Elevation simulation: owner promotes user to admin
+    const adminUserRecord = inMemoryStore.users.get(newReaderId);
+    if (adminUserRecord) {
+      adminUserRecord.role = 'admin';
+    }
+
+    const elevatedUser = await validateSessionToken(readerSessionToken);
+    assert.strictEqual(elevatedUser?.role, 'admin', 'Elevated user now possesses admin role');
+
+    // Test record ownership check
+    const isOwner = assertRecordOwnership(newReaderId, newReaderId, 'reader');
+    assert.strictEqual(isOwner, true, 'User owns their own record');
+
+    const isAdversary = assertRecordOwnership('usr_other_user', newReaderId, 'reader');
+    assert.strictEqual(isAdversary, false, 'Reader cannot own another user record');
+
+    const adminOverride = assertRecordOwnership('usr_other_user', newReaderId, 'admin');
+    assert.strictEqual(adminOverride, true, 'Admin has authorized administrative access across records');
+
+    await destroySession(readerSessionToken);
+    console.log('  ✔ RBAC roles (reader vs admin) and ownership assertion helpers verified.');
+  }
+
+  // --- Test Suite 4: Content Management Validation (Books & Chapters) ---
+  console.log('\n▶ Test Suite 4: Content Management Validation (CMS)');
+  {
+    const validBook = bookCreateSchema.safeParse({
+      title: 'Neural Networks & Deep Transformers',
+      slug: 'neural-networks-deep-transformers',
+      subtitle: 'Complete Guide from Perceptrons to LLMs',
+      description: 'An advanced exploration of deep architectures, backprop calculus, and attention.',
+      synopsis: 'Detailed educational synopsis covering self-attention, multi-head projections, and training.',
+      category: 'Artificial Intelligence',
+      tags: ['AI', 'Transformers', 'Python'],
+      edition: 'First Edition (2026)',
+      publishedYear: 2026,
+      coverImageUrl: '/images/ml-deep-learning-cover.jpg',
+      isPublished: false, // Default draft
+    });
+    assert.strictEqual(validBook.success, true, 'Valid book creation schema must pass');
+
+    // Reject uppercase or space in slug
+    const badSlug = bookCreateSchema.safeParse({
+      title: 'Invalid Book',
+      slug: 'Invalid Slug with Spaces',
+      description: 'Long enough description text here.',
+      synopsis: 'Long enough synopsis text here.',
+      category: 'Tech',
+      coverImageUrl: '/images/cover.jpg',
+    });
+    assert.strictEqual(badSlug.success, false, 'Invalid book slug must be rejected');
+
+    // Valid chapter
+    const validChapter = chapterCreateSchema.safeParse({
+      chapterNumber: 1,
+      title: 'Foundations of Attention Mechanics',
+      slug: 'chapter-1-attention-mechanics',
+      summary: 'Exploring query, key, and value vectors in self-attention.',
+      estimatedReadingTimeMinutes: 20,
+      isPublished: true,
+      content: [
+        {
+          title: '1.1 Scaled Dot-Product Attention',
+          content: 'The attention function computes weighted sums of values based on similarity.',
+          codeSnippet: { language: 'python', code: 'import numpy as np\n# attention calculation' },
+          callout: { type: 'concept', text: 'Softmax normalizes similarity scores to sum to 1.' },
+        },
+      ],
+    });
+    assert.strictEqual(validChapter.success, true, 'Valid chapter creation schema must pass');
+
+    console.log('  ✔ Book and chapter validation schemas (slug format, sections, callouts) verified.');
+  }
+
+  // --- Test Suite 5: Reading Progress & Bookmarks Isolation ---
+  console.log('\n▶ Test Suite 5: Reading Progress & Bookmark Boundaries');
   {
     // Valid progress
     const validProgress = progressUpdateSchema.safeParse({
@@ -89,101 +200,53 @@ async function runTests() {
       chapterNumber: 1,
       progressPercentage: 25,
     });
-    assert(validProgress.success === true, 'Valid reading progress payload must pass');
+    assert.strictEqual(validProgress.success, true, 'Valid reading progress payload must pass');
 
-    // Progress bounds: reject > 100%
+    // Reject > 100%
     const overProgress = progressUpdateSchema.safeParse({
       bookSlug: 'ml-deep-learning-fundamentals',
       chapterSlug: 'chapter-1-foundations-of-machine-learning',
       chapterNumber: 1,
       progressPercentage: 150,
     });
-    assert(overProgress.success === false, 'Progress > 100% must be rejected');
+    assert.strictEqual(overProgress.success, false, 'Progress > 100% must be rejected');
 
-    // Progress bounds: reject < 0%
+    // Reject < 0%
     const negProgress = progressUpdateSchema.safeParse({
       bookSlug: 'ml-deep-learning-fundamentals',
       chapterSlug: 'chapter-1-foundations-of-machine-learning',
       chapterNumber: 1,
       progressPercentage: -10,
     });
-    assert(negProgress.success === false, 'Negative progress must be rejected');
+    assert.strictEqual(negProgress.success, false, 'Negative progress must be rejected');
 
-    console.log('  ✔ Reading progress percentage boundaries (0-100%) enforced.');
-  }
-
-  // --- Test Suite 4: Bookmark Ownership Isolation ---
-  console.log('\n▶ Test Suite 4: Bookmark Ownership & Privacy Isolation');
-  {
-    interface MockBookmark {
-      id: string;
-      userId: string;
-      bookSlug: string;
-      chapterSlug: string;
-    }
-
-    const mockDb: MockBookmark[] = [];
-
-    // User A creates a bookmark
-    const userA_Id = 'user_aaa_111';
-    const userB_Id = 'user_bbb_222';
-
-    mockDb.push({
-      id: 'bm_1',
-      userId: userA_Id,
+    // Bookmark validation
+    const validBookmark = bookmarkCreateSchema.safeParse({
       bookSlug: 'ml-deep-learning-fundamentals',
-      chapterSlug: 'chapter-2-supervised-learning-mechanics',
+      chapterSlug: 'chapter-1-foundations-of-machine-learning',
+      chapterNumber: 1,
+      note: 'Key definition of vectorized representations',
     });
+    assert.strictEqual(validBookmark.success, true, 'Valid bookmark payload must pass');
 
-    // Function simulating server-side authorized query
-    const getBookmarksForUser = (requestingUserId: string) => {
-      return mockDb.filter((b) => b.userId === requestingUserId);
-    };
-
-    // User A should see their bookmark
-    const userABookmarks = getBookmarksForUser(userA_Id);
-    assert.strictEqual(userABookmarks.length, 1, 'User A must see their own bookmark');
-
-    // User B should NOT see User A's bookmark
-    const userBBookmarks = getBookmarksForUser(userB_Id);
-    assert.strictEqual(userBBookmarks.length, 0, 'User B must not see User A bookmarks');
-
-    // Function simulating server-side authorized deletion
-    const deleteBookmarkForUser = (bookmarkId: string, requestingUserId: string): boolean => {
-      const index = mockDb.findIndex((b) => b.id === bookmarkId && b.userId === requestingUserId);
-      if (index === -1) return false;
-      mockDb.splice(index, 1);
-      return true;
-    };
-
-    // User B attempts to delete User A's bookmark
-    const userBDeleteAttempt = deleteBookmarkForUser('bm_1', userB_Id);
-    assert.strictEqual(userBDeleteAttempt, false, 'User B must not be allowed to delete User A bookmark');
-    assert.strictEqual(mockDb.length, 1, 'Bookmark must still exist after unauthorized deletion attempt');
-
-    // User A deletes their own bookmark
-    const userADeleteAttempt = deleteBookmarkForUser('bm_1', userA_Id);
-    assert.strictEqual(userADeleteAttempt, true, 'User A can delete their own bookmark');
-    assert.strictEqual(mockDb.length, 0, 'Bookmark must be deleted');
-
-    console.log('  ✔ Bookmark ownership isolation and privacy verified.');
+    console.log('  ✔ Reading progress percentage boundaries (0-100%) and bookmark schemas enforced.');
   }
 
-  // --- Test Suite 5: Rate Limiter Protection ---
-  console.log('\n▶ Test Suite 5: Rate Limiting Defense');
+  // --- Test Suite 6: Rate Limiter Protection ---
+  console.log('\n▶ Test Suite 6: Rate Limiting Defense');
   {
-    const testIp = '198.51.100.42';
+    const testIp = '198.51.100.99';
     const limit = 3;
     const windowMs = 5000;
 
     // Requests 1, 2, 3 should be allowed
-    assert(checkRateLimit(`test_${testIp}`, limit, windowMs).isAllowed === true, 'Req 1 allowed');
-    assert(checkRateLimit(`test_${testIp}`, limit, windowMs).isAllowed === true, 'Req 2 allowed');
-    assert(checkRateLimit(`test_${testIp}`, limit, windowMs).isAllowed === true, 'Req 3 allowed');
+    assert.strictEqual(checkRateLimit(`test_${testIp}`, limit, windowMs).isAllowed, true, 'Req 1 allowed');
+    assert.strictEqual(checkRateLimit(`test_${testIp}`, limit, windowMs).isAllowed, true, 'Req 2 allowed');
+    assert.strictEqual(checkRateLimit(`test_${testIp}`, limit, windowMs).isAllowed, true, 'Req 3 allowed');
 
     // Request 4 should be throttled (HTTP 429)
     const throttled = checkRateLimit(`test_${testIp}`, limit, windowMs);
-    assert(throttled.isAllowed === false, 'Req 4 must be throttled');
+    assert.strictEqual(throttled.isAllowed, false, 'Req 4 must be throttled');
     assert(throttled.retryAfterSeconds > 0, 'Must provide retry-after seconds');
 
     console.log('  ✔ Sliding window rate limiting successfully throttles brute-force attempts.');

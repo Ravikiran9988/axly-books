@@ -9,9 +9,7 @@ import {
   ArrowRight,
   Trash2,
   BookmarkX,
-  Sparkles,
   Library,
-  Clock,
 } from 'lucide-react';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import { progressService } from '@/services/progressService';
