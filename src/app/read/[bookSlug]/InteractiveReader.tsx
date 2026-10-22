@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -20,6 +20,14 @@ import { Book } from '@/types/book';
 import { ReadingPreferences } from '@/types/reading';
 import { progressService } from '@/services/progressService';
 import styles from './reader.module.css';
+
+const DEFAULT_PREFERENCES: ReadingPreferences = {
+  theme: 'light',
+  fontSize: 18,
+  lineHeight: 1.75,
+  fontFamily: 'serif',
+  distractionFree: false,
+};
 
 interface InteractiveReaderProps {
   book: Book;
@@ -41,18 +49,21 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
   const nextChapter =
     activeChapterIndex < book.chapters.length - 1 ? book.chapters[activeChapterIndex + 1] : null;
 
-  // Preferences & State (Initialized with safe defaults for SSR hydration)
-  const [prefs, setPrefs] = useState<ReadingPreferences>({
-    theme: 'light',
-    fontSize: 18,
-    lineHeight: 1.75,
-    fontFamily: 'serif',
-    distractionFree: false,
-  });
+  // Preferences & State synchronized safely via React useSyncExternalStore
+  const prefs = useSyncExternalStore(
+    useCallback((cb) => progressService.subscribe(cb), []),
+    useCallback(() => progressService.getPreferences(), []),
+    () => DEFAULT_PREFERENCES
+  );
+
+  const isBookmarked = useSyncExternalStore(
+    useCallback((cb) => progressService.subscribe(cb), []),
+    useCallback(() => progressService.isBookmarked(book.slug, currentChapter.slug), [book.slug, currentChapter.slug]),
+    () => false
+  );
 
   const [tocOpen, setTocOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -64,18 +75,6 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
   }, []);
-
-  // Sync preferences and bookmark status from local/server storage on mount and updates
-  useEffect(() => {
-    setPrefs(progressService.getPreferences());
-    setIsBookmarked(progressService.isBookmarked(book.slug, currentChapter.slug));
-
-    const unsubscribe = progressService.subscribe(() => {
-      setPrefs(progressService.getPreferences());
-      setIsBookmarked(progressService.isBookmarked(book.slug, currentChapter.slug));
-    });
-    return () => unsubscribe();
-  }, [book.slug, currentChapter.slug]);
 
   // Save reading progress on chapter switch
   useEffect(() => {
@@ -124,15 +123,13 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
   }, []);
 
   const updatePreference = (updates: Partial<ReadingPreferences>) => {
-    const next = progressService.savePreferences(updates);
-    setPrefs(next);
+    progressService.savePreferences(updates);
   };
 
   const handleToggleBookmark = useCallback(() => {
     const currentlyBookmarked = progressService.isBookmarked(book.slug, currentChapter.slug);
     if (currentlyBookmarked) {
       progressService.removeBookmarkByChapter(book.slug, currentChapter.slug);
-      setIsBookmarked(false);
       showToast('Bookmark removed');
     } else {
       progressService.addBookmark(
@@ -143,21 +140,17 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
         currentChapter.title,
         currentChapter.summary
       );
-      setIsBookmarked(true);
       showToast(`Chapter ${currentChapter.chapterNumber} bookmarked`);
     }
   }, [book.slug, book.title, currentChapter.chapterNumber, currentChapter.slug, currentChapter.title, currentChapter.summary, showToast]);
 
   const toggleDistractionFree = useCallback(() => {
-    setPrefs((prev) => {
-      const next = !prev.distractionFree;
-      const updated = progressService.savePreferences({ distractionFree: next });
-      if (next) {
-        showToast('Distraction-free mode enabled (Press D or click top-right to exit)');
-      }
-      return updated;
-    });
-  }, [showToast]);
+    const next = !prefs.distractionFree;
+    progressService.savePreferences({ distractionFree: next });
+    if (next) {
+      showToast('Distraction-free mode enabled (Press D or click top-right to exit)');
+    }
+  }, [prefs.distractionFree, showToast]);
 
   // Keyboard navigation
   useEffect(() => {
