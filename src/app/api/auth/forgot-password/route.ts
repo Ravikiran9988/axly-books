@@ -6,15 +6,37 @@ import { forgotPasswordSchema } from '@/lib/validations';
 import { hashToken, generateSecureToken, inMemoryStore } from '@/lib/auth';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rateLimit';
 
+const RESET_TOKEN_LIFETIME_MS = 60 * 60 * 1000;
+const EMAIL_REQUEST_TIMEOUT_MS = 10_000;
+
+function acceptedResetResponse() {
+  // Deliberately identical for existing and unknown accounts to avoid account enumeration.
+  // HTTP 202 means the request was accepted; it does not claim that an email was delivered.
+  return NextResponse.json(
+    {
+      requestAccepted: true,
+      message:
+        'If an account exists for this email address, reset instructions will be sent if email delivery is available. If you do not receive an email, try again later.',
+    },
+    { status: 202 }
+  );
+}
+
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request.headers);
     const rateCheck = await checkRateLimitAsync(`forgot_pw_${ip}`, 5, 15 * 60 * 1000);
+
+    if (rateCheck.unavailable) {
+      return NextResponse.json(
+        { error: 'Security rate limiting is temporarily unavailable. Please try again shortly.' },
+        { status: 503, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
+      );
+    }
+
     if (!rateCheck.isAllowed) {
       return NextResponse.json(
-        {
-          error: `Too many password reset requests. Please try again in ${rateCheck.retryAfterSeconds} seconds.`,
-        },
+        { error: `Too many password reset requests. Please try again in ${rateCheck.retryAfterSeconds} seconds.` },
         { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
       );
     }
@@ -28,18 +50,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email } = parseResult.data;
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = parseResult.data.email.toLowerCase().trim();
 
-    // In production, check if an email provider (e.g. Resend) is configured
-    const isEmailConfigured = Boolean(process.env.RESEND_API_KEY || process.env.SMTP_HOST);
-
-    if (process.env.NODE_ENV === 'production' && !isEmailConfigured) {
+    // Resend is the email provider implemented by this route. Do not treat SMTP_HOST
+    // alone as configured because this code has no SMTP transport implementation.
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (process.env.NODE_ENV === 'production' && !resendApiKey) {
       return NextResponse.json(
-        {
-          error:
-            'Password recovery email delivery is currently not configured on this server. Please contact author Slayer at ravikiran@axly.in for password recovery assistance.',
-        },
+        { error: 'Password recovery is temporarily unavailable because email delivery is not configured.' },
+        { status: 503 }
+      );
+    }
+
+    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+      return NextResponse.json(
+        { error: 'Password recovery is temporarily unavailable because persistent storage is not configured.' },
         { status: 503 }
       );
     }
@@ -52,81 +77,122 @@ export async function POST(request: Request) {
         .from(schema.users)
         .where(eq(schema.users.email, normalizedEmail))
         .limit(1);
-
-      if (records.length > 0) {
-        userId = records[0].id;
-      }
+      userId = records[0]?.id ?? null;
     } else {
-      for (const u of inMemoryStore.users.values()) {
-        if (u.email === normalizedEmail) {
-          userId = u.id;
+      // Process-local records are only used in local development and tests.
+      for (const user of inMemoryStore.users.values()) {
+        if (user.email === normalizedEmail) {
+          userId = user.id;
           break;
         }
       }
     }
 
-    if (userId) {
-      const rawResetToken = generateSecureToken();
-      const tokenHash = hashToken(rawResetToken);
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
+    // Keep the same outward response regardless of whether the account exists.
+    if (!userId) return acceptedResetResponse();
 
-      if (isDatabaseConfigured() && db) {
-        await db.insert(schema.passwordResets).values({
-          id: `reset_${crypto.randomUUID()}`,
-          userId,
-          tokenHash,
-          expiresAt,
-        });
-      } else {
-        inMemoryStore.resets.set(tokenHash, {
-          userId,
-          expiresAt,
-          used: false,
-        });
-      }
+    const rawResetToken = generateSecureToken();
+    const tokenHash = hashToken(rawResetToken);
+    const resetRecordId = `reset_${crypto.randomUUID()}`;
+    const expiresAt = new Date(Date.now() + RESET_TOKEN_LIFETIME_MS);
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const resetUrl = `${appUrl}/reset-password?token=${rawResetToken}`;
-
-      if (isEmailConfigured && process.env.RESEND_API_KEY) {
-        try {
-          await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              from: process.env.EMAIL_FROM || 'AXLY Books <onboarding@resend.dev>',
-              to: [normalizedEmail],
-              subject: 'Reset your AXLY Books Password',
-              html: `<p>Hello,</p><p>We received a request to reset your password on AXLY Books.</p><p><a href="${resetUrl}">Click here to reset your password</a></p><p>This link is valid for 1 hour. If you did not request this, please ignore this email.</p>`,
-            }),
-          });
-        } catch (emailErr) {
-          console.error('Failed to dispatch reset email via provider:', emailErr);
-        }
-      } else if (process.env.NODE_ENV !== 'production') {
-        // In local development, print link to console for immediate developer access
-        console.log(`\n🔑 [DEV ONLY] Password reset link for ${normalizedEmail}:`);
-        console.log(`   ${resetUrl}\n`);
-      }
+    if (isDatabaseConfigured() && db) {
+      await db.insert(schema.passwordResets).values({
+        id: resetRecordId,
+        userId,
+        tokenHash,
+        expiresAt,
+      });
+    } else {
+      inMemoryStore.resets.set(tokenHash, {
+        userId,
+        expiresAt,
+        used: false,
+      });
     }
 
-    // Honest messaging
-    const message = isEmailConfigured
-      ? 'If an account exists with this email address, password recovery instructions have been dispatched.'
-      : 'Password recovery request registered. (Development notice: email provider is not configured; check server console for reset link).';
+    if (resendApiKey) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      if (!appUrl && process.env.NODE_ENV === 'production') {
+        await deleteResetToken(resetRecordId, tokenHash);
+        console.error('[PASSWORD RESET] NEXT_PUBLIC_APP_URL is missing; email was not requested.');
+        return NextResponse.json(
+          { error: 'Password recovery is temporarily unavailable due to server configuration.' },
+          { status: 503 }
+        );
+      }
 
-    return NextResponse.json({
-      success: true,
-      message,
-    });
+      const resetUrl = `${(appUrl || 'http://localhost:3000').replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(rawResetToken)}`;
+      let providerAccepted = false;
+
+      try {
+        const emailResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: process.env.EMAIL_FROM || 'AXLY Books <onboarding@resend.dev>',
+            to: [normalizedEmail],
+            subject: 'Reset your AXLY Books password',
+            html:
+              '<p>Hello,</p>' +
+              '<p>We received a request to reset your AXLY Books password.</p>' +
+              `<p><a href="${resetUrl}">Reset your password</a></p>` +
+              '<p>This link expires in one hour. If you did not request this, you can ignore this email.</p>',
+          }),
+          signal: AbortSignal.timeout(EMAIL_REQUEST_TIMEOUT_MS),
+        });
+
+        if (emailResponse.ok) {
+          providerAccepted = true;
+        } else {
+          // Do not log provider response bodies; keep logs free of recipient or token data.
+          console.error(
+            `[PASSWORD RESET] Resend rejected the email request with HTTP ${emailResponse.status}.`
+          );
+        }
+      } catch (emailError: unknown) {
+        const errorName = emailError instanceof Error ? emailError.name : 'UnknownError';
+        console.error(`[PASSWORD RESET] Resend request failed (${errorName}).`);
+      }
+
+      if (!providerAccepted) {
+        // A reset link that was not accepted for delivery must not remain usable.
+        await deleteResetToken(resetRecordId, tokenHash);
+      }
+    } else if (process.env.NODE_ENV !== 'production') {
+      // Development-only workflow: emit the link to the local server console, never the API response.
+      console.log(`\n🔑 [DEV ONLY] Password reset link for ${normalizedEmail}:\n   ${(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')}/reset-password?token=${rawResetToken}\n`);
+    }
+
+    // No response claims that an email was dispatched or delivered. A 202 response
+    // is returned uniformly to avoid revealing whether the email belongs to an account.
+    return acceptedResetResponse();
   } catch (err: unknown) {
-    console.error('Password reset request error:', err);
+    console.error(
+      '[PASSWORD RESET] Request processing failed.',
+      err instanceof Error ? err.name : 'UnknownError'
+    );
     return NextResponse.json(
-      { error: 'An unexpected error occurred while processing your request.' },
+      { error: 'An unexpected error occurred while processing the password reset request.' },
       { status: 500 }
+    );
+  }
+}
+
+async function deleteResetToken(resetRecordId: string, tokenHash: string): Promise<void> {
+  try {
+    if (isDatabaseConfigured() && db) {
+      await db.delete(schema.passwordResets).where(eq(schema.passwordResets.id, resetRecordId));
+    } else {
+      inMemoryStore.resets.delete(tokenHash);
+    }
+  } catch (cleanupError: unknown) {
+    console.error(
+      '[PASSWORD RESET] Failed to invalidate undelivered reset token.',
+      cleanupError instanceof Error ? cleanupError.name : 'UnknownError'
     );
   }
 }
