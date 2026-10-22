@@ -62,6 +62,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (process.env.NODE_ENV === 'production' && !appUrl) {
+      return NextResponse.json(
+        { error: 'Password recovery is temporarily unavailable due to server configuration.' },
+        { status: 503 }
+      );
+    }
+
     if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
       return NextResponse.json(
         { error: 'Password recovery is temporarily unavailable because persistent storage is not configured.' },
@@ -112,16 +120,6 @@ export async function POST(request: Request) {
     }
 
     if (resendApiKey) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-      if (!appUrl && process.env.NODE_ENV === 'production') {
-        await deleteResetToken(resetRecordId, tokenHash);
-        console.error('[PASSWORD RESET] NEXT_PUBLIC_APP_URL is missing; email was not requested.');
-        return NextResponse.json(
-          { error: 'Password recovery is temporarily unavailable due to server configuration.' },
-          { status: 503 }
-        );
-      }
-
       const resetUrl = `${(appUrl || 'http://localhost:3000').replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(rawResetToken)}`;
       let providerAccepted = false;
 
