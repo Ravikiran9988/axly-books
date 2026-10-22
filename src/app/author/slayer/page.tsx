@@ -36,7 +36,7 @@ export default function AuthorProfilePage() {
 
         <div className={styles.profileInfo}>
           <div className={styles.penNamePill}>
-            <Sparkles size={14} />
+            <Feather size={14} />
             <span>Official Author Identity</span>
           </div>
 

@@ -9,11 +9,11 @@
 .authCard {
   width: 100%;
   max-width: 460px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: 2.75rem 2.25rem;
-  box-shadow: var(--shadow-lg), 0 0 30px rgba(56, 189, 248, 0.08);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -28,13 +28,14 @@
 
 .authTitle {
   font-size: 1.85rem;
-  font-weight: 700;
-  color: #ffffff;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
 .authSub {
-  font-size: 0.92rem;
-  color: var(--text-muted);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
 }
 
 .form {
@@ -59,6 +60,7 @@
   padding: 0.25rem;
   display: flex;
   align-items: center;
+  transition: color var(--transition-fast);
 }
 
 .passwordToggle:hover {
@@ -69,27 +71,29 @@
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 0.88rem;
+  color: var(--text-secondary);
   line-height: 1.45;
 }
 
 .checkboxRow a {
-  color: var(--color-brand-cyan);
+  color: #2563eb;
   text-decoration: underline;
+  font-weight: 500;
 }
 
 .checkbox {
   margin-top: 0.2rem;
-  accent-color: var(--color-brand-cyan);
+  accent-color: #2563eb;
   cursor: pointer;
 }
 
 .forgotLink {
-  font-size: 0.82rem;
-  color: var(--color-brand-cyan);
+  font-size: 0.85rem;
+  color: #2563eb;
   align-self: flex-end;
   text-decoration: none;
+  font-weight: 500;
 }
 
 .forgotLink:hover {
@@ -98,15 +102,15 @@
 
 .authFooter {
   text-align: center;
-  font-size: 0.88rem;
-  color: var(--text-muted);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
   padding-top: 1rem;
   border-top: 1px solid var(--border-subtle);
 }
 
 .authFooter a {
-  color: var(--color-brand-cyan);
-  font-weight: 500;
+  color: #2563eb;
+  font-weight: 600;
 }
 
 .authFooter a:hover {
@@ -114,29 +118,37 @@
 }
 
 .errorBanner {
-  background: var(--status-error-bg);
-  border: 1px solid var(--status-error);
-  color: #fca5a5;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
   padding: 0.75rem 1rem;
   border-radius: var(--radius-md);
   font-size: 0.86rem;
+  font-weight: 500;
 }
 
 .successBanner {
-  background: var(--status-success-bg);
-  border: 1px solid var(--status-success);
-  color: #86efac;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
   padding: 0.75rem 1rem;
   border-radius: var(--radius-md);
   font-size: 0.86rem;
+  font-weight: 500;
 }
 
 .devNotice {
-  font-size: 0.75rem;
-  color: var(--text-subtle);
-  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  background: #f8fafc;
   padding: 0.6rem 0.8rem;
   border-radius: var(--radius-sm);
-  border-left: 3px solid var(--color-brand-cyan);
+  border-left: 3px solid #2563eb;
   line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+  .authCard {
+    padding: 2rem 1.5rem;
+  }
 }

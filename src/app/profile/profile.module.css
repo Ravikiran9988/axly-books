@@ -1,5 +1,5 @@
 .profileContainer {
-  padding: 4rem 0 6rem;
+  padding: 3.5rem 0 6rem;
   max-width: 780px;
 }
 
@@ -16,13 +16,15 @@
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  background: #0f172a;
+  border: 2px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2rem;
   font-weight: 700;
-  color: #080c14;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
 }
 
 .profileTitleWrap {
@@ -33,19 +35,21 @@
 
 .profileName {
   font-size: 1.85rem;
-  font-weight: 700;
-  color: #ffffff;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
 .profileEmail {
   font-size: 0.95rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .cardSection {
-  background: var(--bg-surface);
+  background: #ffffff;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   padding: 2rem;
   margin-bottom: 2rem;
   display: flex;
@@ -55,8 +59,8 @@
 
 .cardTitle {
   font-size: 1.25rem;
-  font-weight: 600;
-  color: #ffffff;
+  font-weight: 700;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -79,12 +83,13 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
+  font-weight: 600;
 }
 
 .infoValue {
   font-size: 1rem;
   color: var(--text-primary);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .prefGroup {
@@ -108,21 +113,28 @@
 
 .prefTitle {
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .prefDesc {
-  font-size: 0.82rem;
-  color: var(--text-muted);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
 }
 
 .authNotice {
   padding: 1.25rem;
-  background: rgba(56, 189, 248, 0.06);
-  border: 1px solid var(--border-subtle);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
   border-radius: var(--radius-md);
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 0.88rem;
+  color: #1e40af;
   line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .profileHeader {
+    flex-direction: column;
+    text-align: center;
+  }
 }

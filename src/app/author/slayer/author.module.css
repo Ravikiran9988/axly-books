@@ -1,18 +1,18 @@
 .authorPage {
-  padding: 4rem 0 6rem;
+  padding: 3.5rem 0 6rem;
 }
 
 .heroProfile {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 220px 1fr;
   gap: 3.5rem;
   align-items: center;
-  background: var(--bg-surface);
+  background: #ffffff;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: 3rem;
   margin-bottom: 3.5rem;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .avatarContainer {
@@ -23,12 +23,12 @@
 }
 
 .avatarShield {
-  width: 190px;
-  height: 190px;
+  width: 180px;
+  height: 180px;
   border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, #0e2746 0%, #0284c7 100%);
-  border: 2px solid rgba(56, 189, 248, 0.4);
-  box-shadow: 0 0 35px rgba(56, 189, 248, 0.25);
+  background: #0f172a;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.12);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -39,18 +39,18 @@
 }
 
 .avatarMonogram {
-  font-size: 4rem;
+  font-size: 3.8rem;
   font-weight: 800;
   font-family: var(--font-heading);
   letter-spacing: -0.05em;
-  color: #38bdf8;
+  color: #ffffff;
 }
 
 .avatarSub {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(255, 255, 255, 0.8);
+  color: #94a3b8;
   font-weight: 600;
 }
 
@@ -64,22 +64,28 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: var(--radius-full);
+  color: #1d4ed8;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-brand-cyan);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  width: fit-content;
 }
 
 .fullName {
-  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-size: clamp(2rem, 4vw, 2.85rem);
   font-weight: 800;
-  color: #ffffff;
-  line-height: 1.15;
+  color: var(--text-primary);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
 }
 
 .penName {
-  color: var(--color-brand-cyan);
+  color: #2563eb;
 }
 
 .roleTitle {
@@ -95,7 +101,7 @@
   padding-top: 0.75rem;
   border-top: 1px solid var(--border-subtle);
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .metaItem {
@@ -140,7 +146,7 @@
 .sectionTitle {
   font-size: 1.45rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -162,33 +168,35 @@
 }
 
 .philosophyCard {
-  background: var(--bg-surface);
+  background: #ffffff;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  padding: 1.35rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
 .philosophyCardTitle {
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   font-weight: 600;
-  color: var(--color-brand-cyan);
+  color: #2563eb;
 }
 
 .philosophyCardDesc {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  line-height: 1.5;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
 }
 
 /* Side Card */
 .sideCard {
-  background: var(--bg-surface);
+  background: #ffffff;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -196,8 +204,8 @@
 
 .sideCardTitle {
   font-size: 1.1rem;
-  font-weight: 600;
-  color: #ffffff;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .infoRow {
@@ -211,6 +219,7 @@
   text-transform: uppercase;
   color: var(--text-muted);
   letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .infoValue {
@@ -221,7 +230,7 @@
 
 .contactDisclaimer {
   font-size: 0.78rem;
-  color: var(--text-subtle);
+  color: var(--text-muted);
   line-height: 1.45;
   margin-top: 0.25rem;
 }
@@ -243,5 +252,6 @@
   }
   .editorialGrid {
     grid-template-columns: 1fr;
+    gap: 2.5rem;
   }
 }

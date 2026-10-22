@@ -25,7 +25,7 @@ export default function HomePage() {
         <div className={`container ${styles.heroGrid}`}>
           <div className={styles.heroContent}>
             <div className={styles.brandPill}>
-              <Sparkles size={14} />
+              <BookOpen size={14} />
               <span>Independent Digital Publishing</span>
             </div>
 
