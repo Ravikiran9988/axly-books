@@ -301,7 +301,11 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
           </p>
         </div>
 
-        <div>
+        <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+          <Link href="/admin/books/import" className="btn btn-ghost btn-sm">
+            <Upload size={16} />
+            <span>Import PDF</span>
+          </Link>
           <button type="button" onClick={handleOpenCreate} className="btn btn-primary btn-sm">
             <Plus size={16} />
             <span>Create New Book</span>
