@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { upload } from '@vercel/blob/client';
 import { ArrowLeft, FileUp, LoaderCircle, Plus, Trash2, UploadCloud } from 'lucide-react';
 import styles from '../../admin.module.css';
 
@@ -211,11 +212,23 @@ export default function PdfBookImporter() {
           isPublished: book.isPublished,
         };
       });
-      const form = new FormData();
-      form.append('file', file);
-      form.append('book', JSON.stringify(payload));
-      form.append('chapters', JSON.stringify(chapterPayload));
-      const response = await fetch('/api/admin/books/import', { method: 'POST', body: form });
+      setProgress('Uploading PDF directly to storage…');
+      const uploaded = await upload(
+        `books/originals/${slugify(file.name.replace(/\\.pdf$/i, '')).slice(0, 70) || 'book'}.pdf`,
+        file,
+        {
+          access: 'public',
+          handleUploadUrl: '/api/admin/books/upload',
+          clientPayload: JSON.stringify({ purpose: 'book-original-pdf' }),
+          onUploadProgress: ({ percentage }) => setProgress(`Uploading PDF… ${Math.round(percentage)}%`),
+        },
+      );
+      setProgress('Saving book and chapters…');
+      const response = await fetch('/api/admin/books/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ book: payload, chapters: chapterPayload, originalPdfUrl: uploaded.url }),
+      });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Book import failed.');
       setNotice({ type: 'success', text: result.message || 'Book imported successfully.' });
@@ -245,7 +258,7 @@ export default function PdfBookImporter() {
       <form onSubmit={importBook}>
         <section className={styles.modalContent} style={{ maxWidth: 'none', marginBottom: 24 }}>
           <h2 className={styles.modalTitle}>1. Choose your PDF</h2>
-          <p style={{ color: 'var(--text-muted)', marginTop: 8 }}>PDF only · Maximum 25 MB · Text extraction runs in your browser. Your PDF is uploaded to storage only when you press Import Book.</p>
+          <p style={{ color: 'var(--text-muted)', marginTop: 8 }}>PDF only · Maximum 25 MB · Text extraction runs in your browser. Import uploads directly to Blob storage to avoid server request-size limits. Original PDFs use public Blob URLs; disabling the download link does not make the URL private.</p>
           <input ref={fileInput} type="file" accept="application/pdf,.pdf" onChange={(event) => { const selected = event.target.files?.[0]; if (selected) void extractPdf(selected); }} disabled={isExtracting || isImporting} style={{ display: 'none' }} />
           <button type="button" className="btn btn-secondary" onClick={() => fileInput.current?.click()} disabled={isExtracting || isImporting} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
             {isExtracting ? <LoaderCircle size={17} className="animate-spin" /> : <FileUp size={17} />}
