@@ -132,6 +132,10 @@ export default async function ReaderDashboardPage() {
             <Settings size={16} />
             <span>Profile & Settings</span>
           </Link>
+          <Link href="/dashboard/notifications" className="btn btn-secondary btn-sm">
+            <BookOpen size={16} />
+            <span>Notifications</span>
+          </Link>
           {user.role === 'admin' && (
             <Link href="/admin" className="btn btn-primary btn-sm">
               <Shield size={16} />
