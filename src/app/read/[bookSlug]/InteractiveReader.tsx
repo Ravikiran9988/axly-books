@@ -20,6 +20,7 @@ import { Book } from '@/types/book';
 import { ReadingPreferences } from '@/types/reading';
 import { progressService } from '@/services/progressService';
 import styles from './reader.module.css';
+import CommentsPanel from './CommentsPanel';
 
 const DEFAULT_PREFERENCES: ReadingPreferences = {
   theme: 'light',
@@ -558,6 +559,8 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
           )}
         </nav>
       </article>
+
+      <CommentsPanel bookSlug={book.slug} chapterSlug={currentChapter.slug} />
 
       {/* Floating Notification Toast */}
       {toastMessage && (
