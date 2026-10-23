@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   User,
   MessageCircle,
+  Star,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import styles from './admin.module.css';
@@ -62,6 +63,10 @@ export default async function AdminLayout({
           <Link href="/admin/comments" className={styles.navLink}>
             <MessageCircle size={18} />
             <span>Reader Comments</span>
+          </Link>
+          <Link href="/admin/reviews" className={styles.navLink}>
+            <Star size={18} />
+            <span>Book Reviews</span>
           </Link>
 
           <span className={styles.navSectionTitle}>Navigation</span>
