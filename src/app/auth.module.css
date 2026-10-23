@@ -148,7 +148,14 @@
 }
 
 @media (max-width: 480px) {
+  .authContainer {
+    padding: 2rem 0.75rem 3rem;
+  }
   .authCard {
-    padding: 2rem 1.5rem;
+    padding: 1.5rem 1rem;
+    border-radius: var(--radius-lg);
+  }
+  .authTitle {
+    font-size: 1.5rem;
   }
 }

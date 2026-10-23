@@ -289,15 +289,28 @@
   .dashboardContainer {
     padding: 2rem 1rem 4rem;
   }
+  .quickStatsGrid {
+    grid-template-columns: 1fr;
+  }
   .continueCard {
     flex-direction: column;
     align-items: flex-start;
+    padding: 1.25rem 1rem;
   }
   .continueCover {
-    width: 80px;
-    height: 110px;
+    width: 75px;
+    height: 105px;
   }
   .bookmarksList {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 380px) {
+  .dashboardContainer {
+    padding: 1.5rem 0.75rem 3rem;
+  }
+  .title {
+    font-size: 1.5rem;
   }
 }
