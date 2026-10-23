@@ -16,7 +16,7 @@ type Review = {
   canEdit: boolean;
 };
 type Summary = { averageRating: number; reviewCount: number; distribution: Record<number, number> };
-type OwnReview = { id: string; rating: number; title: string | null; content: string; updatedAt: string } | null;
+type OwnReview = { id: string; rating: number; title: string | null; content: string; status: 'published' | 'hidden'; updatedAt: string } | null;
 
 function Stars({ value, interactive = false, onChange }: { value: number; interactive?: boolean; onChange?: (rating: number) => void }) {
   return (
@@ -183,7 +183,7 @@ export default function ReviewsPanel({ bookSlug }: { bookSlug: string }) {
         </form>
       )}
 
-      {myReview && !showForm && <div className={styles.ownReviewNotice}>You’ve reviewed this book. <button type="button" onClick={() => setShowForm(true)}>Edit</button><button type="button" onClick={deleteReview} disabled={busy}>Delete</button></div>}
+      {myReview && !showForm && <div className={styles.ownReviewNotice}>{myReview.status === 'hidden' ? 'Your review is hidden by a moderator. You can delete it, but cannot republish it yourself.' : 'You’ve reviewed this book.'} {myReview.status === 'published' && <button type="button" onClick={() => setShowForm(true)}>Edit</button>}<button type="button" onClick={deleteReview} disabled={busy}>Delete</button></div>}
       {notice && <p className={styles.notice} role="status">{notice}</p>}
 
       <div className={styles.reviewList}>
