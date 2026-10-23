@@ -205,8 +205,7 @@ export const readerAnnotations = pgTable(
     anchor: text('anchor'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [uniqueIndex('reader_annotation_owner_id_idx').on(table.userId, table.id)]
+  }
 );
 
 export const correctionSubmissions = pgTable(
