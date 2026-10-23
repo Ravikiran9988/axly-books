@@ -27,6 +27,10 @@
 
 ---
 
+## P5 private annotations and author tools
+
+Readers can save private passage notes per book/chapter, submit typo or factual-correction suggestions, view an in-app notification inbox, and browse published edition history. The admin CMS includes a correction review queue at **Admin → Reader Corrections**; decisions notify the submitting reader and do not silently rewrite published chapters. Admins can publish edition notes through `POST /api/admin/books/:bookId/editions`, which announces the update to reader accounts. Apply migration `0005_annotations_author_tools.sql` with `npm run db:migrate`. See [`docs/P5_ANNOTATIONS_AUTHOR_TOOLS.md`](docs/P5_ANNOTATIONS_AUTHOR_TOOLS.md) for API details, privacy guarantees, limitations, and manual verification steps.
+
 ## P3 ratings and reviews
 
 Published book pages now include a public rating summary, star distribution, paginated reviews, and a review composer for signed-in readers. Each reader can maintain one 1–5-star review per book, optionally title it, and edit or delete their review. Administrators can moderate reviews from **Admin → Book Reviews**, including hiding/restoring or deleting them. Apply migration `0004_add_book_reviews.sql` with `npm run db:migrate`. See [`docs/P3_BOOK_REVIEWS.md`](docs/P3_BOOK_REVIEWS.md) for validation rules and manual smoke tests.
