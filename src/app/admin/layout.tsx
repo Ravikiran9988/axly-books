@@ -72,6 +72,10 @@ export default async function AdminLayout({
             <MessageCircle size={18} />
             <span>Reader Corrections</span>
           </Link>
+          <Link href="/admin/questions" className={styles.navLink}>
+            <MessageCircle size={18} />
+            <span>Ask Slayer · Q&A</span>
+          </Link>
 
           <span className={styles.navSectionTitle}>Navigation</span>
           <Link href="/dashboard" className={styles.navLink}>
