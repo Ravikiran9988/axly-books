@@ -29,7 +29,7 @@
 
 ## P3 ratings and reviews
 
-Published book pages now include a public rating summary, star distribution, paginated reviews, and a review composer for signed-in readers. Each reader can maintain one 1–5-star review per book, optionally title it, and edit or delete their review. Administrators can hide/restore or delete reviews. Apply migration `0004_add_book_reviews.sql` with `npm run db:migrate`. See [`docs/P3_BOOK_REVIEWS.md`](docs/P3_BOOK_REVIEWS.md) for validation rules and manual smoke tests.
+Published book pages now include a public rating summary, star distribution, paginated reviews, and a review composer for signed-in readers. Each reader can maintain one 1–5-star review per book, optionally title it, and edit or delete their review. Administrators can moderate reviews from **Admin → Book Reviews**, including hiding/restoring or deleting them. Apply migration `0004_add_book_reviews.sql` with `npm run db:migrate`. See [`docs/P3_BOOK_REVIEWS.md`](docs/P3_BOOK_REVIEWS.md) for validation rules and manual smoke tests.
 
 ## P2 reader experience
 
