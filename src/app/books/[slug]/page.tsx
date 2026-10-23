@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Clock, ChevronRight, Download } from 'lucide-react';
-import { bookService } from '@/services/bookService';
+import { getServerBookBySlug } from '@/services/serverBookService';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import BookActions from './BookActions';
 import styles from './page.module.css';
@@ -20,7 +20,7 @@ interface BookPageProps {
 
 export async function generateMetadata({ params }: BookPageProps) {
   const { slug } = await params;
-  const book = await bookService.getBookBySlug(slug);
+  const book = await getServerBookBySlug(slug);
   if (!book) return { title: 'Book Not Found · AXLY' };
 
   return {
@@ -154,9 +154,9 @@ export default async function BookDetailPage({ params }: BookPageProps) {
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                 {book.copyrightNotice}
               </span>
-              <span className="badge badge-cyan" style={{ fontSize: '0.72rem' }}>
-                CC BY-NC 4.0
-              </span>
+              {book.license.includes('CC BY-NC 4.0') && (
+                <span className="badge badge-cyan" style={{ fontSize: '0.72rem' }}>CC BY-NC 4.0</span>
+              )}
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: 0 }}>
               Licensed under{' '}
@@ -168,7 +168,9 @@ export default async function BookDetailPage({ params }: BookPageProps) {
               >
                 {book.license}
               </a>
-              . Free online access for individual educational study and technical advancement.
+              . {book.license.includes('CC BY-NC 4.0')
+                ? 'Free online access for individual educational study and technical advancement.'
+                : 'Please consult this publication’s copyright notice for reuse permissions.'}
             </p>
           </div>
 
