@@ -2,7 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, ChevronRight } from 'lucide-react';
+import { Clock, ChevronRight, Download } from 'lucide-react';
 import { bookService } from '@/services/bookService';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import BookActions from './BookActions';
@@ -82,6 +82,11 @@ export default async function BookDetailPage({ params }: BookPageProps) {
 
           {/* Interactive Start/Continue Reading CTA (Client Component) */}
           <BookActions book={book} />
+          {book.allowPdfDownload && (
+            <a href={'/api/books/' + encodeURIComponent(book.slug) + '/pdf'} className="btn btn-ghost btn-sm">
+              <Download size={16} /> Download original PDF
+            </a>
+          )}
         </div>
 
         {/* Info Column */}
