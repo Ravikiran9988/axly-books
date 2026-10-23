@@ -126,6 +126,51 @@ export const chapters = pgTable(
   ]
 );
 
+// --- Chapter Comments ---
+// Comments are tied to both a book and chapter so discussions never leak across books.
+export const comments = pgTable(
+  'comments',
+  {
+    id: text('id').primaryKey(),
+    bookId: text('book_id').notNull().references(() => books.id, { onDelete: 'cascade' }),
+    chapterId: text('chapter_id').notNull().references(() => chapters.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    parentCommentId: text('parent_comment_id'),
+    content: text('content').notNull(),
+    status: text('status').default('published').notNull(), // published | hidden
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('comments_id_book_chapter_idx').on(table.id, table.bookId, table.chapterId),
+  ]
+);
+
+export const commentVotes = pgTable(
+  'comment_votes',
+  {
+    id: text('id').primaryKey(),
+    commentId: text('comment_id').notNull().references(() => comments.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex('comment_vote_user_idx').on(table.commentId, table.userId)]
+);
+
+export const commentReports = pgTable(
+  'comment_reports',
+  {
+    id: text('id').primaryKey(),
+    commentId: text('comment_id').notNull().references(() => comments.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    reason: text('reason').notNull(),
+    details: text('details'),
+    status: text('status').default('open').notNull(), // open | reviewed | dismissed
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex('comment_report_user_idx').on(table.commentId, table.userId)]
+);
+
 // --- Rate Limits Table (Shared Multi-Instance Persistence) ---
 export const rateLimits = pgTable('rate_limits', {
   key: text('key').primaryKey(),
@@ -205,6 +250,9 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(sessions),
   readingProgress: many(readingProgress),
   bookmarks: many(bookmarks),
+  comments: many(comments),
+  commentVotes: many(commentVotes),
+  commentReports: many(commentReports),
   preferences: one(readerPreferences, {
     fields: [users.id],
     references: [readerPreferences.userId],
@@ -219,6 +267,7 @@ export const booksRelations = relations(books, ({ many, one }) => ({
   chapters: many(chapters),
   readingProgress: many(readingProgress),
   bookmarks: many(bookmarks),
+  comments: many(comments),
 }));
 
 export const chaptersRelations = relations(chapters, ({ one }) => ({
@@ -226,4 +275,23 @@ export const chaptersRelations = relations(chapters, ({ one }) => ({
     fields: [chapters.bookId],
     references: [books.id],
   }),
+  comments: many(comments),
+}));
+
+export const commentsRelations = relations(comments, ({ one, many }) => ({
+  book: one(books, { fields: [comments.bookId], references: [books.id] }),
+  chapter: one(chapters, { fields: [comments.chapterId], references: [chapters.id] }),
+  user: one(users, { fields: [comments.userId], references: [users.id] }),
+  votes: many(commentVotes),
+  reports: many(commentReports),
+}));
+
+export const commentVotesRelations = relations(commentVotes, ({ one }) => ({
+  comment: one(comments, { fields: [commentVotes.commentId], references: [comments.id] }),
+  user: one(users, { fields: [commentVotes.userId], references: [users.id] }),
+}));
+
+export const commentReportsRelations = relations(commentReports, ({ one }) => ({
+  comment: one(comments, { fields: [commentReports.commentId], references: [comments.id] }),
+  user: one(users, { fields: [commentReports.userId], references: [users.id] }),
 }));
