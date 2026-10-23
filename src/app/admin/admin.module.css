@@ -446,6 +446,27 @@
   color: var(--text-primary);
 }
 
+.formGroup {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.formGroup input,
+.formGroup textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.8rem;
+  background: var(--surface-primary, #fff);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 400;
+}
+
 .formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
