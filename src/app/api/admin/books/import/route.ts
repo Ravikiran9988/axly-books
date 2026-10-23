@@ -1,162 +1,135 @@
+import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { del } from '@vercel/blob';
-import { eq } from 'drizzle-orm';
+import { put, del } from '@vercel/blob';
+import { asc, eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
-import { bookCreateSchema, chapterCreateSchema } from '@/lib/validations';
+import { extractPdfPages, splitPdfIntoChapters, slugifyImportedChapter } from '@/lib/pdfImport';
 
-const MAX_CHAPTERS = 100;
+const MAX_PDF_SIZE = 4 * 1024 * 1024;
+const MAX_EXTRACTED_CHARS = 1_200_000;
+
+function slugify(value: string): string {
+  return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90);
+}
+function field(form: FormData, key: string, fallback = ''): string {
+  const value = form.get(key);
+  return typeof value === 'string' ? value.trim() : fallback;
+}
+function uniqueSlug(base: string, taken: Set<string>): string {
+  let value = base;
+  let suffix = 2;
+  while (taken.has(value)) value = base.slice(0, 108) + '-' + suffix++;
+  taken.add(value);
+  return value;
+}
 
 export async function POST(request: Request) {
   const auth = await requireAdmin(request);
   if ('errorResponse' in auth) return auth.errorResponse;
-
   if (!isDatabaseConfigured() || !db) {
-    return NextResponse.json({ error: 'A configured persistent database is required to import a book.' }, { status: 503 });
+    return NextResponse.json({ error: 'PDF import needs the persistent Neon database. Configure DATABASE_URL and run the database migrations first.' }, { status: 503 });
+  }
+  const storageToken = process.env.PDF_BLOB_READ_WRITE_TOKEN;
+  if (!storageToken) {
+    return NextResponse.json({ error: 'Private PDF storage is not configured. Create a Private Vercel Blob store and set PDF_BLOB_READ_WRITE_TOKEN in this deployment.' }, { status: 503 });
   }
 
+  let uploadedPath: string | null = null;
   let createdBookId: string | null = null;
-  let uploadedBlobUrl: string | null = null;
   try {
-    const body = await request.json().catch(() => null) as {
-      book?: unknown;
-      chapters?: unknown;
-      originalPdfUrl?: unknown;
-    } | null;
-    if (!body || typeof body !== 'object' || !body.book || !Array.isArray(body.chapters) || typeof body.originalPdfUrl !== 'string') {
-      return NextResponse.json({ error: 'Provide book metadata, extracted chapters, and the uploaded PDF URL.' }, { status: 400 });
-    }
+    const form = await request.formData();
+    const fileValue = form.get('file');
+    if (!fileValue || typeof fileValue === 'string') return NextResponse.json({ error: 'Choose a PDF file to import.' }, { status: 400 });
+    const file = fileValue as File;
+    if (!file.size) return NextResponse.json({ error: 'The selected PDF is empty.' }, { status: 400 });
+    if (file.size > MAX_PDF_SIZE) return NextResponse.json({ error: 'PDFs must be 4 MB or smaller for this server-side import. Compress the PDF or split it into smaller files.' }, { status: 413 });
 
-    let originalPdfUrl: URL;
-    try {
-      originalPdfUrl = new URL(body.originalPdfUrl);
-    } catch {
-      return NextResponse.json({ error: 'The uploaded PDF URL is invalid.' }, { status: 400 });
-    }
-    if (
-      originalPdfUrl.protocol !== 'https:' ||
-      !(originalPdfUrl.hostname.endsWith('.public.blob.vercel-storage.com') || originalPdfUrl.hostname.endsWith('.blob.vercel-storage.com')) ||
-      !originalPdfUrl.pathname.toLowerCase().endsWith('.pdf')
-    ) {
-      return NextResponse.json({ error: 'The PDF must be uploaded to the configured Vercel Blob public store.' }, { status: 400 });
-    }
+    const bytes = Buffer.from(await file.arrayBuffer());
+    if (bytes.length < 8 || bytes.subarray(0, 5).toString('ascii') !== '%PDF-') return NextResponse.json({ error: 'The file does not have a valid PDF signature.' }, { status: 400 });
+    const pages = extractPdfPages(bytes);
+    const extractedTextSize = pages.reduce((sum, page) => sum + page.length, 0);
+    if (extractedTextSize > MAX_EXTRACTED_CHARS) return NextResponse.json({ error: 'The extracted text is too large to import at once. Split the PDF into smaller files.' }, { status: 413 });
+    const parsedChapters = splitPdfIntoChapters(pages);
 
-    const bookInput = body.book;
-    const chapterInput = body.chapters;
+    const title = field(form, 'title') || file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
+    const slug = slugify(field(form, 'slug') || title);
+    const subtitle = field(form, 'subtitle');
+    const category = field(form, 'category', 'General') || 'General';
+    const description = field(form, 'description') || 'A free book imported from an original PDF. Review the extracted chapters before publishing.';
+    const synopsis = field(form, 'synopsis') || description;
+    const edition = field(form, 'edition', 'First Edition (2026)') || 'First Edition (2026)';
+    const requestedYear = Number(field(form, 'publishedYear', String(new Date().getFullYear())));
+    const publishedYear = Number.isInteger(requestedYear) && requestedYear >= 2000 && requestedYear <= 2100 ? requestedYear : new Date().getFullYear();
+    const tags = field(form, 'tags').split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 20);
+    const allowPdfDownload = field(form, 'allowPdfDownload') === 'true';
+    const license = field(form, 'license') === 'Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)'
+      ? 'Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)'
+      : 'All Rights Reserved';
+    const licenseUrl = license.includes('CC BY-NC 4.0')
+      ? 'https://creativecommons.org/licenses/by-nc/4.0/'
+      : null;
 
-    const parsedBook = bookCreateSchema.safeParse(bookInput);
-    if (!parsedBook.success) {
-      return NextResponse.json({ error: parsedBook.error.issues[0]?.message || 'Book metadata is invalid.' }, { status: 400 });
-    }
-    if (!Array.isArray(chapterInput) || chapterInput.length < 1 || chapterInput.length > MAX_CHAPTERS) {
-      return NextResponse.json({ error: 'Import must contain between 1 and 100 chapters.' }, { status: 400 });
-    }
+    if (title.length < 2 || title.length > 150) return NextResponse.json({ error: 'Book title must be between 2 and 150 characters.' }, { status: 400 });
+    if (!slug || slug.length > 100 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return NextResponse.json({ error: 'Provide a valid URL slug using lowercase letters, numbers and hyphens.' }, { status: 400 });
+    if (description.length < 10 || description.length > 2000 || synopsis.length < 10 || synopsis.length > 10000) return NextResponse.json({ error: 'Description must be 10–2,000 characters and synopsis must be 10–10,000 characters.' }, { status: 400 });
+    if (category.length < 2 || category.length > 100) return NextResponse.json({ error: 'Category must be between 2 and 100 characters.' }, { status: 400 });
 
-    const parsedChapters = chapterInput.map((chapter) => chapterCreateSchema.safeParse(chapter));
-    const invalidChapter = parsedChapters.findIndex((result) => !result.success);
-    if (invalidChapter !== -1) {
-      const result = parsedChapters[invalidChapter];
-      return NextResponse.json({
-        error: `Chapter ${invalidChapter + 1}: ${result.success ? '' : result.error.issues[0]?.message || 'Invalid chapter data.'}`,
-      }, { status: 400 });
-    }
-    const chapters = parsedChapters.map((result) => (result.success ? result.data : null)).filter((value) => value !== null);
-    const chapterNumbers = chapters.map((chapter) => chapter.chapterNumber);
-    const chapterSlugs = chapters.map((chapter) => chapter.slug);
-    if (new Set(chapterNumbers).size !== chapterNumbers.length) {
-      return NextResponse.json({ error: 'Chapter numbers must be unique.' }, { status: 400 });
-    }
-    if (new Set(chapterSlugs).size !== chapterSlugs.length) {
-      return NextResponse.json({ error: 'Chapter slugs must be unique.' }, { status: 400 });
-    }
-    const totalCharacters = chapters.reduce((sum, chapter) => sum + chapter.content.reduce((sectionSum, section) => sectionSum + section.content.length, 0), 0);
-    if (totalCharacters > 1_000_000) {
-      return NextResponse.json({ error: 'The import is limited to 1,000,000 characters. Split the book into smaller imports.' }, { status: 413 });
-    }
-    const data = parsedBook.data;
-    if (data.isPublished && !chapters.some((chapter) => chapter.isPublished)) {
-      return NextResponse.json(
-        { error: 'The imported book must include at least one published chapter before it can be published.' },
-        { status: 400 }
-      );
-    }
-
-    const existing = await db.select({ id: schema.books.id }).from(schema.books).where(eq(schema.books.slug, data.slug)).limit(1);
-    if (existing.length) {
-      return NextResponse.json({ error: `A book with slug "${data.slug}" already exists.` }, { status: 409 });
-    }
-
-    uploadedBlobUrl = originalPdfUrl.toString();
+    const duplicate = await db.select({ id: schema.books.id }).from(schema.books).where(eq(schema.books.slug, slug)).limit(1);
+    if (duplicate.length) return NextResponse.json({ error: 'A book with that slug already exists. Choose a different URL slug.' }, { status: 409 });
 
     const now = new Date();
-    createdBookId = `book_${crypto.randomUUID()}`;
-    const totalReadingMinutes = chapters.reduce((sum, chapter) => sum + chapter.estimatedReadingTimeMinutes, 0);
+    createdBookId = 'book_' + crypto.randomUUID();
+    const intendedPath = 'original-pdfs/' + crypto.randomUUID() + '.pdf';
+    const blob = await put(intendedPath, bytes, {
+      access: 'private', token: storageToken, contentType: 'application/pdf', addRandomSuffix: false, cacheControlMaxAge: 0,
+    });
+    if (!blob?.pathname) throw new Error('Private Blob storage did not return a file path.');
+    uploadedPath = blob.pathname;
 
     await db.insert(schema.books).values({
-      id: createdBookId,
-      slug: data.slug,
-      title: data.title,
-      subtitle: data.subtitle,
-      description: data.description,
-      synopsis: data.synopsis,
-      authorName: data.authorName,
-      coverImageUrl: data.coverImageUrl,
-      category: data.category,
-      tags: data.tags,
-      edition: data.edition,
-      publishedYear: data.publishedYear,
-      status: data.isPublished ? 'Available Free' : 'Draft',
-      isFree: data.isFree,
-      isPublished: data.isPublished,
-      totalChapters: chapters.length,
-      estimatedReadingTimeMinutes: totalReadingMinutes,
-      allowPdfDownload: data.allowPdfDownload,
-      originalPdfUrl: uploadedBlobUrl,
-      createdAt: now,
-      updatedAt: now,
+      id: createdBookId, slug, title, subtitle, description, synopsis, authorName: 'Slayer',
+      coverImageUrl: '/images/ml-deep-learning-cover.jpg', category, tags, edition, publishedYear,
+      status: 'Draft', isFree: true, isPublished: false, totalChapters: parsedChapters.length,
+      estimatedReadingTimeMinutes: parsedChapters.reduce((sum, chapter) => sum + chapter.estimatedReadingTimeMinutes, 0),
+      allowPdfDownload, license, licenseUrl, originalPdfPath: uploadedPath, createdAt: now, updatedAt: now,
     });
 
-    for (const chapter of chapters) {
-      await db.insert(schema.chapters).values({
-        id: `ch_${crypto.randomUUID()}`,
-        bookId: createdBookId,
-        chapterNumber: chapter.chapterNumber,
-        title: chapter.title,
-        slug: chapter.slug,
-        summary: chapter.summary,
-        content: chapter.content,
-        estimatedReadingTimeMinutes: chapter.estimatedReadingTimeMinutes,
-        isPublished: chapter.isPublished && data.isPublished,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
+    const taken = new Set<string>();
+    const chapterRows = parsedChapters.map((chapter, index) => ({
+      id: 'ch_' + crypto.randomUUID(), bookId: createdBookId as string, chapterNumber: index + 1,
+      title: chapter.title, slug: uniqueSlug(slugifyImportedChapter(chapter.title, index + 1), taken),
+      summary: chapter.text.slice(0, 220).replace(/\s+/g, ' ').trim() || 'Imported from the original PDF.',
+      content: [{ title: 'Imported text', content: chapter.text }],
+      estimatedReadingTimeMinutes: chapter.estimatedReadingTimeMinutes, isPublished: false, createdAt: now, updatedAt: now,
+    }));
+    await db.insert(schema.chapters).values(chapterRows);
+
+    const chapters = await db.select({
+      id: schema.chapters.id, chapterNumber: schema.chapters.chapterNumber, title: schema.chapters.title,
+      slug: schema.chapters.slug, summary: schema.chapters.summary,
+      estimatedReadingTimeMinutes: schema.chapters.estimatedReadingTimeMinutes,
+    }).from(schema.chapters).where(eq(schema.chapters.bookId, createdBookId)).orderBy(asc(schema.chapters.chapterNumber));
 
     return NextResponse.json({
       success: true,
-      bookId: createdBookId,
-      slug: data.slug,
-      originalPdfUrl: uploadedBlobUrl,
-      chaptersImported: chapters.length,
-      message: `Imported "${data.title}" with ${chapters.length} chapters. Review the chapters before publishing.`,
+      book: { id: createdBookId, slug, title, allowPdfDownload, isPublished: false },
+      pageCount: pages.length, importedTextCharacters: extractedTextSize,
+      chapters: chapters.map((chapter) => ({ ...chapter, wordCount: parsedChapters[chapter.chapterNumber - 1]?.wordCount ?? 0 })),
+      message: 'PDF imported as an unpublished draft. Review chapter titles and text before publishing.',
     }, { status: 201 });
-  } catch (error) {
-    if (createdBookId && db) {
-      try {
-        await db.delete(schema.books).where(eq(schema.books.id, createdBookId));
-      } catch (cleanupError) {
-        console.error('PDF import database cleanup failed:', cleanupError);
-      }
+  } catch (error: unknown) {
+    if (createdBookId) {
+      try { await db.delete(schema.books).where(eq(schema.books.id, createdBookId)); }
+      catch (cleanupError) { console.error('PDF import database cleanup failed:', cleanupError); }
     }
-    if (uploadedBlobUrl) {
-      try {
-        await del(uploadedBlobUrl, { token: process.env.BLOB_READ_WRITE_TOKEN });
-      } catch (cleanupError) {
-        console.error('PDF import blob cleanup failed:', cleanupError);
-      }
+    if (uploadedPath) {
+      try { await del(uploadedPath, { token: storageToken }); }
+      catch (cleanupError) { console.error('PDF import Blob cleanup failed:', cleanupError); }
     }
-    console.error('PDF book import failed:', error);
-    return NextResponse.json({ error: 'The PDF could not be imported. Check storage/database configuration and try again.' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unexpected PDF import failure.';
+    console.error('PDF import error:', error);
+    return NextResponse.json({ error: message }, { status: 422 });
   }
 }
