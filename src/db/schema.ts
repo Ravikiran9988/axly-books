@@ -88,6 +88,8 @@ export const books = pgTable('books', {
   totalChapters: integer('total_chapters').default(0).notNull(),
   estimatedReadingTimeMinutes: integer('estimated_reading_time_minutes').default(0).notNull(),
   allowPdfDownload: boolean('allow_pdf_download').default(false).notNull(),
+  // Path inside the private Vercel Blob store; never expose through public book APIs.
+  originalPdfPath: text('original_pdf_path'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
