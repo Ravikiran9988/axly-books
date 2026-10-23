@@ -61,12 +61,12 @@ export default function CommentsPanel({ bookSlug, chapterSlug }: { bookSlug: str
   useEffect(() => {
     let cancelled = false;
     fetch('/api/auth/me', { cache: 'no-store' }).then((r) => r.json()).then((data) => {
-      if (!cancelled) setUser(data.user ? { id: data.user.id, displayName: data.user.displayName, role: data.user.role } : null); // eslint-disable-line react-hooks/set-state-in-effect
+      if (!cancelled) setUser(data.user ? { id: data.user.id, displayName: data.user.displayName, role: data.user.role } : null);
     }).catch(() => undefined);
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => { void load(true); }, [endpoint, sort]); // eslint-disable-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  useEffect(() => { void load(true); }, [endpoint, sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submitComment(event: FormEvent, parentCommentId: string | null = null) {
     event.preventDefault();
