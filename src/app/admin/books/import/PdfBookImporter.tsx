@@ -53,30 +53,36 @@ function loadPdfJs(): Promise<NonNullable<Window['pdfjsLib']>> {
   });
 }
 
+function cleanExtractedText(text: string): string {
+  const lines = text.replace(/\\r/g, '').split('\\n').map((line) => line.replace(/[ \\t]+/g, ' ').trim());
+  const frequency = new Map<string, number>();
+  lines.filter(Boolean).forEach((line) => { if (line.length <= 90) frequency.set(line, (frequency.get(line) ?? 0) + 1); });
+  return lines.filter((line) => {
+    if (!line || /^\\s*(?:page\\s*)?\\d+(?:\\s*(?:of|\\/)\\s*\\d+)?\\s*$/i.test(line)) return false;
+    if (line.length <= 90 && (frequency.get(line) ?? 0) >= 4) return false;
+    return true;
+  }).join('\\n').replace(/[ \\t]+\\n/g, '\\n').replace(/\\n{3,}/g, '\\n\\n').trim();
+}
+
 function splitIntoChapters(text: string): DraftChapter[] {
-  const normalized = text.replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
-  const lines = normalized.split('\n');
-  const headingPattern = /^\s*((?:chapter|unit|lesson|part)\s+(?:\d+|[ivxlcdm]+|one|two|three|four|five|six|seven|eight|nine|ten)\b[^\n]{0,140}|(?:introduction|preface|foreword|prologue|conclusion|epilogue|appendix(?:\s+[a-z0-9]+)?|acknowledgements?|references|bibliography|about the author))\s*$/i;
+  const normalized = cleanExtractedText(text);
+  const lines = normalized.split('\\n');
+  const headingPattern = /^\\s*((?:chapter|unit|lesson|part|section)\\s+(?:(?:no\\.?\\s*)?\\d+[a-z]?|[ivxlcdm]+|one|two|three|four|five|six|seven|eight|nine|ten)\\b[^\\n]{0,140}|(?:introduction|preface|foreword|prologue|conclusion|epilogue|appendix(?:\\s+[a-z0-9]+)?|acknowledgements?|references|bibliography|about the author|getting started|final thoughts|exercises|solutions))\\s*[:.]?\\s*$/i;
   const starts: Array<{ index: number; title: string }> = [];
-  lines.forEach((line, index) => {
-    const trimmed = line.trim();
-    if (trimmed && trimmed.length <= 150 && headingPattern.test(trimmed)) starts.push({ index, title: trimmed });
-  });
-  const unique = starts.filter((entry, index) => index === 0 || entry.index !== starts[index - 1].index);
+  lines.forEach((line, index) => { const trimmed = line.trim(); if (trimmed && trimmed.length <= 150 && headingPattern.test(trimmed)) starts.push({ index, title: trimmed }); });
+  const counts = new Map<string, number>();
+  starts.forEach(({ title }) => counts.set(title.toLowerCase(), (counts.get(title.toLowerCase()) ?? 0) + 1));
+  const unique = starts.filter((entry, index) => (index === 0 || entry.index !== starts[index - 1].index) && counts.get(entry.title.toLowerCase()) === 1);
   if (!unique.length) return [{ title: 'Full Book', content: normalized }];
   const result: DraftChapter[] = [];
-  if (unique[0].index > 0) {
-    const frontMatter = lines.slice(0, unique[0].index).join('\n').trim();
-    if (frontMatter.length > 250) result.push({ title: 'Introduction', content: frontMatter });
-  }
+  if (unique[0].index > 0) { const frontMatter = lines.slice(0, unique[0].index).join('\\n').trim(); if (frontMatter.length > 250) result.push({ title: 'Introduction', content: frontMatter }); }
   unique.forEach((heading, index) => {
     const end = unique[index + 1]?.index ?? lines.length;
-    const body = lines.slice(heading.index + 1, end).join('\n').trim();
-    if (body.length > 30) result.push({ title: heading.title, content: body });
+    const body = lines.slice(heading.index + 1, end).join('\\n').trim();
+    if (body.length > 30) result.push({ title: heading.title.replace(/[:.]$/, ''), content: body });
   });
   return result.length ? result : [{ title: 'Full Book', content: normalized }];
 }
-
 export default function PdfBookImporter() {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
