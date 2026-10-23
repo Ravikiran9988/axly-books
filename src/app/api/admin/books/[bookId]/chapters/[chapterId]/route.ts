@@ -5,10 +5,10 @@ import { requireAdmin } from '@/lib/auth';
 import { chapterUpdateSchema } from '@/lib/validations';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ bookId: string; chapterId: string }> }
 ) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }
@@ -41,7 +41,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ bookId: string; chapterId: string }> }
 ) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }
@@ -49,9 +49,9 @@ export async function PUT(
   try {
     const { chapterId } = await params;
 
-    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+    if (!isDatabaseConfigured() || !db) {
       return NextResponse.json(
-        { error: 'Persistent database service is not configured.' },
+        { error: 'Persistent database service is not configured. Configure DATABASE_URL before changing books.' },
         { status: 503 }
       );
     }
@@ -78,6 +78,34 @@ export async function PUT(
       }
 
       const chapter = existing[0];
+
+      // A published book must retain at least one published chapter.
+      if (updates.isPublished === false && chapter.isPublished) {
+        const [parentBook] = await db
+          .select({ isPublished: schema.books.isPublished })
+          .from(schema.books)
+          .where(eq(schema.books.id, chapter.bookId))
+          .limit(1);
+
+        if (parentBook?.isPublished) {
+          const otherPublishedChapters = await db
+            .select({ id: schema.chapters.id })
+            .from(schema.chapters)
+            .where(and(
+              eq(schema.chapters.bookId, chapter.bookId),
+              eq(schema.chapters.isPublished, true),
+              sql`${schema.chapters.id} <> ${chapter.id}`
+            ))
+            .limit(1);
+
+          if (otherPublishedChapters.length === 0) {
+            return NextResponse.json(
+              { error: 'This is the last published chapter. Unpublish the book first or publish another chapter before hiding this one.' },
+              { status: 409 }
+            );
+          }
+        }
+      }
 
       // If chapterNumber changed, check uniqueness
       if (updates.chapterNumber && updates.chapterNumber !== chapter.chapterNumber) {
@@ -154,7 +182,7 @@ export async function PUT(
       return NextResponse.json({ success: true, chapter: updated[0] });
     }
 
-    return NextResponse.json({ success: true, message: 'Updated chapter.' });
+    return NextResponse.json({ error: 'Persistent database service is required to update chapters.' }, { status: 503 });
   } catch (err: unknown) {
     console.error('Admin update chapter error:', err);
     return NextResponse.json({ error: 'Failed to update chapter.' }, { status: 500 });
@@ -162,10 +190,10 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ bookId: string; chapterId: string }> }
 ) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin(request);
   if ('errorResponse' in auth) {
     return auth.errorResponse;
   }
@@ -194,6 +222,34 @@ export async function DELETE(
       const chapter = existing[0];
       const bookId = chapter.bookId;
       const now = new Date();
+
+      // Do not let deletion leave a published book with no published chapters.
+      if (chapter.isPublished) {
+        const [parentBook] = await db
+          .select({ isPublished: schema.books.isPublished })
+          .from(schema.books)
+          .where(eq(schema.books.id, bookId))
+          .limit(1);
+
+        if (parentBook?.isPublished) {
+          const otherPublishedChapters = await db
+            .select({ id: schema.chapters.id })
+            .from(schema.chapters)
+            .where(and(
+              eq(schema.chapters.bookId, bookId),
+              eq(schema.chapters.isPublished, true),
+              sql`${schema.chapters.id} <> ${chapter.id}`
+            ))
+            .limit(1);
+
+          if (otherPublishedChapters.length === 0) {
+            return NextResponse.json(
+              { error: 'This is the last published chapter. Unpublish the book or publish another chapter before deleting it.' },
+              { status: 409 }
+            );
+          }
+        }
+      }
 
       // Clean up reading_progress and bookmarks referencing this chapter
       await db.delete(schema.readingProgress).where(eq(schema.readingProgress.chapterId, chapterId));
@@ -224,7 +280,7 @@ export async function DELETE(
       });
     }
 
-    return NextResponse.json({ success: true, message: 'Deleted chapter.' });
+    return NextResponse.json({ error: 'Persistent database service is required to delete chapters.' }, { status: 503 });
   } catch (err: unknown) {
     console.error('Admin delete chapter error:', err);
     return NextResponse.json({ error: 'Failed to delete chapter.' }, { status: 500 });
