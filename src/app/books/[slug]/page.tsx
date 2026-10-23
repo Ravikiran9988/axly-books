@@ -167,14 +167,18 @@ async function BookDetailContent({ params }: BookPageProps) {
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: 0 }}>
               Licensed under{' '}
-              <a
-                href={book.licenseUrl || 'https://creativecommons.org/licenses/by-nc/4.0/'}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--color-brand-cyan)', textDecoration: 'underline' }}
-              >
-                {book.license}
-              </a>
+              {book.licenseUrl ? (
+                <a
+                  href={book.licenseUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--color-brand-cyan)', textDecoration: 'underline' }}
+                >
+                  {book.license}
+                </a>
+              ) : (
+                <strong>{book.license}</strong>
+              )}
               . Free online access for individual educational study and technical advancement.
             </p>
           </div>
