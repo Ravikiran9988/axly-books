@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { getCurrentUser, requireAuth } from '@/lib/auth';
 
