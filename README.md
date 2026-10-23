@@ -35,7 +35,7 @@
 4. Choose a PDF (maximum 25 MB). Text extraction runs in the browser using PDF.js; the PDF is uploaded to Vercel Blob only when you submit the import.
 5. Review the extracted chapter split and edit titles/content before importing. Keep the book unpublished until you have checked formatting and page headers/footers.
 
-**Current limitations:** this first version extracts selectable PDF text only. Scanned/image-only PDFs require OCR before import. Chapter detection is heuristic, so review every chapter. Embedded images/diagrams, layout, and code formatting are not automatically reconstructed yet. Original PDFs are stored in Vercel Blob; only display the download link when `Allow readers to download the original PDF` is enabled in the import form.
+**Current limitations:** this first version extracts selectable PDF text only. Scanned/image-only PDFs require OCR before import. Chapter detection is heuristic, so review every chapter. Embedded images/diagrams, layout, and code formatting are not automatically reconstructed yet. Original PDFs are stored in a public Vercel Blob store, and the reader download link is shown only when `Allow readers to download the original PDF` is enabled. **Important:** the toggle hides the link; it is not storage-level access control. Do not upload confidential manuscripts to a public Blob store.
 
 ## 2. Official Publication
 
