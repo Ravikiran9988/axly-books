@@ -135,8 +135,12 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      const articleTop = articleRef.current
+        ? articleRef.current.getBoundingClientRect().top + window.scrollY
+        : 0;
+      const articleHeight = articleRef.current?.offsetHeight ?? document.documentElement.scrollHeight;
+      const scrollableHeight = Math.max(1, articleHeight - window.innerHeight);
+      const progress = ((scrollTop - articleTop) / scrollableHeight) * 100;
       setScrollProgress(Math.min(100, Math.max(0, progress)));
 
       if (positionSaveTimer.current) clearTimeout(positionSaveTimer.current);
