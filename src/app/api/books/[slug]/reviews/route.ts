@@ -53,6 +53,7 @@ export async function GET(request: Request, { params }: RouteContext) {
             rating: schema.bookReviews.rating,
             title: schema.bookReviews.title,
             content: schema.bookReviews.content,
+            status: schema.bookReviews.status,
             updatedAt: schema.bookReviews.updatedAt,
           }).from(schema.bookReviews)
             .where(and(eq(schema.bookReviews.bookId, book.id), eq(schema.bookReviews.userId, currentUser.id)))
@@ -88,6 +89,7 @@ export async function GET(request: Request, { params }: RouteContext) {
         rating: ownRows[0].rating,
         title: ownRows[0].title,
         content: ownRows[0].content,
+        status: ownRows[0].status,
         updatedAt: ownRows[0].updatedAt.toISOString(),
       } : null,
       nextOffset: rows.length > limit ? offset + limit : null,
