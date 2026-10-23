@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Clock, ChevronRight, Download } from 'lucide-react';
-import { bookService } from '@/services/bookService';
+import { getServerBookBySlug } from '@/services/serverBookService';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import BookActions from './BookActions';
 import styles from './page.module.css';
@@ -20,7 +20,7 @@ interface BookPageProps {
 
 export async function generateMetadata({ params }: BookPageProps) {
   const { slug } = await params;
-  const book = await bookService.getBookBySlug(slug);
+  const book = await getServerBookBySlug(slug);
   if (!book) return { title: 'Book Not Found · AXLY' };
 
   return {
