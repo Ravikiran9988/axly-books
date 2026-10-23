@@ -27,6 +27,10 @@
 
 ---
 
+## P3 ratings and reviews
+
+Published book pages now include a public rating summary, star distribution, paginated reviews, and a review composer for signed-in readers. Each reader can maintain one 1–5-star review per book, optionally title it, and edit or delete their review. Administrators can moderate reviews from **Admin → Book Reviews**, including hiding/restoring or deleting them. Apply migration `0004_add_book_reviews.sql` with `npm run db:migrate`. See [`docs/P3_BOOK_REVIEWS.md`](docs/P3_BOOK_REVIEWS.md) for validation rules and manual smoke tests.
+
 ## P2 reader experience
 
 The reader restores the last scroll position for each book chapter on the current browser, shows estimated chapter reading time and approximate remaining time, and keeps the existing theme, typography, bookmark, chapter navigation, and distraction-free controls. Position persistence is device-local and does not sync across devices. See [`docs/P2_READER_EXPERIENCE.md`](docs/P2_READER_EXPERIENCE.md) for manual smoke tests and limitations.
