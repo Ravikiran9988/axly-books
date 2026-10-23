@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Import must contain between 1 and 100 chapters.' }, { status: 400 });
     }
 
-    const parsedChapters = chapterInput.map((chapter, index) => chapterCreateSchema.safeParse(chapter));
+    const parsedChapters = chapterInput.map((chapter) => chapterCreateSchema.safeParse(chapter));
     const invalidChapter = parsedChapters.findIndex((result) => !result.success);
     if (invalidChapter !== -1) {
       const result = parsedChapters[invalidChapter];
