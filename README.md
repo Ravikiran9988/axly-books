@@ -21,10 +21,35 @@
 - An editorial, distraction-free reading interface with 3 reading themes (**Dark**, **Light**, **Sepia**), custom typography, instant chapter drawer, and full keyboard navigation.
 - Persistent cross-device reading progress, chapter bookmarks, and reader dashboard.
 - A fully isolated **Administrator Content Management System (CMS)** with draft segregation, chapter reordering, and technical code snippet/callout management.
+- **PDF book import:** upload an existing searchable PDF, extract text in the browser, review/edit detected chapter splits, run browser OCR on scanned pages, preview the extracted text in a reader-like layout, and import the original PDF plus interactive chapters without retyping.
 - Robust Role-Based Access Control (**RBAC**) separating general readers from platform administrators.
 - **100% Free Access Policy:** The platform strictly prohibits advertisements, paywalls, subscriptions, or book sales.
 
 ---
+
+## P4 chapter discussions
+
+P4 adds chapter-specific discussions with threaded replies (one reply level), reader names, a Slayer author badge for administrator replies, editing/deleting your own comments, helpful votes, abuse reports, comment sorting and load-more pagination. Administrators can review the moderation queue at **Admin → Reader Comments**, hide/restore content, inspect reports, and delete comments.
+
+Apply the new migration with `npm run db:migrate` after pulling the branch. The migration creates `comments`, `comment_votes`, and `comment_reports`. Comments require a persistent database and signed-in readers; reading published discussions remains public. Each account can cast one helpful vote and submit one report per comment. Comment text is limited to 2,000 characters.
+
+Moderation is intentionally conservative: reports are queued for an administrator, not auto-hidden based on untrusted report counts. The reader-facing platform remains free, without ads, subscriptions, paywalls, or book sales.
+
+## P3 launch readiness
+
+See [`docs/P3_LAUNCH_READINESS.md`](docs/P3_LAUNCH_READINESS.md) for the deployment configuration checklist, security/storage caveats, and the required preview smoke test. CI now includes regression checks that anonymous requests and forged session cookies cannot invoke the PDF import endpoint.
+
+## PDF book import setup
+
+1. Configure `BLOB_READ_WRITE_TOKEN` in the deployment environment for Vercel Blob storage.
+2. Apply the new database migration with `npm run db:migrate` (or run `ALTER TABLE books ADD COLUMN original_pdf_url text;` once if you manage migrations manually).
+3. Open **Admin → Book Management → Import from PDF** or visit `/admin/books/import` as an administrator.
+4. Choose a PDF (maximum 25 MB). Text extraction runs in the browser using PDF.js; when you submit, the PDF uploads directly from the browser to Vercel Blob with an admin-authorized, short-lived upload token and visible progress. This avoids sending the file through a serverless function request body.
+5. Review the extracted chapter split and edit titles/content before importing. Keep the book unpublished until you have checked formatting and page headers/footers.
+
+**Storage security:** the current direct-upload flow targets a **public** Vercel Blob store. Original PDFs are therefore accessible to anyone who obtains the Blob URL, even when the reader download link is disabled. Use this only for manuscripts you are comfortable storing publicly; use a separate private-storage design for restricted originals. Do not upload confidential manuscripts.
+
+**Current limitations:** OCR fallback currently uses Tesseract.js in the browser and recognizes English (`eng`) only; quality and processing time depend on the PDF and device. Chapter splitting and repeated header/footer cleanup are heuristic, so review every chapter. The reader preview shows extracted text, not the original PDF layout. Embedded images/diagrams, tables, rich layout, and code formatting are not automatically reconstructed yet. The reader download link is shown only when `Allow readers to download the original PDF` is enabled; this is a UI control, not storage-level access control.
 
 ## 2. Official Publication
 

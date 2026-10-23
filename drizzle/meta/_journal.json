@@ -15,6 +15,20 @@
       "when": 1792685040179,
       "tag": "0001_amused_mister_fear",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792750000000,
+      "tag": "0002_add_original_pdf_url",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792750060000,
+      "tag": "0003_add_chapter_comments",
+      "breakpoints": true
     }
   ]
 }

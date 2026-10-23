@@ -34,6 +34,7 @@ export async function GET(request: Request) {
       totalChapters: number;
       estimatedReadingTimeMinutes: number;
       allowPdfDownload: boolean;
+      originalPdfUrl?: string | null;
     }> = [];
 
     if (isDatabaseConfigured() && db) {
@@ -101,6 +102,7 @@ export async function GET(request: Request) {
       coverImageUrl: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
       author: b.authorName || 'Slayer',
       publicationStatus: b.status || 'Available Free',
+      originalPdfUrl: b.allowPdfDownload ? b.originalPdfUrl ?? null : null,
     }));
 
     return NextResponse.json({

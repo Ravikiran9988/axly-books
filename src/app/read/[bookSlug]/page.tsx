@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { bookService } from '@/services/bookService';
+import { getServerBookBySlug } from '@/services/serverBookService';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import InteractiveReader from './InteractiveReader';
 
@@ -16,7 +16,7 @@ interface ReaderPageProps {
 
 export async function generateMetadata({ params }: ReaderPageProps) {
   const { bookSlug } = await params;
-  const book = await bookService.getBookBySlug(bookSlug);
+  const book = await getServerBookBySlug(bookSlug);
   if (!book) return { title: 'Book Reader · AXLY' };
 
   return {
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: ReaderPageProps) {
 
 export default async function ReaderPage({ params }: ReaderPageProps) {
   const { bookSlug } = await params;
-  const book = await bookService.getBookBySlug(bookSlug);
+  const book = await getServerBookBySlug(bookSlug);
 
   if (!book) {
     notFound();

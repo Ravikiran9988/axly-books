@@ -2,8 +2,8 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, ChevronRight } from 'lucide-react';
-import { bookService } from '@/services/bookService';
+import { Clock, ChevronRight, Download } from 'lucide-react';
+import { getServerBookBySlug } from '@/services/serverBookService';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import BookActions from './BookActions';
 import styles from './page.module.css';
@@ -20,7 +20,7 @@ interface BookPageProps {
 
 export async function generateMetadata({ params }: BookPageProps) {
   const { slug } = await params;
-  const book = await bookService.getBookBySlug(slug);
+  const book = await getServerBookBySlug(slug);
   if (!book) return { title: 'Book Not Found · AXLY' };
 
   return {
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: BookPageProps) {
 
 export default async function BookDetailPage({ params }: BookPageProps) {
   const { slug } = await params;
-  const book = await bookService.getBookBySlug(slug);
+  const book = await getServerBookBySlug(slug);
 
   if (!book) {
     notFound();
@@ -82,6 +82,17 @@ export default async function BookDetailPage({ params }: BookPageProps) {
 
           {/* Interactive Start/Continue Reading CTA (Client Component) */}
           <BookActions book={book} />
+          {book.allowPdfDownload && book.originalPdfUrl && (
+            <a
+              href={book.originalPdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.75rem', width: '100%' }}
+            >
+              <Download size={16} /> Download original PDF
+            </a>
+          )}
         </div>
 
         {/* Info Column */}
