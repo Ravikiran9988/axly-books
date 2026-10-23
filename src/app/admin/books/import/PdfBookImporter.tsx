@@ -58,6 +58,20 @@ function loadPdfJs(): Promise<NonNullable<Window['pdfjsLib']>> {
   });
 }
 
+function loadTesseract(): Promise<NonNullable<Window['Tesseract']>> {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-axly-tesseract]');
+    const finish = () => window.Tesseract ? resolve(window.Tesseract) : reject(new Error('OCR did not initialize. Check your connection and retry.'));
+    if (existing) { existing.addEventListener('load', finish, { once: true }); existing.addEventListener('error', () => reject(new Error('Could not load OCR.')), { once: true }); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.async = true; script.dataset.axlyTesseract = 'true'; script.onload = finish;
+    script.onerror = () => reject(new Error('Could not load OCR. Check your internet connection.'));
+    document.head.appendChild(script);
+  });
+}
+
 function cleanExtractedText(text: string): string {
   const lines = text.replace(/\r/g, '').split('\n').map((line) => line.replace(/[ \t]+/g, ' ').trim());
   const frequency = new Map<string, number>();
