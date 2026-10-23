@@ -27,6 +27,10 @@
 
 ---
 
+## P3 launch readiness
+
+See [`docs/P3_LAUNCH_READINESS.md`](docs/P3_LAUNCH_READINESS.md) for the deployment configuration checklist, security/storage caveats, and the required preview smoke test. CI now includes regression checks that anonymous requests and forged session cookies cannot invoke the PDF import endpoint.
+
 ## PDF book import setup
 
 1. Configure `BLOB_READ_WRITE_TOKEN` in the deployment environment for Vercel Blob storage.
