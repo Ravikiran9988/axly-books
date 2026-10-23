@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { del } from '@vercel/blob';
 import { eq, or, asc } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
@@ -172,7 +173,7 @@ export async function DELETE(
 
     if (isDatabaseConfigured() && db) {
       const existing = await db
-        .select({ id: schema.books.id, title: schema.books.title })
+        .select()
         .from(schema.books)
         .where(or(eq(schema.books.id, bookId), eq(schema.books.slug, bookId)))
         .limit(1);
@@ -181,18 +182,64 @@ export async function DELETE(
         return NextResponse.json({ error: 'Book not found.' }, { status: 404 });
       }
 
-      const realId = existing[0].id;
+      const target = existing[0];
+      const otherBooks = await db
+        .select({
+          id: schema.books.id,
+          coverImageUrl: schema.books.coverImageUrl,
+          originalPdfUrl: schema.books.originalPdfUrl,
+        })
+        .from(schema.books);
+      const referencedByOtherBook = (url: string | null | undefined) =>
+        !!url && otherBooks.some((book) =>
+          book.id !== target.id && (book.coverImageUrl === url || book.originalPdfUrl === url)
+        );
 
-      // Cascading deletion is configured in PostgreSQL foreign keys,
-      // but we explicitly clean up reading_progress, bookmarks, and chapters for safety.
-      await db.delete(schema.readingProgress).where(eq(schema.readingProgress.bookId, realId));
-      await db.delete(schema.bookmarks).where(eq(schema.bookmarks.bookId, realId));
-      await db.delete(schema.chapters).where(eq(schema.chapters.bookId, realId));
-      await db.delete(schema.books).where(eq(schema.books.id, realId));
+      // Delete the database record first. Chapter, comment, progress, and bookmark
+      // rows are removed by the configured foreign-key cascades.
+      await db.delete(schema.readingProgress).where(eq(schema.readingProgress.bookId, target.id));
+      await db.delete(schema.bookmarks).where(eq(schema.bookmarks.bookId, target.id));
+      await db.delete(schema.chapters).where(eq(schema.chapters.bookId, target.id));
+      await db.delete(schema.books).where(eq(schema.books.id, target.id));
+
+      // Only remove assets owned by this Vercel Blob store, and never remove an
+      // asset that another book still references. External URLs and local paths
+      // are intentionally left untouched.
+      const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+      const assetUrls = [...new Set([target.originalPdfUrl, target.coverImageUrl].filter(
+        (url): url is string => typeof url === 'string' && url.length > 0
+      ))];
+      const blobUrls = assetUrls.filter((url) => {
+        try {
+          const parsed = new URL(url);
+          return parsed.protocol === 'https:' &&
+            (parsed.hostname.endsWith('.public.blob.vercel-storage.com') ||
+              parsed.hostname.endsWith('.blob.vercel-storage.com')) &&
+            !referencedByOtherBook(url);
+        } catch {
+          return false;
+        }
+      });
+
+      let storageCleanupWarning: string | undefined;
+      if (blobUrls.length > 0 && blobToken) {
+        try {
+          await del(blobUrls, { token: blobToken });
+        } catch (cleanupError) {
+          console.error('Book deleted but Blob asset cleanup failed:', cleanupError);
+          storageCleanupWarning =
+            'The book was deleted from the library, but one or more stored files could not be removed. Check Vercel Blob and clean up orphaned files if needed.';
+        }
+      } else if (blobUrls.length > 0 && !blobToken) {
+        storageCleanupWarning =
+          'The book was deleted from the library, but Blob cleanup was skipped because BLOB_READ_WRITE_TOKEN is not configured.';
+      }
 
       return NextResponse.json({
         success: true,
-        message: `Book "${existing[0].title}" and all its chapters were successfully deleted.`,
+        message: `Book "${target.title}" and its chapters, comments, bookmarks, and reading progress were deleted.`,
+        ...(storageCleanupWarning ? { storageCleanupWarning } : {}),
+        deletedBlobAssets: blobToken ? blobUrls.length : 0,
       });
     }
 
