@@ -423,7 +423,7 @@ async function runRealRouteIntegrationTests() {
       try {
         delete process.env.RESEND_API_KEY;
         delete process.env.DATABASE_URL;
-        Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, writable: true });
+        Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, enumerable: true, writable: true });
         return await forgotPasswordHandler(forgotReq);
       } finally {
         if (previousResendKey === undefined) delete process.env.RESEND_API_KEY;
@@ -431,7 +431,7 @@ async function runRealRouteIntegrationTests() {
         if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
         else process.env.DATABASE_URL = previousDatabaseUrl;
         if (previousNodeEnv === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
-        else Object.defineProperty(process.env, 'NODE_ENV', { value: previousNodeEnv, configurable: true, writable: true });
+        else Object.defineProperty(process.env, 'NODE_ENV', { value: previousNodeEnv, configurable: true, enumerable: true, writable: true });
       }
     })();
     assert.strictEqual(forgotRes.status, 202, 'Forgot password request must return generic 202 Accepted');
@@ -469,7 +469,7 @@ async function runRealRouteIntegrationTests() {
     const existingResetHashes = [...inMemoryStore.resets.keys()].sort();
 
     try {
-      Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, writable: true });
+      Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, enumerable: true, writable: true });
       delete process.env.DATABASE_URL;
       process.env.RESEND_API_KEY = 're_test_provider_failure';
       process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
@@ -492,7 +492,7 @@ async function runRealRouteIntegrationTests() {
     } finally {
       globalThis.fetch = originalFetch;
       if (previousNodeEnv === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
-      else Object.defineProperty(process.env, 'NODE_ENV', { value: previousNodeEnv, configurable: true, writable: true });
+      else Object.defineProperty(process.env, 'NODE_ENV', { value: previousNodeEnv, configurable: true, enumerable: true, writable: true });
       if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
       else process.env.DATABASE_URL = previousDatabaseUrl;
       if (previousResendKey === undefined) delete process.env.RESEND_API_KEY;
