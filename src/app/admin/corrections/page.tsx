@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect -- fetch the review queue when its filter changes. */
 import { useCallback, useEffect, useState } from 'react';
 type Correction = { id:string; quote:string; suggestion:string; details:string|null; status:string; adminResponse:string|null; createdAt:string; bookTitle:string; bookSlug:string; chapterTitle:string; chapterSlug:string; userId:string; readerName:string };
 export default function AdminCorrectionsPage() {
