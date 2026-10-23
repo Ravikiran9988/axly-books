@@ -10,12 +10,15 @@ import {
   ExternalLink,
   Code2,
 } from 'lucide-react';
-import { PUBLISHED_BOOKS } from '@/data/booksData';
+import { getServerPublishedBooks } from '@/services/serverBookService';
 import BookCard from '@/components/BookCard';
 import styles from './page.module.css';
 
-export default function HomePage() {
-  const featuredBook = PUBLISHED_BOOKS[0];
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const publishedBooks = await getServerPublishedBooks();
+  const featuredBook = publishedBooks[0] ?? null;
 
   return (
     <>
@@ -67,24 +70,30 @@ export default function HomePage() {
 
           {/* Featured Book Presentation */}
           <div className={styles.featuredShowcase}>
-            <div className={styles.book3dWrapper}>
-              <div className={styles.bookCoverGlow} />
-              <Link
-                href={`/books/${featuredBook.slug}`}
-                className={styles.book3dFrame}
-                aria-label={`View ${featuredBook.title}`}
-              >
-                <Image
-                  src={featuredBook.coverImage || '/images/ml-deep-learning-cover.jpg'}
-                  alt={`Cover of ${featuredBook.title}`}
-                  width={340}
-                  height={510}
-                  className={styles.bookImage}
-                  style={{ width: '100%', height: 'auto' }}
-                  priority
-                />
-              </Link>
-            </div>
+            {featuredBook ? (
+              <div className={styles.book3dWrapper}>
+                <div className={styles.bookCoverGlow} />
+                <Link
+                  href={`/books/${featuredBook.slug}`}
+                  className={styles.book3dFrame}
+                  aria-label={`View ${featuredBook.title}`}
+                >
+                  <Image
+                    src={featuredBook.coverImage || '/images/ml-deep-learning-cover.jpg'}
+                    alt={`Cover of ${featuredBook.title}`}
+                    width={340}
+                    height={510}
+                    className={styles.bookImage}
+                    style={{ width: '100%', height: 'auto' }}
+                    priority
+                  />
+                </Link>
+              </div>
+            ) : (
+              <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                No books are currently published. Check back soon.
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -97,16 +106,22 @@ export default function HomePage() {
               <span className={styles.sectionTag}>Featured Publication</span>
               <h2 className={styles.sectionTitle}>Essential Reading for AI Practitioners</h2>
             </div>
-            <Link href={`/books/${featuredBook.slug}`} className="btn btn-outline">
-              <span>View Book Details</span>
-              <ArrowRight size={16} />
-            </Link>
+            {featuredBook && (
+              <Link href={`/books/${featuredBook.slug}`} className="btn btn-outline">
+                <span>View Book Details</span>
+                <ArrowRight size={16} />
+              </Link>
+            )}
           </div>
 
           <div className={styles.booksGrid}>
-            {PUBLISHED_BOOKS.map((book) => (
-              <BookCard key={book.id} book={book} />
-            ))}
+            {publishedBooks.length > 0 ? (
+              publishedBooks.map((book) => <BookCard key={book.id} book={book} />)
+            ) : (
+              <p style={{ color: 'var(--text-muted)' }}>
+                No published books yet. New titles will appear here when they are ready.
+              </p>
+            )}
           </div>
         </div>
       </section>
