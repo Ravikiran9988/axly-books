@@ -80,11 +80,11 @@ export default function AboutPage() {
           Engineering, Warangal.
         </p>
         <p>
-          Having authored <em>ML + Deep Learning Fundamentals — Full Beginner to GenAI Edition</em>,
-          Slayer sought to create a platform that prioritised the reader experience above all else.
-          Rather than placing technical books behind opaque marketplaces or cluttered PDF readers,
-          AXLY provides an interactive, bespoke environment designed specifically for technical
-          prose, code examples, and mathematical foundations.
+          Through active software engineering and technical writing, Slayer sought to create a
+          platform that prioritised the reader experience above all else. Rather than placing
+          technical writings behind opaque marketplaces or cluttered PDF readers, AXLY provides
+          an interactive, bespoke environment designed specifically for technical prose, code
+          examples, and mathematical foundations.
         </p>
         <p>
           As an independent initiative, AXLY remains committed to knowledge accessibility, clean

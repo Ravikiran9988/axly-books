@@ -249,9 +249,8 @@ async function HomePageContent() {
 
               <p className={styles.authorBioExcerpt}>
                 &ldquo;Through writing, I aim to organise knowledge, explain technical concepts,
-                and make learning more approachable. My book, <em>ML + Deep Learning Fundamentals</em>,
-                presents a structured path from essential data tools and machine learning concepts toward
-                neural networks, Transformers, and modern Generative AI.&rdquo;
+                and make learning more approachable creating a structured path from essential data tools
+                and foundational principles toward neural networks, Transformers, and modern Generative AI.&rdquo;
               </p>
 
               <div className={styles.authorLinksRow}>
@@ -266,7 +265,7 @@ async function HomePageContent() {
                   className="btn btn-outline"
                 >
                   <Code2 size={16} />
-                  <span>GitHub (700+ Contributions)</span>
+                  <span>GitHub (1250+ Contributions)</span>
                   <ExternalLink size={14} />
                 </a>
               </div>
