@@ -159,18 +159,22 @@ export default async function BookDetailPage({ params }: BookPageProps) {
               )}
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: 0 }}>
-              Licensed under{' '}
-              <a
-                href={book.licenseUrl || 'https://creativecommons.org/licenses/by-nc/4.0/'}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--color-brand-cyan)', textDecoration: 'underline' }}
-              >
-                {book.license}
-              </a>
-              . {book.license.includes('CC BY-NC 4.0')
-                ? 'Free online access for individual educational study and technical advancement.'
-                : 'Please consult this publication’s copyright notice for reuse permissions.'}
+              {book.licenseUrl ? (
+                <>
+                  Licensed under{' '}
+                  <a
+                    href={book.licenseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--color-brand-cyan)', textDecoration: 'underline' }}
+                  >
+                    {book.license}
+                  </a>
+                  . Free online access for individual educational study and technical advancement.
+                </>
+              ) : (
+                <>License: <strong>{book.license}</strong>. Please consult this publication’s copyright notice for reuse permissions.</>
+              )}
             </p>
           </div>
 
