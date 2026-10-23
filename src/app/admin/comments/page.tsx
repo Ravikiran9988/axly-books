@@ -30,6 +30,8 @@ export default function AdminCommentsPage() {
     finally { setLoading(false); }
   }, [filter]);
 
+  // Fetch moderation data when the selected filter changes.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
 
   async function moderate(comment: ModerationComment, action: 'hide' | 'restore' | 'delete') {
