@@ -21,6 +21,7 @@ type CurrentUser = { id: string; displayName: string; role: 'admin' | 'reader' }
 
 export default function CommentsPanel({ bookSlug, chapterSlug }: { bookSlug: string; chapterSlug: string }) {
   const [comments, setComments] = useState<CommentItem[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [user, setUser] = useState<CurrentUser>(null);
   const [loaded, setLoaded] = useState(false);
   const [offset, setOffset] = useState<number | null>(0);
@@ -46,6 +47,7 @@ export default function CommentsPanel({ bookSlug, chapterSlug }: { bookSlug: str
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not load comments.');
       setComments((previous) => reset ? data.comments : [...previous, ...data.comments.filter((item: CommentItem) => !previous.some((old) => old.id === item.id))]);
+      setTotalCount(Number(data.totalCount ?? 0));
       setOffset(data.nextOffset);
       setNotice('');
     } catch (error) {
@@ -112,7 +114,7 @@ export default function CommentsPanel({ bookSlug, chapterSlug }: { bookSlug: str
       <div className={styles.header}>
         <div>
           <p className={styles.eyebrow}>READER COMMUNITY</p>
-          <h2 id="chapter-discussion-title"><MessageCircle size={22} /> Chapter discussion</h2>
+          <h2 id="chapter-discussion-title"><MessageCircle size={22} /> Chapter discussion <span className={styles.discussionCount}>{totalCount}</span></h2>
           <p className={styles.subhead}>Share what you learned, ask questions, and help other readers.</p>
         </div>
         <label className={styles.sortLabel}>Sort
