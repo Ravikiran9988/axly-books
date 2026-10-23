@@ -217,10 +217,14 @@
   max-width: 440px;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 640px) {
+  .container {
+    padding: 2rem 0 4rem;
+  }
   .progressCard {
     flex-direction: column;
     align-items: flex-start;
+    padding: 1.25rem 1rem;
   }
   .miniCover {
     width: 70px;
@@ -230,6 +234,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+    padding: 1rem 0.85rem;
   }
   .inProgressGrid {
     grid-template-columns: 1fr;

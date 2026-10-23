@@ -132,10 +132,26 @@
   line-height: 1.5;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 640px) {
+  .profileContainer {
+    padding: 2rem 0 4rem;
+  }
   .profileHeader {
     flex-direction: column;
     text-align: center;
+    gap: 1rem;
+  }
+  .avatarBig {
+    width: 64px;
+    height: 64px;
+    font-size: 1.75rem;
+  }
+  .cardSection {
+    padding: 1.5rem 1rem;
+  }
+  .infoGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
   .prefRow {
     flex-direction: column;
