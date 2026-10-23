@@ -1,29 +1,22 @@
-import React, { Suspense } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import React, { Suspense } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 import {
   BookOpen,
   ArrowRight,
   Bookmark,
   Sliders,
-  CheckCircle,
+  CheckCircle2,
   ExternalLink,
   Code2,
   Clock,
-  ChevronRight,
-} from "lucide-react";
-import { getServerPublishedBooks } from "@/services/serverBookService";
-import styles from "./page.module.css";
+} from 'lucide-react';
+import { getServerPublishedBooks } from '@/services/serverBookService';
+import styles from './page.module.css';
 
 export default function HomePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="container" style={{ padding: "4rem 0", color: "var(--text-muted)" }}>
-          Loading…
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="container" style={{ padding: '4rem 0', color: 'var(--text-muted)' }}>Loading published books...</div>}>
       <HomePageContent />
     </Suspense>
   );
@@ -33,248 +26,248 @@ async function HomePageContent() {
   const publishedBooks = await getServerPublishedBooks();
   const featuredBook = publishedBooks[0] || null;
 
+
   return (
     <>
-      {/* ── HERO ─────────────────────────────────────────────── */}
-      <section className={styles.hero}>
-        <div className={styles.heroBlob1} aria-hidden="true" />
-        <div className={styles.heroBlob2} aria-hidden="true" />
+      {/* Hero Section */}
+      <section className={styles.heroSection}>
+        <div className={`container ${styles.heroGrid}`}>
+          <div className={styles.heroContent}>
+            <div className={styles.brandPill}>
+              <BookOpen size={14} />
+              <span>Independent Digital Publishing</span>
+            </div>
 
-        <div className={`container ${styles.heroInner}`}>
-          {/* LEFT — copy */}
-          <div className={styles.heroCopy}>
-            <span className={styles.eyebrow}>
-              <BookOpen size={13} strokeWidth={2.5} />
-              Independent Digital Publishing
-            </span>
-
-            <h1 className={styles.heroHeadline}>
-              Read Deep.<br />
-              <span className={styles.heroAccent}>Think Deeper.</span>
+            <h1 className={styles.headline}>
+              A World of Ideas, <br />
+              <span className={styles.headlineHighlight}>One Page at a Time.</span>
             </h1>
 
-            <p className={styles.heroSub}>
-              Handcrafted technical books by Slayer — free, distraction-free, and built for
-              engineers who want to actually understand how things work.
+            <p className={styles.heroCopy}>
+              Discover and read books by Slayer. Explore technology, learning, and meaningful ideas
+              in one thoughtfully designed reading space.
             </p>
 
-            <div className={styles.heroCtas}>
-              <Link href="/books" className={styles.ctaPrimary}>
-                <BookOpen size={17} strokeWidth={2.5} />
-                Browse Library
+            <div className={styles.ctaGroup}>
+              <Link href="/books" className="btn btn-primary btn-lg">
+                <BookOpen size={18} />
+                <span>Explore Books</span>
               </Link>
-              <Link href="/author/slayer" className={styles.ctaGhost}>
-                About the Author
-                <ChevronRight size={16} strokeWidth={2.5} />
+              <Link href="/author/slayer" className="btn btn-secondary btn-lg">
+                <span>Meet the Author</span>
+                <ArrowRight size={16} />
               </Link>
             </div>
 
-            <div className={styles.trustRow}>
-              <span className={styles.trustPill}>
-                <CheckCircle size={13} className={styles.trustIcon} />
-                No paywall
-              </span>
-              <span className={styles.trustPill}>
-                <CheckCircle size={13} className={styles.trustIcon} />
-                No sign-up
-              </span>
-              <span className={styles.trustPill}>
-                <CheckCircle size={13} className={styles.trustIcon} />
-                Progress saved
-              </span>
+            <div className={styles.heroFeatures}>
+              <div className={styles.heroFeatureItem}>
+                <CheckCircle2 size={16} className={styles.heroFeatureIcon} />
+                <span>100% Free Online Reading</span>
+              </div>
+              <div className={styles.heroFeatureItem}>
+                <CheckCircle2 size={16} className={styles.heroFeatureIcon} />
+                <span>Distraction-Free Reader</span>
+              </div>
+              <div className={styles.heroFeatureItem}>
+                <CheckCircle2 size={16} className={styles.heroFeatureIcon} />
+                <span>Saved Reading Progress</span>
+              </div>
             </div>
           </div>
 
-          {/* RIGHT — featured book card */}
-          {featuredBook && (
-            <div className={styles.bookCardWrap}>
-              <div className={styles.bookGlowRing} aria-hidden="true" />
-              <div className={styles.bookCard}>
-                <div className={styles.bookCardTop}>
-                  <span className={styles.livePill}>
-                    <span className={styles.liveDot} />
-                    Now Available
-                  </span>
-                  <span className={styles.freePill}>Free</span>
+          {/* Featured Publication Spotlight Banner Card */}
+          <div className={styles.heroSpotlightWrapper}>
+            <div className={styles.spotlightGlow} aria-hidden="true" />
+            {featuredBook ? (
+              <div className={styles.spotlightCard}>
+                <div className={styles.spotlightHeader}>
+                  <div className={styles.spotlightPill}>
+                    <span className={styles.pulseDot} />
+                    <span>Featured Publication</span>
+                  </div>
+                  <span className={styles.spotlightBadge}>100% Free</span>
                 </div>
 
-                <Link
-                  href={`/books/${featuredBook.slug}`}
-                  className={styles.coverLink}
-                  tabIndex={-1}
-                  aria-hidden="true"
-                >
-                  <div className={styles.coverFrame}>
-                    <Image
-                      src={featuredBook.coverImage || "/images/ml-deep-learning-cover.jpg"}
-                      alt={`Cover of ${featuredBook.title}`}
-                      fill
-                      className={styles.coverImg}
-                      priority
-                      sizes="(max-width: 900px) 100vw, 340px"
-                    />
-                    <div className={styles.coverSheen} aria-hidden="true" />
+                <div className={styles.spotlightBody}>
+                  <Link
+                    href={`/books/${featuredBook.slug}`}
+                    className={styles.spotlightCoverLink}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  >
+                    <div className={styles.spotlightCoverFrame}>
+                      <Image
+                        src={featuredBook.coverImage || '/images/ml-deep-learning-cover.jpg'}
+                        alt={`Cover of ${featuredBook.title}`}
+                        width={180}
+                        height={270}
+                        className={styles.spotlightCoverImg}
+                        priority
+                      />
+                    </div>
+                  </Link>
+
+                  <div className={styles.spotlightDetails}>
+                    <span className={styles.spotlightCategory}>{featuredBook.category}</span>
+                    <h3 className={styles.spotlightTitle}>
+                      <Link href={`/books/${featuredBook.slug}`}>{featuredBook.title}</Link>
+                    </h3>
+                    <p className={styles.spotlightAuthor}>
+                      By <strong>{featuredBook.author}</strong>
+                    </p>
+
+                    <div className={styles.spotlightMeta}>
+                      <span className={styles.spotlightMetaItem}>
+                        <BookOpen size={13} />
+                        {featuredBook.totalChapters} Chapters
+                      </span>
+                      <span className={styles.spotlightMetaItem}>
+                        <Clock size={13} />
+                        ~{Math.round(featuredBook.estimatedReadingTimeMinutes / 60)}h Read
+                      </span>
+                    </div>
+
+                    <div className={styles.spotlightActions}>
+                      <Link
+                        href={`/read/${featuredBook.slug}`}
+                        className={`btn btn-primary ${styles.spotlightReadBtn}`}
+                      >
+                        <BookOpen size={15} />
+                        <span>Start Reading</span>
+                      </Link>
+                      <Link
+                        href={`/books/${featuredBook.slug}`}
+                        className={`btn btn-secondary ${styles.spotlightDetailsBtn}`}
+                        title="View book details and table of contents"
+                        aria-label={`View details of ${featuredBook.title}`}
+                      >
+                        <ArrowRight size={15} />
+                      </Link>
+                    </div>
                   </div>
-                </Link>
+                </div>
 
-                <div className={styles.bookMeta}>
-                  <span className={styles.bookCategory}>{featuredBook.category}</span>
-                  <h2 className={styles.bookTitle}>
-                    <Link href={`/books/${featuredBook.slug}`}>{featuredBook.title}</Link>
-                  </h2>
-                  <p className={styles.bookAuthor}>
-                    by <strong>{featuredBook.author}</strong>
-                  </p>
-
-                  <div className={styles.bookStats}>
-                    <span className={styles.bookStat}>
-                      <BookOpen size={12} />
-                      {featuredBook.totalChapters} chapters
-                    </span>
-                    <span className={styles.bookStatDivider} />
-                    <span className={styles.bookStat}>
-                      <Clock size={12} />
-                      ~{Math.round(featuredBook.estimatedReadingTimeMinutes / 60)}h read
-                    </span>
-                  </div>
-
-                  <div className={styles.bookActions}>
-                    <Link href={`/read/${featuredBook.slug}`} className={styles.readBtn}>
-                      <BookOpen size={15} strokeWidth={2.5} />
-                      Start Reading
-                    </Link>
-                    <Link
-                      href={`/books/${featuredBook.slug}`}
-                      className={styles.detailBtn}
-                      aria-label="Book details"
-                    >
-                      <ArrowRight size={15} strokeWidth={2.5} />
-                    </Link>
+                <div className={styles.spotlightFooter}>
+                  <div className={styles.spotlightFooterInfo}>
+                    <CheckCircle2 size={13} className={styles.spotlightSparkle} />
+                    <span>No paywalls or sign-up required</span>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── STATS BAR ────────────────────────────────────────── */}
-      <div className={styles.statsBar}>
-        <div className={`container ${styles.statsInner}`}>
-          <div className={styles.statItem}>
-            <span className={styles.statNum}>{publishedBooks.length}</span>
-            <span className={styles.statLabel}>{publishedBooks.length === 1 ? "Book" : "Books"} Published</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.statItem}>
-            <span className={styles.statNum}>
-              {publishedBooks.reduce((a, b) => a + (b.totalChapters ?? 0), 0)}
-            </span>
-            <span className={styles.statLabel}>Chapters</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.statItem}>
-            <span className={styles.statNum}>100%</span>
-            <span className={styles.statLabel}>Free Access</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.statItem}>
-            <span className={styles.statNum}>0</span>
-            <span className={styles.statLabel}>Paywalls</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── READING EXPERIENCE ───────────────────────────────── */}
-      <section className={styles.featuresSection}>
-        <div className="container">
-          <div className={styles.featuresHeader}>
-            <span className={styles.sectionEyebrow}>Reading Experience</span>
-            <h2 className={styles.sectionHeading}>Built for Readers Who Mean Business</h2>
-            <p className={styles.sectionSub}>
-              No ads, no popups, no noise. Just you, the content, and a reader
-              engineered around how engineers actually study.
-            </p>
-          </div>
-
-          <div className={styles.featuresGrid}>
-            <div className={`${styles.featureCard} ${styles.featureBlue}`}>
-              <div className={styles.featureIconBox}>
-                <BookOpen size={24} strokeWidth={1.8} />
+            ) : (
+              <div className={styles.spotlightCard}>
+                <div className={styles.spotlightHeader}>
+                  <span className={styles.spotlightPill}>Axly Library</span>
+                </div>
+                <p style={{ color: 'var(--text-muted)', padding: '1.5rem 0' }}>
+                  No published books yet. New publications will appear here as soon as they are released.
+                </p>
               </div>
-              <h3 className={styles.featureTitle}>Chapter Navigation</h3>
-              <p className={styles.featureDesc}>
-                Slide-out table of contents. Jump anywhere instantly. Never lose your thread.
-              </p>
-            </div>
-            <div className={`${styles.featureCard} ${styles.featurePurple}`}>
-              <div className={styles.featureIconBox}>
-                <Sliders size={24} strokeWidth={1.8} />
-              </div>
-              <h3 className={styles.featureTitle}>Reading Preferences</h3>
-              <p className={styles.featureDesc}>
-                Dark, Light, or Sepia. Adjust font size, line height, and focus mode on the fly.
-              </p>
-            </div>
-            <div className={`${styles.featureCard} ${styles.featureGreen}`}>
-              <div className={styles.featureIconBox}>
-                <Bookmark size={24} strokeWidth={1.8} />
-              </div>
-              <h3 className={styles.featureTitle}>Auto-saved Progress</h3>
-              <p className={styles.featureDesc}>
-                Your position is saved the moment you scroll. Resume exactly where you left off.
-              </p>
-            </div>
-            <div className={`${styles.featureCard} ${styles.featureAmber}`}>
-              <div className={styles.featureIconBox}>
-                <Code2 size={24} strokeWidth={1.8} />
-              </div>
-              <h3 className={styles.featureTitle}>Code &amp; Math Ready</h3>
-              <p className={styles.featureDesc}>
-                High-contrast syntax blocks and formatted formulae rendered for engineering clarity.
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* ── AUTHOR ───────────────────────────────────────────── */}
-      <section className={styles.authorSection}>
-        <div className="container">
-          <div className={styles.authorCard}>
-            <div className={styles.authorCardAccent} aria-hidden="true" />
 
-            <div className={styles.authorLeft}>
+
+      {/* Reading Experience Preview */}
+      <section className={styles.section}>
+        <div className="container">
+          <div className={styles.previewBox}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.sectionTag}>Reading Experience</span>
+              <h2 className={styles.sectionTitle}>Crafted for Depth, Focus, and Comfort</h2>
+              <p className={styles.sectionDesc}>
+                AXLY removes the clutter of typical reading apps. Everything is engineered to give
+                you a clean editorial canvas designed for deep technical comprehension.
+              </p>
+            </div>
+
+            <div className={styles.previewGrid}>
+              <div className={styles.previewCard}>
+                <div className={styles.previewIconWrap}>
+                  <BookOpen size={22} />
+                </div>
+                <h3 className={styles.previewCardTitle}>Instant Chapter Navigation</h3>
+                <p className={styles.previewCardText}>
+                  Jump between sections effortlessly using the slide-out table of contents.
+                  Seamlessly move through consecutive chapters with single-click navigation.
+                </p>
+              </div>
+
+              <div className={styles.previewCard}>
+                <div className={styles.previewIconWrap}>
+                  <Sliders size={22} />
+                </div>
+                <h3 className={styles.previewCardTitle}>Reading Preferences</h3>
+                <p className={styles.previewCardText}>
+                  Tailor your environment with Dark, Light, or Sepia themes. Customize font sizes,
+                  line heights, and toggle distraction-free mode for immersive focus.
+                </p>
+              </div>
+
+              <div className={styles.previewCard}>
+                <div className={styles.previewIconWrap}>
+                  <Bookmark size={22} />
+                </div>
+                <h3 className={styles.previewCardTitle}>Bookmarks & Progress</h3>
+                <p className={styles.previewCardText}>
+                  Never lose your place. Your last read position is saved automatically, allowing
+                  you to resume reading seamlessly across study sessions.
+                </p>
+              </div>
+
+              <div className={styles.previewCard}>
+                <div className={styles.previewIconWrap}>
+                  <Code2 size={22} />
+                </div>
+                <h3 className={styles.previewCardTitle}>Syntax & Mathematical Formulae</h3>
+                <p className={styles.previewCardText}>
+                  High-contrast code blocks and conceptual callouts formatted specifically for
+                  developers and machine learning researchers.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About the Author Intro */}
+      <section className={styles.section}>
+        <div className="container">
+          <div className={styles.authorBanner}>
+            <div className={styles.authorAvatarWrap}>
               <div className={styles.authorAvatar}>S</div>
-              <span className={styles.authorBadge}>Author · Engineer</span>
+              <span className={styles.authorBadge}>Author · Slayer</span>
             </div>
 
-            <div className={styles.authorRight}>
-              <span className={styles.sectionEyebrow}>Meet the Author</span>
-              <h2 className={styles.authorName}>Medicharla Ravi Kiran</h2>
-              <p className={styles.authorHandle}>Slayer · AI/ML Engineer &amp; Full-Stack Developer</p>
+            <div className={styles.authorDetails}>
+              <div>
+                <h2 className={styles.authorName}>Medicharla Ravi Kiran (Slayer)</h2>
+                <p className={styles.authorRole}>AI/ML Engineer & Full-Stack Developer</p>
+              </div>
 
-              <blockquote className={styles.authorQuote}>
-                &ldquo;Through writing, I aim to organise knowledge, explain technical
-                concepts, and make learning more approachable. My book,{" "}
-                <em>ML + Deep Learning Fundamentals</em>, presents a structured path from
-                essential data tools toward Transformers and modern Generative AI.&rdquo;
-              </blockquote>
+              <p className={styles.authorBioExcerpt}>
+                &ldquo;Through writing, I aim to organise knowledge, explain technical concepts,
+                and make learning more approachable. My book, <em>ML + Deep Learning Fundamentals</em>,
+                presents a structured path from essential data tools and machine learning concepts toward
+                neural networks, Transformers, and modern Generative AI.&rdquo;
+              </p>
 
-              <div className={styles.authorLinks}>
-                <Link href="/author/slayer" className={styles.authorLinkPrimary}>
-                  Full Profile
-                  <ArrowRight size={15} strokeWidth={2.5} />
+              <div className={styles.authorLinksRow}>
+                <Link href="/author/slayer" className="btn btn-primary">
+                  <span>Read Full Author Profile</span>
+                  <ArrowRight size={16} />
                 </Link>
                 <a
                   href="https://github.com/Ravikiran9988/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={styles.authorLinkSecondary}
+                  className="btn btn-outline"
                 >
-                  <Code2 size={15} />
-                  GitHub
-                  <ExternalLink size={12} />
+                  <Code2 size={16} />
+                  <span>GitHub (700+ Contributions)</span>
+                  <ExternalLink size={14} />
                 </a>
               </div>
             </div>
