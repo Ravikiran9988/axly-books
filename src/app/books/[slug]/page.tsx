@@ -162,7 +162,7 @@ async function BookDetailContent({ params }: BookPageProps) {
                 {book.copyrightNotice}
               </span>
               <span className="badge badge-cyan" style={{ fontSize: '0.72rem' }}>
-                CC BY-NC 4.0
+                {book.license.includes('CC BY-NC 4.0') ? 'CC BY-NC 4.0' : 'All Rights Reserved'}
               </span>
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: 0 }}>
