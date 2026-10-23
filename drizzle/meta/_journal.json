@@ -36,6 +36,13 @@
       "when": 1792750120000,
       "tag": "0004_add_book_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792750180000,
+      "tag": "0005_annotations_author_tools",
+      "breakpoints": true
     }
   ]
 }

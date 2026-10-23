@@ -191,6 +191,86 @@ export const bookReviews = pgTable(
   ]
 );
 
+// --- Phase 5: Private Reader Annotations ---
+// Notes and highlights belong only to their owner and never appear in public discussions.
+export const readerAnnotations = pgTable(
+  'reader_annotations',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    bookId: text('book_id').notNull().references(() => books.id, { onDelete: 'cascade' }),
+    chapterId: text('chapter_id').notNull().references(() => chapters.id, { onDelete: 'cascade' }),
+    quote: text('quote').notNull(),
+    note: text('note').notNull().default(''),
+    anchor: text('anchor'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  }
+);
+
+export const correctionSubmissions = pgTable(
+  'correction_submissions',
+  {
+    id: text('id').primaryKey(),
+    bookId: text('book_id').notNull().references(() => books.id, { onDelete: 'cascade' }),
+    chapterId: text('chapter_id').notNull().references(() => chapters.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    quote: text('quote').notNull(),
+    suggestion: text('suggestion').notNull(),
+    details: text('details'),
+    status: text('status').default('pending').notNull(), // pending | accepted | rejected
+    adminResponse: text('admin_response'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    reviewedBy: text('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  }
+);
+
+export const authorQuestions = pgTable(
+  'author_questions',
+  {
+    id: text('id').primaryKey(),
+    bookId: text('book_id').notNull().references(() => books.id, { onDelete: 'cascade' }),
+    chapterId: text('chapter_id').notNull().references(() => chapters.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    question: text('question').notNull(),
+    status: text('status').default('open').notNull(), // open | answered
+    answer: text('answer'),
+    answeredAt: timestamp('answered_at', { withTimezone: true }),
+    answeredBy: text('answered_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  }
+);
+
+export const readerNotifications = pgTable(
+  'reader_notifications',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(), // correction_update | edition_update
+    title: text('title').notNull(),
+    message: text('message').notNull(),
+    href: text('href'),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  }
+);
+
+export const bookEditions = pgTable(
+  'book_editions',
+  {
+    id: text('id').primaryKey(),
+    bookId: text('book_id').notNull().references(() => books.id, { onDelete: 'cascade' }),
+    edition: text('edition').notNull(),
+    changeSummary: text('change_summary').notNull(),
+    publishedAt: timestamp('published_at', { withTimezone: true }).defaultNow().notNull(),
+    createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (table) => [uniqueIndex('book_edition_book_label_idx').on(table.bookId, table.edition)]
+);
+
 // --- Rate Limits Table (Shared Multi-Instance Persistence) ---
 export const rateLimits = pgTable('rate_limits', {
   key: text('key').primaryKey(),

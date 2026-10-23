@@ -68,6 +68,18 @@ export default async function AdminLayout({
             <Star size={18} />
             <span>Book Reviews</span>
           </Link>
+          <Link href="/admin/corrections" className={styles.navLink}>
+            <MessageCircle size={18} />
+            <span>Reader Corrections</span>
+          </Link>
+          <Link href="/admin/questions" className={styles.navLink}>
+            <MessageCircle size={18} />
+            <span>Ask Slayer · Q&A</span>
+          </Link>
+          <Link href="/admin/editions" className={styles.navLink}>
+            <BookOpen size={18} />
+            <span>Edition History</span>
+          </Link>
 
           <span className={styles.navSectionTitle}>Navigation</span>
           <Link href="/dashboard" className={styles.navLink}>
