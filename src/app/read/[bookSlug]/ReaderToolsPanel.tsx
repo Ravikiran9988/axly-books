@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect -- synchronize reader tools with API data for the current chapter. */
 
 import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
