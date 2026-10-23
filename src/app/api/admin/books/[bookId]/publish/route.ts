@@ -15,9 +15,9 @@ export async function PATCH(
   try {
     const { bookId } = await params;
 
-    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+    if (!isDatabaseConfigured() || !db) {
       return NextResponse.json(
-        { error: 'Persistent database service is not configured.' },
+        { error: 'Persistent database service is not configured. Configure DATABASE_URL before changing books.' },
         { status: 503 }
       );
     }
@@ -75,7 +75,7 @@ export async function PATCH(
       });
     }
 
-    return NextResponse.json({ success: true, isPublished: true });
+    return NextResponse.json({ error: 'Persistent database service is required to change publication status.' }, { status: 503 });
   } catch (err: unknown) {
     console.error('Publish toggle error:', err);
     return NextResponse.json({ error: 'Failed to update publication status.' }, { status: 500 });

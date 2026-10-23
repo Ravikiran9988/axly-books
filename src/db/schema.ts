@@ -270,7 +270,7 @@ export const booksRelations = relations(books, ({ many, one }) => ({
   comments: many(comments),
 }));
 
-export const chaptersRelations = relations(chapters, ({ one }) => ({
+export const chaptersRelations = relations(chapters, ({ one, many }) => ({
   book: one(books, {
     fields: [chapters.bookId],
     references: [books.id],

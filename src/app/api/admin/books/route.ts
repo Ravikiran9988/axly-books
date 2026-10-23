@@ -52,9 +52,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+    if (!isDatabaseConfigured() || !db) {
       return NextResponse.json(
-        { error: 'Persistent database service is not configured.' },
+        { error: 'Persistent database service is not configured. Configure DATABASE_URL before changing books.' },
         { status: 503 }
       );
     }
@@ -67,6 +67,13 @@ export async function POST(request: Request) {
     }
 
     const data = parseResult.data;
+    if (data.isPublished) {
+      return NextResponse.json(
+        { error: 'Create this book as a draft, add at least one published chapter, then publish it.' },
+        { status: 400 }
+      );
+    }
+
     const now = new Date();
     const bookId = `book_${crypto.randomUUID()}`;
 
@@ -124,20 +131,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // In-memory fallback
     return NextResponse.json(
-      {
-        success: true,
-        book: {
-          id: bookId,
-          ...data,
-          totalChapters: 0,
-          estimatedReadingTimeMinutes: 0,
-          createdAt: now.toISOString(),
-          updatedAt: now.toISOString(),
-        },
-      },
-      { status: 201 }
+      { error: 'Persistent database service is required to create books.' },
+      { status: 503 }
     );
   } catch (err: unknown) {
     console.error('Admin create book error:', err);

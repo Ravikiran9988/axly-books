@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { del } from '@vercel/blob';
-import { eq, or, asc } from 'drizzle-orm';
+import { eq, or, asc, and } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 import { bookUpdateSchema } from '@/lib/validations';
@@ -79,9 +79,9 @@ export async function PUT(
   try {
     const { bookId } = await params;
 
-    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+    if (!isDatabaseConfigured() || !db) {
       return NextResponse.json(
-        { error: 'Persistent database service is not configured.' },
+        { error: 'Persistent database service is not configured. Configure DATABASE_URL before changing books.' },
         { status: 503 }
       );
     }
@@ -108,6 +108,25 @@ export async function PUT(
       }
 
       const targetBook = existing[0];
+
+      // Prevent the edit endpoint from bypassing the publication guard used by the Publish action.
+      if (updates.isPublished === true && !targetBook.isPublished) {
+        const publishedChapters = await db
+          .select({ id: schema.chapters.id })
+          .from(schema.chapters)
+          .where(and(
+            eq(schema.chapters.bookId, targetBook.id),
+            eq(schema.chapters.isPublished, true)
+          ))
+          .limit(1);
+
+        if (publishedChapters.length === 0) {
+          return NextResponse.json(
+            { error: 'Cannot publish a book without at least one published chapter. Publish a chapter first, then try again.' },
+            { status: 400 }
+          );
+        }
+      }
 
       // If slug changed, verify no collisions
       if (updates.slug && updates.slug !== targetBook.slug) {
@@ -145,7 +164,7 @@ export async function PUT(
       });
     }
 
-    return NextResponse.json({ success: true, message: 'Updated in development.' });
+    return NextResponse.json({ error: 'Persistent database service is required to update books.' }, { status: 503 });
   } catch (err: unknown) {
     console.error('Admin update book error:', err);
     return NextResponse.json({ error: 'Failed to update book.' }, { status: 500 });
@@ -164,9 +183,9 @@ export async function DELETE(
   try {
     const { bookId } = await params;
 
-    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+    if (!isDatabaseConfigured() || !db) {
       return NextResponse.json(
-        { error: 'Persistent database service is not configured.' },
+        { error: 'Persistent database service is not configured. Configure DATABASE_URL before changing books.' },
         { status: 503 }
       );
     }
@@ -222,9 +241,11 @@ export async function DELETE(
       });
 
       let storageCleanupWarning: string | undefined;
+      let deletedBlobAssets = 0;
       if (blobUrls.length > 0 && blobToken) {
         try {
           await del(blobUrls, { token: blobToken });
+          deletedBlobAssets = blobUrls.length;
         } catch (cleanupError) {
           console.error('Book deleted but Blob asset cleanup failed:', cleanupError);
           storageCleanupWarning =
@@ -239,11 +260,11 @@ export async function DELETE(
         success: true,
         message: `Book "${target.title}" and its chapters, comments, bookmarks, and reading progress were deleted.`,
         ...(storageCleanupWarning ? { storageCleanupWarning } : {}),
-        deletedBlobAssets: blobToken ? blobUrls.length : 0,
+        deletedBlobAssets,
       });
     }
 
-    return NextResponse.json({ success: true, message: 'Deleted in development.' });
+    return NextResponse.json({ error: 'Persistent database service is required to delete books.' }, { status: 503 });
   } catch (err: unknown) {
     console.error('Admin delete book error:', err);
     return NextResponse.json({ error: 'Failed to delete book.' }, { status: 500 });

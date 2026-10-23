@@ -448,10 +448,11 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
                       </button>
 
                       <Link
-                        href={`/books/${book.slug}`}
+                        href={book.isPublished ? `/books/${book.slug}` : `/admin/books/${book.id}/chapters`}
                         target="_blank"
                         className={styles.btnAction}
-                        title="Preview reader page"
+                        title={book.isPublished ? 'Preview reader page' : 'Review draft chapters'}
+                        aria-label={book.isPublished ? `Preview ${book.title}` : `Review chapters for draft ${book.title}`}
                       >
                         <Eye size={14} />
                       </Link>
@@ -634,11 +635,19 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
                       type="checkbox"
                       checked={formData.isPublished}
                       onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                      disabled={isCreateOpen}
                     />
                     <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                      Publish Immediately (Make visible to public readers)
+                      {isCreateOpen
+                        ? 'Publish after adding chapters'
+                        : 'Publish Immediately (Make visible to public readers)'}
                     </span>
                   </label>
+                  {isCreateOpen && (
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                      New books start as drafts. Add and publish at least one chapter before publishing the book.
+                    </p>
+                  )}
                 </div>
               </div>
 
