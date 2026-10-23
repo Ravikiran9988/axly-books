@@ -46,10 +46,11 @@ export async function PATCH(
           .select({ id: schema.chapters.id })
           .from(schema.chapters)
           .where(eq(schema.chapters.bookId, book.id));
+        const publishedChapters = chapters.filter((chapter) => chapter.isPublished);
 
-        if (chapters.length === 0) {
+        if (publishedChapters.length === 0) {
           return NextResponse.json(
-            { error: 'Cannot publish a book without any chapters. Please add at least one chapter before publishing.' },
+            { error: 'Cannot publish a book without at least one published chapter. Publish a chapter first, then try again.' },
             { status: 400 }
           );
         }
