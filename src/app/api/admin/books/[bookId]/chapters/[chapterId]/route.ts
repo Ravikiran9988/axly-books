@@ -49,9 +49,9 @@ export async function PUT(
   try {
     const { chapterId } = await params;
 
-    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+    if (!isDatabaseConfigured() || !db) {
       return NextResponse.json(
-        { error: 'Persistent database service is not configured.' },
+        { error: 'Persistent database service is not configured. Configure DATABASE_URL before changing books.' },
         { status: 503 }
       );
     }
@@ -182,7 +182,7 @@ export async function PUT(
       return NextResponse.json({ success: true, chapter: updated[0] });
     }
 
-    return NextResponse.json({ success: true, message: 'Updated chapter.' });
+    return NextResponse.json({ error: 'Persistent database service is required to update chapters.' }, { status: 503 });
   } catch (err: unknown) {
     console.error('Admin update chapter error:', err);
     return NextResponse.json({ error: 'Failed to update chapter.' }, { status: 500 });
@@ -280,7 +280,7 @@ export async function DELETE(
       });
     }
 
-    return NextResponse.json({ success: true, message: 'Deleted chapter.' });
+    return NextResponse.json({ error: 'Persistent database service is required to delete chapters.' }, { status: 503 });
   } catch (err: unknown) {
     console.error('Admin delete chapter error:', err);
     return NextResponse.json({ error: 'Failed to delete chapter.' }, { status: 500 });
