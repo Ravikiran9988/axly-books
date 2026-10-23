@@ -66,6 +66,12 @@ export async function POST(request: Request) {
     const publishedYear = Number.isInteger(requestedYear) && requestedYear >= 2000 && requestedYear <= 2100 ? requestedYear : new Date().getFullYear();
     const tags = field(form, 'tags').split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 20);
     const allowPdfDownload = field(form, 'allowPdfDownload') === 'true';
+    const license = field(form, 'license') === 'Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)'
+      ? 'Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)'
+      : 'All Rights Reserved';
+    const licenseUrl = license.includes('CC BY-NC 4.0')
+      ? 'https://creativecommons.org/licenses/by-nc/4.0/'
+      : null;
 
     if (title.length < 2 || title.length > 150) return NextResponse.json({ error: 'Book title must be between 2 and 150 characters.' }, { status: 400 });
     if (!slug || slug.length > 100 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return NextResponse.json({ error: 'Provide a valid URL slug using lowercase letters, numbers and hyphens.' }, { status: 400 });
@@ -89,7 +95,7 @@ export async function POST(request: Request) {
       coverImageUrl: '/images/ml-deep-learning-cover.jpg', category, tags, edition, publishedYear,
       status: 'Draft', isFree: true, isPublished: false, totalChapters: parsedChapters.length,
       estimatedReadingTimeMinutes: parsedChapters.reduce((sum, chapter) => sum + chapter.estimatedReadingTimeMinutes, 0),
-      allowPdfDownload, originalPdfPath: uploadedPath, createdAt: now, updatedAt: now,
+      allowPdfDownload, license, licenseUrl, originalPdfPath: uploadedPath, createdAt: now, updatedAt: now,
     });
 
     const taken = new Set<string>();
