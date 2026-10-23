@@ -27,6 +27,10 @@
 
 ---
 
+## P2 reader experience
+
+The reader restores the last scroll position for each book chapter on the current browser, shows estimated chapter reading time and approximate remaining time, and keeps the existing theme, typography, bookmark, chapter navigation, and distraction-free controls. Position persistence is device-local and does not sync across devices. See [`docs/P2_READER_EXPERIENCE.md`](docs/P2_READER_EXPERIENCE.md) for manual smoke tests and limitations.
+
 ## P4 chapter discussions
 
 P4 adds chapter-specific discussions with threaded replies (one reply level), reader names, a Slayer author badge for administrator replies, editing/deleting your own comments, helpful votes, abuse reports, comment sorting and load-more pagination. Administrators can review the moderation queue at **Admin → Reader Comments**, hide/restore content, inspect reports, and delete comments.

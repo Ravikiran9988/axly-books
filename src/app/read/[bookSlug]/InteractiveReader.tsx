@@ -71,13 +71,21 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
 
   const articleRef = useRef<HTMLElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const positionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const positionKey = `axly_read_position:${book.slug}:${currentChapter.slug}`;
+  const wordCount = useMemo(
+    () => currentChapter.sections.reduce((total, section) => total + section.content.trim().split(/\s+/).filter(Boolean).length, 0),
+    [currentChapter.sections]
+  );
+  const chapterReadingMinutes = currentChapter.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 220));
+  const remainingMinutes = Math.max(0, Math.ceil(chapterReadingMinutes * (1 - scrollProgress / 100)));
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
   }, []);
 
-  // Save reading progress on chapter switch
+  // Save chapter progress and restore the reader's last position on this device.
   useEffect(() => {
     const percent = Math.round((currentChapter.chapterNumber / book.totalChapters) * 100);
     progressService.saveProgress(
@@ -85,19 +93,32 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
       currentChapter.chapterNumber,
       currentChapter.slug,
       percent,
-      true // immediate save on chapter change
+      true
     );
 
-    // If anchor hash exists in URL, scroll to anchor; else scroll to top
-    if (typeof window !== 'undefined' && window.location.hash) {
+    let restoreTimer: ReturnType<typeof setTimeout> | undefined;
+    if (window.location.hash) {
       const el = document.querySelector(window.location.hash);
       if (el) {
-        setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 150);
-        return;
+        restoreTimer = setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 150);
       }
+    } else {
+      const savedPosition = Number(localStorage.getItem(positionKey) || 0);
+      restoreTimer = setTimeout(() => {
+        window.scrollTo({ top: savedPosition > 0 ? savedPosition : 0, behavior: 'auto' });
+      }, 80);
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [book.slug, book.totalChapters, currentChapter.chapterNumber, currentChapter.slug]);
+
+    return () => {
+      if (restoreTimer) clearTimeout(restoreTimer);
+      if (positionSaveTimer.current) clearTimeout(positionSaveTimer.current);
+      try {
+        localStorage.setItem(positionKey, String(Math.max(0, Math.round(window.scrollY))));
+      } catch {
+        // Reading continues if local storage is unavailable.
+      }
+    };
+  }, [book.slug, book.totalChapters, currentChapter.chapterNumber, currentChapter.slug, positionKey]);
 
   const handleCopyCode = async (idx: number, code: string) => {
     try {
@@ -110,18 +131,35 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
     }
   };
 
-  // Track scroll depth
+  // Track scroll depth and persist the position without writing on every scroll event.
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      const articleTop = articleRef.current
+        ? articleRef.current.getBoundingClientRect().top + window.scrollY
+        : 0;
+      const articleHeight = articleRef.current?.offsetHeight ?? document.documentElement.scrollHeight;
+      const scrollableHeight = Math.max(1, articleHeight - window.innerHeight);
+      const progress = ((scrollTop - articleTop) / scrollableHeight) * 100;
       setScrollProgress(Math.min(100, Math.max(0, progress)));
+
+      if (positionSaveTimer.current) clearTimeout(positionSaveTimer.current);
+      positionSaveTimer.current = setTimeout(() => {
+        try {
+          localStorage.setItem(positionKey, String(Math.max(0, Math.round(window.scrollY))));
+        } catch {
+          // Ignore storage restrictions and keep the reader usable.
+        }
+      }, 250);
     };
 
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (positionSaveTimer.current) clearTimeout(positionSaveTimer.current);
+    };
+  }, [positionKey]);
 
   const updatePreference = (updates: Partial<ReadingPreferences>) => {
     progressService.savePreferences(updates);
@@ -454,6 +492,13 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
       >
         <div className={styles.chapterBadge}>
           Chapter {currentChapter.chapterNumber} of {book.totalChapters}
+        </div>
+        <div className={styles.readingStatus} aria-label="Chapter reading information">
+          <span>{chapterReadingMinutes} min read</span>
+          <span className={styles.statusDot} aria-hidden="true">•</span>
+          <span>{Math.round(scrollProgress)}% through chapter</span>
+          <span className={styles.statusDot} aria-hidden="true">•</span>
+          <span>{remainingMinutes === 0 ? 'Almost finished' : '~' + remainingMinutes + ' min left'}</span>
         </div>
 
         <h1 className={styles.chapterTitle}>{currentChapter.title}</h1>

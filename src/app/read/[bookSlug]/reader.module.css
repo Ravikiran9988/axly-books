@@ -556,3 +556,28 @@
   }
 }
 
+
+
+/* Compact reading context below the chapter label */
+.readingStatus {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.75rem 0 1.1rem;
+  color: var(--reader-subtle);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.statusDot {
+  color: var(--color-brand-cyan);
+  font-weight: 800;
+}
+
+@media (max-width: 480px) {
+  .readingStatus {
+    gap: 0.35rem;
+    font-size: 0.72rem;
+  }
+}
