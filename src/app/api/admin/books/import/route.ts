@@ -6,8 +6,6 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 import { extractPdfPages, splitPdfIntoChapters, slugifyImportedChapter } from '@/lib/pdfImport';
 
-export const runtime = 'nodejs';
-export const maxDuration = 60;
 const MAX_PDF_SIZE = 4 * 1024 * 1024;
 const MAX_EXTRACTED_CHARS = 1_200_000;
 
