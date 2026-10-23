@@ -4,24 +4,19 @@ import {
   Mail,
   GraduationCap,
   Code2,
-  BookOpen,
   Feather,
   Compass,
 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '@/components/SocialIcons';
-import { PUBLISHED_BOOKS } from '@/data/booksData';
-import BookCard from '@/components/BookCard';
 import styles from './author.module.css';
 
 export const metadata = {
   title: 'About Slayer (Medicharla Ravi Kiran) — Author Profile · AXLY',
   description:
-    'Author profile of Slayer (Medicharla Ravi Kiran), AI/ML Engineer, Full-Stack Developer, and author of ML + Deep Learning Fundamentals.',
+    'Meet Slayer (Medicharla Ravi Kiran), an independent creator focused on AI, machine learning, Generative AI, and full-stack development.',
 };
 
 export default function AuthorProfilePage() {
-  const featuredBook = PUBLISHED_BOOKS[0];
-
   return (
     <div className={`container ${styles.authorPage}`}>
       {/* Hero Profile Banner */}
@@ -55,7 +50,7 @@ export default function AuthorProfilePage() {
             </div>
             <div className={styles.metaItem}>
               <Code2 size={16} color="var(--color-brand-cyan)" />
-              <span>10+ Projects & 700+ GitHub Contributions</span>
+              <span>40+ Public Repositories · 1,251 GitHub Contributions in 2026</span>
             </div>
           </div>
 
@@ -102,35 +97,36 @@ export default function AuthorProfilePage() {
             </h2>
 
             <p className={styles.bioParagraph}>
-              I&apos;m <strong>Medicharla Ravi Kiran</strong>, writing under the pen name{' '}
-              <strong>Slayer</strong>. I&apos;m an AI/ML engineer and full-stack developer with a
-              B.Tech in Computer Science and Engineering from Vaagdevi College of Engineering,
-              Warangal.
+              I&apos;m <strong>Medicharla Ravi Kiran</strong>, known by the pen name{' '}
+              <strong>Slayer</strong>. I&apos;m an independent creator, AI/ML engineer, and full-stack
+              developer with a B.Tech in Computer Science and Engineering from Vaagdevi College of
+              Engineering, Warangal.
             </p>
 
             <p className={styles.bioParagraph}>
-              My work spans Artificial Intelligence, Machine Learning, Generative AI, and full-stack
-              development. My development journey includes more than 10 projects and over 700 GitHub
-              contributions, as documented in my book.
+              My work spans Artificial Intelligence, Machine Learning, Deep Learning, Generative AI,
+              and full-stack development. I enjoy building practical software, exploring emerging
+              technologies, and turning complex technical concepts into clear, structured learning
+              experiences.
             </p>
 
             <p className={styles.bioParagraph}>
-              Through writing, I aim to organise knowledge, explain technical concepts, and make
-              learning more approachable. My book, <em>ML + Deep Learning Fundamentals</em>, presents
-              a structured path from essential data tools and machine learning concepts toward neural
-              networks, Transformers, and modern Generative AI.
+              I maintain a portfolio of <strong>40+ public GitHub repositories</strong> and recorded{' '}
+              <strong>1,251 GitHub contributions in 2026</strong>, reflecting my ongoing development
+              activity and commitment to learning by building.
             </p>
 
             <p className={styles.bioParagraph}>
-              Through AXLY, I want to create a place where readers can discover my books, access
-              published works for free, and continue learning at their own pace.
+              Through AXLY, I want to make knowledge more accessible and create a welcoming space for
+              people to explore ideas, develop technical skills, and learn at their own pace.
             </p>
 
             <p className={styles.bioParagraph}>
-              I believe knowledge becomes more valuable when it is communicated clearly and made
-              accessible to others. AXLY is my space for sharing ideas, learning resources, and
-              books—one page at a time.
+              I believe knowledge becomes more valuable when it is communicated clearly and shared
+              openly. My goal is to keep learning, building, and helping others grow through technology
+              and accessible educational resources.
             </p>
+
           </section>
 
           {/* Writing Philosophy Block */}
@@ -179,17 +175,6 @@ export default function AuthorProfilePage() {
             </div>
           </section>
 
-          {/* Featured Publications Block */}
-          <section className={styles.sectionBlock}>
-            <h2 className={styles.sectionTitle}>
-              <BookOpen size={20} color="var(--color-brand-cyan)" />
-              <span>Published Books by Slayer</span>
-            </h2>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', maxWidth: '420px' }}>
-              <BookCard book={featuredBook} />
-            </div>
-          </section>
         </div>
 
         {/* Side Column: Verified Information & Background */}
@@ -226,7 +211,7 @@ export default function AuthorProfilePage() {
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Code Portfolio</span>
-              <span className={styles.infoValue}>10+ Projects · 700+ GitHub Contributions</span>
+              <span className={styles.infoValue}>40+ Public Repositories · 1,251 Contributions in 2026</span>
             </div>
           </div>
 
@@ -243,8 +228,7 @@ export default function AuthorProfilePage() {
                 ravikiran@axly.in
               </a>
               <span className={styles.contactDisclaimer}>
-                * Email address as published in the book. Details remain editable as domain
-                infrastructure develops.
+                * Contact details may be updated as domain infrastructure develops.
               </span>
             </div>
 
