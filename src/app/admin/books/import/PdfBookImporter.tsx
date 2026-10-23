@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, FileUp, LoaderCircle, Plus, Trash2, UploadCloud } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, FileUp, LoaderCircle, Plus, Trash2, UploadCloud } from 'lucide-react';
 import styles from '../../admin.module.css';
 
 declare global {
@@ -76,6 +77,7 @@ function splitIntoChapters(text: string): DraftChapter[] {
 }
 
 export default function PdfBookImporter() {
+  const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -218,7 +220,7 @@ export default function PdfBookImporter() {
       if (!response.ok) throw new Error(result.error || 'Book import failed.');
       setNotice({ type: 'success', text: result.message || 'Book imported successfully.' });
       setProgress('');
-      window.location.assign(`/admin/books/${result.bookId}/chapters`);
+      router.push(`/admin/books/${result.bookId}/chapters`);
     } catch (error) {
       setNotice({ type: 'error', text: error instanceof Error ? error.message : 'Book import failed.' });
     } finally {
