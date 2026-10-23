@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Star, Send, Trash2, Pencil, ChevronDown, MessageSquareText } from 'lucide-react';
+import { Star, Send, Pencil, ChevronDown, MessageSquareText } from 'lucide-react';
 import styles from './ReviewsPanel.module.css';
 
 type Review = {
