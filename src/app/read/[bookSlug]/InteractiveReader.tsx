@@ -23,6 +23,28 @@ import styles from './reader.module.css';
 import CommentsPanel from './CommentsPanel';
 import ReaderToolsPanel from './ReaderToolsPanel';
 
+type ReaderAnnotation = { id: string; quote: string; note: string; anchor?: string | null };
+
+function renderAnnotatedText(content: string, annotations: ReaderAnnotation[]) {
+  const usable = annotations.filter((a) => a.quote.trim().length >= 2 && content.includes(a.quote));
+  if (!usable.length) return content;
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+  while (cursor < content.length) {
+    let nextStart = -1;
+    let nextAnnotation: ReaderAnnotation | undefined;
+    for (const annotation of usable) {
+      const index = content.indexOf(annotation.quote, cursor);
+      if (index !== -1 && (nextStart === -1 || index < nextStart)) { nextStart = index; nextAnnotation = annotation; }
+    }
+    if (!nextAnnotation || nextStart < 0) { nodes.push(content.slice(cursor)); break; }
+    if (nextStart > cursor) nodes.push(content.slice(cursor, nextStart));
+    nodes.push(<mark key={nextAnnotation.id + '-' + nextStart} data-annotation-id={nextAnnotation.id} title="Your private saved passage" style={{ background: 'rgba(250, 204, 21, .38)', color: 'inherit', borderRadius: 3, padding: '0 1px', boxShadow: 'inset 0 -1px 0 rgba(161, 98, 7, .55)' }}>{nextAnnotation.quote}</mark>);
+    cursor = nextStart + nextAnnotation.quote.length;
+  }
+  return nodes;
+}
+
 const DEFAULT_PREFERENCES: ReadingPreferences = {
   theme: 'light',
   fontSize: 18,
@@ -69,6 +91,7 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [annotations, setAnnotations] = useState<ReaderAnnotation[]>([]);
 
   const articleRef = useRef<HTMLElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -81,6 +104,31 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
   const chapterReadingMinutes = currentChapter.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 220));
   const remainingMinutes = Math.max(0, Math.ceil(chapterReadingMinutes * (1 - scrollProgress / 100)));
 
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch('/api/reader/annotations?book=' + encodeURIComponent(book.slug) + '&chapter=' + encodeURIComponent(currentChapter.slug));
+        const data = await response.json().catch(() => ({}));
+        if (!cancelled && response.ok) setAnnotations(Array.isArray(data.annotations) ? data.annotations : []);
+        if (!cancelled && response.status === 401) setAnnotations([]);
+      } catch { if (!cancelled) setAnnotations([]); }
+    };
+    void load();
+    const refresh = () => void load();
+    const jump = (event: Event) => {
+      const quote = (event as CustomEvent<string>).detail;
+      if (!quote) return;
+      window.setTimeout(() => {
+        const marks = Array.from(document.querySelectorAll<HTMLElement>('[data-annotation-id]'));
+        const target = marks.find((mark) => mark.textContent === quote || mark.textContent?.includes(quote));
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    };
+    window.addEventListener('axly-annotations-updated', refresh);
+    window.addEventListener('axly-jump-to-quote', jump);
+    return () => { cancelled = true; window.removeEventListener('axly-annotations-updated', refresh); window.removeEventListener('axly-jump-to-quote', jump); };
+  }, [book.slug, currentChapter.slug]);
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
@@ -509,7 +557,7 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
         {currentChapter.sections.map((section, idx) => (
           <section key={idx} id={`sec-${idx + 1}`} className={styles.contentSection}>
             <h2 className={styles.sectionHeading}>{section.title}</h2>
-            <p className={styles.paragraph}>{section.content}</p>
+            <p className={styles.paragraph}>{renderAnnotatedText(section.content, annotations)}</p>
 
             {/* Optional Conceptual Callout */}
             {section.callout && (
