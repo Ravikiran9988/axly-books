@@ -410,6 +410,7 @@
 
 .paragraph {
   margin-bottom: 1.25rem;
+  white-space: pre-line;
 }
 
 /* Callout Box */
