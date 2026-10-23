@@ -46,6 +46,7 @@ export async function GET(
         success: true,
         book: {
           ...book,
+          originalPdfUrl: book.allowPdfDownload ? book.originalPdfUrl : null,
           coverImage: book.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
           author: book.authorName || 'Slayer',
           publicationStatus: book.status || 'Available Free',
