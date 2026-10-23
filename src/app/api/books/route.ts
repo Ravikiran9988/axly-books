@@ -35,6 +35,9 @@ export async function GET(request: Request) {
       estimatedReadingTimeMinutes: number;
       allowPdfDownload: boolean;
       originalPdfUrl?: string | null;
+      originalPdfPath?: string | null;
+      license?: string;
+      licenseUrl?: string | null;
     }> = [];
 
     if (isDatabaseConfigured() && db) {
@@ -98,11 +101,19 @@ export async function GET(request: Request) {
 
     const mappedBooks = booksList.map((b) => ({
       ...b,
+      // Never send private Blob paths to readers; private downloads go through an authenticated proxy route.
+      originalPdfPath: null,
       coverImage: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
       coverImageUrl: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
       author: b.authorName || 'Slayer',
       publicationStatus: b.status || 'Available Free',
-      originalPdfUrl: b.allowPdfDownload ? b.originalPdfUrl ?? null : null,
+      originalPdfUrl: b.allowPdfDownload
+        ? b.originalPdfPath
+          ? `/api/books/${encodeURIComponent(b.slug)}/pdf`
+          : b.originalPdfUrl ?? null
+        : null,
+      license: b.license || 'All Rights Reserved',
+      licenseUrl: b.licenseUrl ?? null,
     }));
 
     return NextResponse.json({

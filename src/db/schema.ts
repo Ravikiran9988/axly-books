@@ -89,6 +89,9 @@ export const books = pgTable('books', {
   estimatedReadingTimeMinutes: integer('estimated_reading_time_minutes').default(0).notNull(),
   allowPdfDownload: boolean('allow_pdf_download').default(false).notNull(),
   originalPdfUrl: text('original_pdf_url'),
+  originalPdfPath: text('original_pdf_path'),
+  license: text('license').default('All Rights Reserved').notNull(),
+  licenseUrl: text('license_url'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
