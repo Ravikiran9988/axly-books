@@ -227,6 +227,23 @@ export const correctionSubmissions = pgTable(
   }
 );
 
+export const authorQuestions = pgTable(
+  'author_questions',
+  {
+    id: text('id').primaryKey(),
+    bookId: text('book_id').notNull().references(() => books.id, { onDelete: 'cascade' }),
+    chapterId: text('chapter_id').notNull().references(() => chapters.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    question: text('question').notNull(),
+    status: text('status').default('open').notNull(), // open | answered
+    answer: text('answer'),
+    answeredAt: timestamp('answered_at', { withTimezone: true }),
+    answeredBy: text('answered_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  }
+);
+
 export const readerNotifications = pgTable(
   'reader_notifications',
   {
