@@ -29,7 +29,7 @@
 
 ## P5 private annotations and author tools
 
-Readers can save private passage notes per book/chapter, submit typo or factual-correction suggestions, view an in-app notification inbox, and browse published edition history. The admin CMS includes a correction review queue at **Admin → Reader Corrections**; decisions notify the submitting reader and do not silently rewrite published chapters. Admins can publish edition notes through `POST /api/admin/books/:bookId/editions`, which announces the update to reader accounts. Apply migration `0005_annotations_author_tools.sql` with `npm run db:migrate`. See [`docs/P5_ANNOTATIONS_AUTHOR_TOOLS.md`](docs/P5_ANNOTATIONS_AUTHOR_TOOLS.md) for API details, privacy guarantees, limitations, and manual verification steps.
+Readers can save private passage notes per book/chapter, ask Slayer private chapter questions, submit typo or factual-correction suggestions, view an in-app notification inbox, and browse published edition history. The admin CMS includes **Admin → Reader Corrections** and **Admin → Ask Slayer · Q&A**; author replies and correction decisions notify the reader and do not silently rewrite published chapters. Admins can publish edition notes through `POST /api/admin/books/:bookId/editions`, which announces the update to reader accounts. Apply migration `0005_annotations_author_tools.sql` with `npm run db:migrate`. See [`docs/P5_ANNOTATIONS_AUTHOR_TOOLS.md`](docs/P5_ANNOTATIONS_AUTHOR_TOOLS.md) for API details, privacy guarantees, limitations, and manual verification steps.
 
 ## P3 ratings and reviews
 
