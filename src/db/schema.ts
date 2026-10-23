@@ -88,6 +88,7 @@ export const books = pgTable('books', {
   totalChapters: integer('total_chapters').default(0).notNull(),
   estimatedReadingTimeMinutes: integer('estimated_reading_time_minutes').default(0).notNull(),
   allowPdfDownload: boolean('allow_pdf_download').default(false).notNull(),
+  originalPdfUrl: text('original_pdf_url'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
