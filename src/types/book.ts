@@ -41,6 +41,7 @@ export interface Book {
   isFree: boolean;
   isPublished?: boolean;
   allowPdfDownload: boolean;
+  originalPdfUrl?: string | null;
   copyrightNotice: string;
   license: string;
   licenseUrl?: string;
