@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { upload } from '@vercel/blob/client';
-import { ArrowLeft, FileUp, LoaderCircle, Plus, Trash2, UploadCloud } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, FileUp, LoaderCircle, Plus, ScanText, Trash2, UploadCloud } from 'lucide-react';
 import styles from '../../admin.module.css';
 
 declare global {
@@ -15,8 +15,13 @@ declare global {
         numPages: number;
         getPage: (page: number) => Promise<{
           getTextContent: () => Promise<{ items: Array<{ str?: string; transform?: number[] }> }>;
+          getViewport: (options: { scale: number }) => { width: number; height: number };
+          render: (options: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number } }) => { promise: Promise<void> };
         }>;
       }> };
+    };
+    Tesseract?: {
+      recognize: (image: HTMLCanvasElement, language: string, options?: { logger?: (message: { status?: string; progress?: number }) => void }) => Promise<{ data: { text: string } }>;
     };
   }
 }
@@ -299,6 +304,8 @@ export default function PdfBookImporter() {
           {progress && <p style={{ marginTop: 12 }}><LoaderCircle size={15} style={{ display: 'inline', marginRight: 6 }} />{progress}</p>}
         </section>
 
+        {needsOcr && file && <button type="button" className="btn btn-secondary" onClick={() => void extractPdf(file, true)} disabled={isExtracting || isImporting} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20 }}><ScanText size={16} /> Retry extraction with OCR</button>}
+
         <section className={styles.modalContent} style={{ maxWidth: 'none', marginBottom: 24 }}>
           <h2 className={styles.modalTitle}>2. Book details</h2>
           <div className={styles.formGrid} style={{ marginTop: 16 }}>
@@ -326,9 +333,10 @@ export default function PdfBookImporter() {
               <h2 className={styles.modalTitle}>3. Review extracted chapters</h2>
               <p style={{ color: 'var(--text-muted)', marginTop: 6 }}>{chapters.length} chapters · {totalCharacters.toLocaleString()} characters</p>
             </div>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={addChapter} disabled={chapters.length >= 100}><Plus size={15} /> Add chapter</button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowPreview((value) => !value)} disabled={chapters.length === 0}>{showPreview ? <EyeOff size={15} /> : <Eye size={15} />}{showPreview ? 'Hide preview' : 'Preview reader'}</button><button type="button" className="btn btn-secondary btn-sm" onClick={addChapter} disabled={chapters.length >= 100}><Plus size={15} /> Add chapter</button></div>
           </div>
-          {chapters.length === 0 ? <p style={{ marginTop: 18, color: 'var(--text-muted)' }}>Select a PDF to extract its text. Scanned/image-only PDFs need OCR before importing.</p> : (
+          {showPreview && chapters.length > 0 && <div className={styles.importReaderPreview}><div className={styles.importPreviewEyebrow}>READER PREVIEW</div><h3>{book.title || 'Untitled book'}</h3><p className={styles.importPreviewByline}>By Slayer · {chapters.length} chapters</p><nav className={styles.importPreviewToc} aria-label="Preview chapters">{chapters.map((chapter, index) => <a key={`${chapter.title}-${index}`} href={`#import-preview-chapter-${index}`}>{index + 1}. {chapter.title || 'Untitled chapter'}</a>)}</nav>{chapters.map((chapter, index) => <article id={`import-preview-chapter-${index}`} key={`${chapter.title}-preview-${index}`} className={styles.importPreviewChapter}><h4>{chapter.title || `Chapter ${index + 1}`}</h4>{chapter.content.split(/\n\s*\n/).filter((paragraph) => paragraph.trim()).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph.trim()}</p>)}</article>)}</div>}
+          {chapters.length === 0 ? <p style={{ marginTop: 18, color: 'var(--text-muted)' }}>Select a PDF to extract its text. If text extraction finds too little content, retry with OCR.</p> : (
             <div style={{ display: 'grid', gap: 18, marginTop: 18 }}>
               {chapters.map((chapter, index) => (
                 <article key={index} style={{ border: '1px solid var(--border-subtle, #ddd)', borderRadius: 12, padding: 16 }}>
