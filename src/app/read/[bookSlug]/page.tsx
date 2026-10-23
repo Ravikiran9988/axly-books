@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: ReaderPageProps) {
 
 export default async function ReaderPage({ params }: ReaderPageProps) {
   const { bookSlug } = await params;
-  const book = await bookService.getBookBySlug(bookSlug);
+  const book = await getServerBookBySlug(bookSlug);
 
   if (!book) {
     notFound();
