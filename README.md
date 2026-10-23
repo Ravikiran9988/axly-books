@@ -32,10 +32,12 @@
 1. Configure `BLOB_READ_WRITE_TOKEN` in the deployment environment for Vercel Blob storage.
 2. Apply the new database migration with `npm run db:migrate` (or run `ALTER TABLE books ADD COLUMN original_pdf_url text;` once if you manage migrations manually).
 3. Open **Admin → Book Management → Import from PDF** or visit `/admin/books/import` as an administrator.
-4. Choose a PDF (maximum 25 MB). Text extraction runs in the browser using PDF.js; the PDF is uploaded to Vercel Blob only when you submit the import.
+4. Choose a PDF (maximum 25 MB). Text extraction runs in the browser using PDF.js; when you submit, the PDF uploads directly from the browser to Vercel Blob with an admin-authorized, short-lived upload token and visible progress. This avoids sending the file through a serverless function request body.
 5. Review the extracted chapter split and edit titles/content before importing. Keep the book unpublished until you have checked formatting and page headers/footers.
 
-**Current limitations:** this first version extracts selectable PDF text only. Scanned/image-only PDFs require OCR before import. Chapter detection is heuristic, so review every chapter. Embedded images/diagrams, layout, and code formatting are not automatically reconstructed yet. Original PDFs are stored in a public Vercel Blob store, and the reader download link is shown only when `Allow readers to download the original PDF` is enabled. **Important:** the toggle hides the link; it is not storage-level access control. Do not upload confidential manuscripts to a public Blob store.
+**Storage security:** the current direct-upload flow targets a **public** Vercel Blob store. Original PDFs are therefore accessible to anyone who obtains the Blob URL, even when the reader download link is disabled. Use this only for manuscripts you are comfortable storing publicly; use a separate private-storage design for restricted originals. Do not upload confidential manuscripts.
+
+**Current limitations:** this first version extracts selectable PDF text only. Scanned/image-only PDFs require OCR before import. Chapter detection is heuristic, so review every chapter. Embedded images/diagrams, layout, and code formatting are not automatically reconstructed yet. The reader download link is shown only when `Allow readers to download the original PDF` is enabled; this is a UI control, not storage-level access control.
 
 ## 2. Official Publication
 
