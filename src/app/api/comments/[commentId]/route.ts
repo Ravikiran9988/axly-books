@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
-import { getCurrentUser, requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 
 type Context = { params: Promise<{ commentId: string }> };
 
@@ -45,6 +45,8 @@ export async function DELETE(request: Request, { params }: Context) {
   if (comment.userId !== auth.user.id && auth.user.role !== 'admin') {
     return NextResponse.json({ error: 'You can delete only your own comments.' }, { status: 403 });
   }
+  // Replies use an explicit parent id; remove them first to avoid orphaned discussion entries.
+  await db.delete(schema.comments).where(eq(schema.comments.parentCommentId, commentId));
   await db.delete(schema.comments).where(eq(schema.comments.id, commentId));
   return NextResponse.json({ success: true });
 }
