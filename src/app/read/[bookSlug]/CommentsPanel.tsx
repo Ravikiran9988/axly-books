@@ -73,6 +73,8 @@ export default function CommentsPanel({ bookSlug, chapterSlug }: { bookSlug: str
     return () => { cancelled = true; };
   }, []);
 
+  // Reload comments when the chapter or sorting mode changes.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(true); }, [endpoint, sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submitComment(event: FormEvent, parentCommentId: string | null = null) {
