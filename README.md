@@ -90,6 +90,14 @@ All admin operations and sensitive reader endpoints are guarded on the server by
 - `requireAdmin(request?)`: Validates that the session belongs to a user with `role === 'admin'`. Rejects unauthenticated callers with 401 and non-admin readers with 403.
 - `assertRecordOwnership(userId, ownerId)`: Strictly prevents cross-user modification of progress or bookmarks.
 
+### Rate limiting and password-reset delivery
+
+- Production authentication and password-reset endpoints fail closed with HTTP 503 if the shared Neon-backed rate limiter cannot make a decision; they do not silently fall back to process-local rate limits.
+- Local development and tests may use the process-local limiter when the database is not configured.
+- Password recovery currently supports Resend through `RESEND_API_KEY`; setting `SMTP_HOST` alone is not enough because no SMTP transport is implemented.
+- Resend's HTTP response is checked. If the provider rejects the request or the request times out, the generated reset token is invalidated and a safe error is logged.
+- The password-reset endpoint returns a generic HTTP 202 response to avoid revealing whether an email belongs to an account. This confirms receipt of the request, not email delivery. Configure `RESEND_API_KEY`, `EMAIL_FROM`, and `NEXT_PUBLIC_APP_URL` in production.
+
 ---
 
 ## 5. Persistent Object Storage (Image Uploads)

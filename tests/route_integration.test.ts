@@ -415,8 +415,29 @@ async function runRealRouteIntegrationTests() {
     const forgotReq = createJsonRequest('http://localhost:3000/api/auth/forgot-password', 'POST', {
       email: readerEmail,
     });
-    const forgotRes = await forgotPasswordHandler(forgotReq);
-    assert.strictEqual(forgotRes.status, 200, 'Forgot password request must return 200');
+    // Keep tests hermetic even if a developer has a real Resend key in their shell.
+    const forgotRes = await (async () => {
+      const previousResendKey = process.env.RESEND_API_KEY;
+      const previousDatabaseUrl = process.env.DATABASE_URL;
+      const previousNodeEnv = process.env.NODE_ENV;
+      try {
+        delete process.env.RESEND_API_KEY;
+        delete process.env.DATABASE_URL;
+        Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, enumerable: true, writable: true });
+        return await forgotPasswordHandler(forgotReq);
+      } finally {
+        if (previousResendKey === undefined) delete process.env.RESEND_API_KEY;
+        else process.env.RESEND_API_KEY = previousResendKey;
+        if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+        else process.env.DATABASE_URL = previousDatabaseUrl;
+        if (previousNodeEnv === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
+        else Object.defineProperty(process.env, 'NODE_ENV', { value: previousNodeEnv, configurable: true, enumerable: true, writable: true });
+      }
+    })();
+    assert.strictEqual(forgotRes.status, 202, 'Forgot password request must return generic 202 Accepted');
+    const forgotData = await forgotRes.json();
+    assert.strictEqual(forgotData.requestAccepted, true, 'Request acceptance must be distinct from email delivery');
+    assert(!forgotData.message.includes('have been dispatched'), 'Response must not claim email was dispatched');
 
     // Find the generated reset token from inMemoryStore for verification
     let resetRawToken = '';
@@ -437,6 +458,48 @@ async function runRealRouteIntegrationTests() {
     const invalidResetRes = await resetPasswordHandler(invalidResetReq);
     assert.strictEqual(invalidResetRes.status, 400, 'Invalid reset token must be rejected with 400');
     console.log('  ✔ Invalid password reset token safely rejected.');
+
+    // 5.3 Provider non-2xx must not be treated as a successful delivery.
+    // The public response remains generic to avoid account-enumeration leaks.
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousDatabaseUrl = process.env.DATABASE_URL;
+    const previousResendKey = process.env.RESEND_API_KEY;
+    const previousAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const originalFetch = globalThis.fetch;
+    const existingResetHashes = [...inMemoryStore.resets.keys()].sort();
+
+    try {
+      Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, enumerable: true, writable: true });
+      delete process.env.DATABASE_URL;
+      process.env.RESEND_API_KEY = 're_test_provider_failure';
+      process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+      globalThis.fetch = (async () => new Response('provider unavailable', { status: 503 })) as typeof fetch;
+
+      const providerFailureReq = createJsonRequest('http://localhost:3000/api/auth/forgot-password', 'POST', {
+        email: readerEmail,
+      });
+      const providerFailureRes = await forgotPasswordHandler(providerFailureReq);
+      assert.strictEqual(providerFailureRes.status, 202, 'Reset request response must remain generic when provider fails');
+      const providerFailureData = await providerFailureRes.json();
+      assert.strictEqual(providerFailureData.requestAccepted, true);
+      assert(!providerFailureData.message.includes('have been dispatched'), 'Must not claim a failed email was dispatched');
+      assert.deepStrictEqual(
+        [...inMemoryStore.resets.keys()].sort(),
+        existingResetHashes,
+        'Undelivered reset token must be deleted when provider rejects the email'
+      );
+      console.log('  ✔ Resend non-2xx response is checked; undelivered token is invalidated without account enumeration.');
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (previousNodeEnv === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
+      else Object.defineProperty(process.env, 'NODE_ENV', { value: previousNodeEnv, configurable: true, enumerable: true, writable: true });
+      if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = previousDatabaseUrl;
+      if (previousResendKey === undefined) delete process.env.RESEND_API_KEY;
+      else process.env.RESEND_API_KEY = previousResendKey;
+      if (previousAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = previousAppUrl;
+    }
   }
 
   // =========================================================================
