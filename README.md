@@ -21,7 +21,7 @@
 - An editorial, distraction-free reading interface with 3 reading themes (**Dark**, **Light**, **Sepia**), custom typography, instant chapter drawer, and full keyboard navigation.
 - Persistent cross-device reading progress, chapter bookmarks, and reader dashboard.
 - A fully isolated **Administrator Content Management System (CMS)** with draft segregation, chapter reordering, and technical code snippet/callout management.
-- **PDF book import:** upload an existing searchable PDF, extract text in the browser, review/edit detected chapter splits, and import the original PDF plus interactive chapters without retyping.
+- **PDF book import:** upload an existing searchable PDF, extract text in the browser, review/edit detected chapter splits, run browser OCR on scanned pages, preview the extracted text in a reader-like layout, and import the original PDF plus interactive chapters without retyping.
 - Robust Role-Based Access Control (**RBAC**) separating general readers from platform administrators.
 - **100% Free Access Policy:** The platform strictly prohibits advertisements, paywalls, subscriptions, or book sales.
 
@@ -37,7 +37,7 @@
 
 **Storage security:** the current direct-upload flow targets a **public** Vercel Blob store. Original PDFs are therefore accessible to anyone who obtains the Blob URL, even when the reader download link is disabled. Use this only for manuscripts you are comfortable storing publicly; use a separate private-storage design for restricted originals. Do not upload confidential manuscripts.
 
-**Current limitations:** this first version extracts selectable PDF text only. Scanned/image-only PDFs require OCR before import. Chapter detection is heuristic, so review every chapter. Embedded images/diagrams, layout, and code formatting are not automatically reconstructed yet. The reader download link is shown only when `Allow readers to download the original PDF` is enabled; this is a UI control, not storage-level access control.
+**Current limitations:** OCR fallback currently uses Tesseract.js in the browser and recognizes English (`eng`) only; quality and processing time depend on the PDF and device. Chapter splitting and repeated header/footer cleanup are heuristic, so review every chapter. The reader preview shows extracted text, not the original PDF layout. Embedded images/diagrams, tables, rich layout, and code formatting are not automatically reconstructed yet. The reader download link is shown only when `Allow readers to download the original PDF` is enabled; this is a UI control, not storage-level access control.
 
 ## 2. Official Publication
 
