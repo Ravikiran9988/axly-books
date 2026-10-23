@@ -241,9 +241,11 @@ export async function DELETE(
       });
 
       let storageCleanupWarning: string | undefined;
+      let deletedBlobAssets = 0;
       if (blobUrls.length > 0 && blobToken) {
         try {
           await del(blobUrls, { token: blobToken });
+          deletedBlobAssets = blobUrls.length;
         } catch (cleanupError) {
           console.error('Book deleted but Blob asset cleanup failed:', cleanupError);
           storageCleanupWarning =
@@ -258,7 +260,7 @@ export async function DELETE(
         success: true,
         message: `Book "${target.title}" and its chapters, comments, bookmarks, and reading progress were deleted.`,
         ...(storageCleanupWarning ? { storageCleanupWarning } : {}),
-        deletedBlobAssets: blobToken ? blobUrls.length : 0,
+        deletedBlobAssets,
       });
     }
 
