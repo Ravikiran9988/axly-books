@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useSyncExternalStore, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -21,6 +21,7 @@ import { ReadingPreferences } from '@/types/reading';
 import { progressService } from '@/services/progressService';
 import styles from './reader.module.css';
 import CommentsPanel from './CommentsPanel';
+import ReaderToolsPanel from './ReaderToolsPanel';
 
 const DEFAULT_PREFERENCES: ReadingPreferences = {
   theme: 'light',
@@ -606,6 +607,7 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
       </article>
 
       <CommentsPanel bookSlug={book.slug} chapterSlug={currentChapter.slug} />
+      <ReaderToolsPanel bookSlug={book.slug} chapterSlug={currentChapter.slug} />
 
       {/* Floating Notification Toast */}
       {toastMessage && (
