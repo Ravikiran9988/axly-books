@@ -6,6 +6,7 @@ import { Clock, ChevronRight, Download } from 'lucide-react';
 import { getServerBookBySlug } from '@/services/serverBookService';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import BookActions from './BookActions';
+import ShareBookButton from './ShareBookButton';
 import ReviewsPanel from './ReviewsPanel';
 import styles from './page.module.css';
 
@@ -83,6 +84,7 @@ export default async function BookDetailPage({ params }: BookPageProps) {
 
           {/* Interactive Start/Continue Reading CTA (Client Component) */}
           <BookActions book={book} />
+          <ShareBookButton title={book.title} />
           {book.allowPdfDownload && book.originalPdfUrl && (
             <a
               href={book.originalPdfUrl}

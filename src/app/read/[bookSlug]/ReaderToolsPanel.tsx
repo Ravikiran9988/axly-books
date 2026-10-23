@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect -- synchronize reader tools with API data for the current chapter. */
 
 import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -36,7 +37,7 @@ export default function ReaderToolsPanel({ bookSlug, chapterSlug }: { bookSlug: 
   try {
    const res = await fetch('/api/reader/annotations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ bookSlug, chapterSlug, quote, note }) });
    const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Could not save note.');
-   setQuote(''); setNote(''); setMessage('Private note saved. Only you can see it.'); await loadAnnotations();
+   setQuote(''); setNote(''); setMessage('Private note saved. Only you can see it.'); window.dispatchEvent(new Event('axly-annotations-updated')); await loadAnnotations();
   } catch (e) { setMessage(e instanceof Error ? e.message : 'Could not save note.'); } finally { setBusy(false); }
  };
  const submitCorrection = async () => {
@@ -49,7 +50,7 @@ export default function ReaderToolsPanel({ bookSlug, chapterSlug }: { bookSlug: 
  };
  const submitQuestion = async () => { setBusy(true); setMessage(''); try { const res = await fetch('/api/books/' + encodeURIComponent(bookSlug) + '/questions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chapterSlug, question }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Could not send question.'); setQuestion(''); setMessage('Question sent privately to the author.'); setTab('questions'); } catch (e) { setMessage(e instanceof Error ? e.message : 'Could not send question.'); } finally { setBusy(false); } };
  const useSelection = () => { const selected = window.getSelection()?.toString().trim(); if (selected) setQuote(selected.slice(0, 1000)); else setMessage('Select a passage in the chapter first, then tap “Use selected text”.'); };
- const removeAnnotation = async (id: string) => { const res = await fetch('/api/reader/annotations/' + encodeURIComponent(id), { method: 'DELETE' }); if (res.ok) setAnnotations(items => items.filter(a => a.id !== id)); else setMessage('Could not delete that note.'); };
+ const removeAnnotation = async (id: string) => { const res = await fetch('/api/reader/annotations/' + encodeURIComponent(id), { method: 'DELETE' }); if (res.ok) { setAnnotations(items => items.filter(a => a.id !== id)); window.dispatchEvent(new Event('axly-annotations-updated')); } else setMessage('Could not delete that note.'); };
  const updateAnnotation = async (id: string, current: string) => { const next = window.prompt('Edit your private note', current); if (next === null) return; const res = await fetch('/api/reader/annotations/' + encodeURIComponent(id), { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ note: next }) }); const data = await res.json(); if (res.ok) setAnnotations(items => items.map(a => a.id === id ? data.annotation : a)); else setMessage(data.error || 'Could not update note.'); };
  return <section style={panelStyle} aria-label="Reader notes and author tools">
   <h2 style={{ marginTop: 0 }}>Your reading tools</h2>
@@ -63,7 +64,7 @@ export default function ReaderToolsPanel({ bookSlug, chapterSlug }: { bookSlug: 
    <label htmlFor="annotation-note">Your private note</label><textarea id="annotation-note" value={note} onChange={e => setNote(e.target.value)} maxLength={2000} rows={3} placeholder="What do you want to remember about this passage?" style={inputStyle} />
    <button type="button" disabled={busy || !quote.trim()} onClick={() => void saveAnnotation()} style={{ padding: '0.65rem 1rem', borderRadius: 8, cursor: 'pointer' }}>Save private note</button>
    <h3>Saved for this chapter ({annotations.length})</h3>
-   {annotations.length === 0 ? <p>No saved notes for this chapter yet. Notes are private to your account.</p> : annotations.map(a => <article key={a.id} style={{ padding: '0.9rem 0', borderTop: '1px solid #ddd' }}><blockquote style={{ margin: '0 0 0.5rem', paddingLeft: 12, borderLeft: '3px solid #69a7a6' }}>{a.quote}</blockquote><p style={{ whiteSpace: 'pre-wrap' }}>{a.note || 'No note text.'}</p><button type="button" onClick={() => void updateAnnotation(a.id, a.note)}>Edit note</button>{' '}<button type="button" onClick={() => void removeAnnotation(a.id)}>Delete</button></article>)}
+   {annotations.length === 0 ? <p>No saved notes for this chapter yet. Notes are private to your account.</p> : annotations.map(a => <article key={a.id} style={{ padding: '0.9rem 0', borderTop: '1px solid #ddd' }}><blockquote style={{ margin: '0 0 0.5rem', paddingLeft: 12, borderLeft: '3px solid #69a7a6' }}>{a.quote}</blockquote><p style={{ whiteSpace: 'pre-wrap' }}>{a.note || 'No note text.'}</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent('axly-jump-to-quote', { detail: a.quote }))}>Find passage</button>{' '}<button type="button" onClick={() => void updateAnnotation(a.id, a.note)}>Edit note</button>{' '}<button type="button" onClick={() => void removeAnnotation(a.id)}>Delete</button></article>)}
   </>}
   {tab === 'correction' && <>
    <p>Send typos, factual errors, or formatting issues to the author. Submissions are private to you and the moderation team.</p>

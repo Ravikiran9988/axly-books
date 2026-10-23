@@ -22,6 +22,6 @@ export async function POST(request: Request, { params }: Context) {
  const [record] = await db.insert(schema.bookEditions).values({ id: 'edn_' + crypto.randomUUID(), bookId, edition, changeSummary, createdBy: auth.user.id }).onConflictDoNothing().returning();
  if (!record) return NextResponse.json({ error: 'That edition label already exists for this book.' }, { status: 409 });
  const readers = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.role, 'reader')).limit(5000);
- if (readers.length) await db.insert(schema.readerNotifications).values(readers.map((reader) => ({ id: 'ntf_' + crypto.randomUUID(), userId: reader.id, type: 'edition_update', title: 'A book has been updated', message: book.title + ' — ' + edition + ': ' + changeSummary, href: '/books/' + book.slug })) ;
+ if (readers.length) await db.insert(schema.readerNotifications).values(readers.map((reader) => ({ id: 'ntf_' + crypto.randomUUID(), userId: reader.id, type: 'edition_update', title: 'A book has been updated', message: book.title + ' — ' + edition + ': ' + changeSummary, href: '/books/' + book.slug })));
  return NextResponse.json({ edition: record, notifiedReaders: readers.length }, { status: 201 });
 }

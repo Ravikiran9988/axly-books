@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect -- fetch the current user's notifications on mount. */
 import { useCallback, useEffect, useState } from 'react';
 type Notification = { id:string; type:string; title:string; message:string; href:string|null; readAt:string|null; createdAt:string };
 export default function NotificationsPage(){

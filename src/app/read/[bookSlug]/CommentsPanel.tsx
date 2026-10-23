@@ -99,7 +99,7 @@ export default function CommentsPanel({ bookSlug, chapterSlug }: { bookSlug: str
     finally { setBusy(false); }
   }
 
-  async function mutateComment(id: string, action: 'vote' | 'delete' | 'hide' | 'restore' | 'report', content?: string) {
+  async function mutateComment(id: string, action: 'vote' | 'delete' | 'hide' | 'restore' | 'report' | 'edit', content?: string) {
     try {
       const url = action === 'vote' ? `/api/comments/${id}/vote` : action === 'report' ? `/api/comments/${id}/report` : `/api/comments/${id}`;
       const method = action === 'delete' ? 'DELETE' : action === 'hide' || action === 'restore' || content !== undefined ? 'PATCH' : 'POST';
