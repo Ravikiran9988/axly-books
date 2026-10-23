@@ -266,7 +266,12 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
       }
 
       setBooks((prev) => prev.filter((b) => b.id !== deletingBook.id));
-      showToast('success', data.message || `Deleted "${deletingBook.title}".`);
+      showToast(
+        data.storageCleanupWarning ? 'error' : 'success',
+        data.storageCleanupWarning
+          ? `${data.message} ${data.storageCleanupWarning}`
+          : data.message || `Deleted "${deletingBook.title}".`
+      );
       setDeletingBook(null);
     } catch {
       showToast('error', 'Network error while deleting book.');
@@ -669,7 +674,8 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.5 }}>
               Are you sure you want to delete <strong>&ldquo;{deletingBook.title}&rdquo;</strong>?
-              This action will permanently delete all its chapters, reader bookmarks, and reading progress.
+              This permanently deletes the book, chapters, comments, bookmarks, and reading progress.
+              Vercel Blob files used only by this book will also be removed when storage cleanup is available.
               This cannot be undone.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
