@@ -115,6 +115,8 @@ export const bookCreateSchema = z.object({
   status: z.string().default('Available Free'),
   isFree: z.boolean().default(true),
   allowPdfDownload: z.boolean().default(false),
+  license: z.string().trim().max(200).default('All Rights Reserved'),
+  licenseUrl: z.string().trim().url().nullable().optional(),
 });
 
 export const bookUpdateSchema = bookCreateSchema.partial();
