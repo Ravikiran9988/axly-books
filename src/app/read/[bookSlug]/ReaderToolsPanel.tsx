@@ -5,14 +5,17 @@ import type { CSSProperties } from 'react';
 
 type Annotation = { id: string; quote: string; note: string; anchor: string | null; createdAt: string };
 type Edition = { id: string; edition: string; changeSummary: string; publishedAt: string };
+type AuthorQuestion = { id: string; question: string; status: string; answer: string | null; createdAt: string; chapterTitle: string };
 
 const panelStyle: CSSProperties = { maxWidth: 820, margin: '2rem auto', padding: '1.25rem', border: '1px solid var(--border-subtle, #ddd)', borderRadius: 14, background: 'var(--surface, #fff)', color: 'var(--text-primary, #222)' };
 const inputStyle: React.CSSProperties = { width: '100%', padding: '0.7rem', borderRadius: 8, border: '1px solid #aaa', margin: '0.35rem 0 0.8rem', font: 'inherit', boxSizing: 'border-box' };
 
 export default function ReaderToolsPanel({ bookSlug, chapterSlug }: { bookSlug: string; chapterSlug: string }) {
- const [tab, setTab] = useState<'notes' | 'correction' | 'editions'>('notes');
+ const [tab, setTab] = useState<'notes' | 'correction' | 'questions' | 'editions'>('notes');
  const [annotations, setAnnotations] = useState<Annotation[]>([]);
  const [editions, setEditions] = useState<Edition[]>([]);
+ const [questions, setQuestions] = useState<AuthorQuestion[]>([]);
+ const [question, setQuestion] = useState('');
  const [quote, setQuote] = useState('');
  const [note, setNote] = useState('');
  const [suggestion, setSuggestion] = useState('');
@@ -27,7 +30,7 @@ export default function ReaderToolsPanel({ bookSlug, chapterSlug }: { bookSlug: 
   else setMessage(data.error || 'Could not load private notes.');
  }, [bookSlug, chapterSlug]);
  useEffect(() => { void loadAnnotations(); }, [loadAnnotations]);
- useEffect(() => { if (tab !== 'editions') return; fetch('/api/books/' + encodeURIComponent(bookSlug) + '/editions').then(r => r.json()).then(d => setEditions(d.editions || [])).catch(() => setEditions([])); }, [tab, bookSlug]);
+ useEffect(() => { if (tab === 'editions') fetch('/api/books/' + encodeURIComponent(bookSlug) + '/editions').then(r => r.json()).then(d => setEditions(d.editions || [])).catch(() => setEditions([])); if (tab === 'questions') fetch('/api/books/' + encodeURIComponent(bookSlug) + '/questions?chapter=' + encodeURIComponent(chapterSlug)).then(r => r.json()).then(d => { if (d.questions) setQuestions(d.questions); else if (d.error) setMessage(d.error); }).catch(() => setMessage('Could not load your questions.')); }, [tab, bookSlug, chapterSlug]);
  const saveAnnotation = async () => {
   setBusy(true); setMessage('');
   try {
@@ -44,6 +47,7 @@ export default function ReaderToolsPanel({ bookSlug, chapterSlug }: { bookSlug: 
    setMessage(data.message || 'Correction submitted.'); setSuggestion(''); setDetails('');
   } catch (e) { setMessage(e instanceof Error ? e.message : 'Could not submit correction.'); } finally { setBusy(false); }
  };
+ const submitQuestion = async () => { setBusy(true); setMessage(''); try { const res = await fetch('/api/books/' + encodeURIComponent(bookSlug) + '/questions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chapterSlug, question }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Could not send question.'); setQuestion(''); setMessage('Question sent privately to the author.'); setTab('questions'); } catch (e) { setMessage(e instanceof Error ? e.message : 'Could not send question.'); } finally { setBusy(false); } };
  const useSelection = () => { const selected = window.getSelection()?.toString().trim(); if (selected) setQuote(selected.slice(0, 1000)); else setMessage('Select a passage in the chapter first, then tap “Use selected text”.'); };
  const removeAnnotation = async (id: string) => { const res = await fetch('/api/reader/annotations/' + encodeURIComponent(id), { method: 'DELETE' }); if (res.ok) setAnnotations(items => items.filter(a => a.id !== id)); else setMessage('Could not delete that note.'); };
  const updateAnnotation = async (id: string, current: string) => { const next = window.prompt('Edit your private note', current); if (next === null) return; const res = await fetch('/api/reader/annotations/' + encodeURIComponent(id), { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ note: next }) }); const data = await res.json(); if (res.ok) setAnnotations(items => items.map(a => a.id === id ? data.annotation : a)); else setMessage(data.error || 'Could not update note.'); };
@@ -51,7 +55,7 @@ export default function ReaderToolsPanel({ bookSlug, chapterSlug }: { bookSlug: 
   <h2 style={{ marginTop: 0 }}>Your reading tools</h2>
   <p style={{ color: 'var(--text-muted, #666)' }}>Private notes stay separate from public chapter discussions. Help improve the book by sending corrections to the author.</p>
   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-   {(['notes', 'correction', 'editions'] as const).map(t => <button key={t} type="button" onClick={() => { setTab(t); setMessage(''); }} aria-pressed={tab === t} style={{ padding: '0.55rem 0.85rem', borderRadius: 999, border: '1px solid #888', background: tab === t ? '#183b46' : 'transparent', color: tab === t ? '#fff' : 'inherit', cursor: 'pointer' }}>{t === 'notes' ? 'Private highlights & notes' : t === 'correction' ? 'Suggest a correction' : 'Edition history'}</button>)}
+   {(['notes', 'correction', 'questions', 'editions'] as const).map(t => <button key={t} type="button" onClick={() => { setTab(t); setMessage(''); }} aria-pressed={tab === t} style={{ padding: '0.55rem 0.85rem', borderRadius: 999, border: '1px solid #888', background: tab === t ? '#183b46' : 'transparent', color: tab === t ? '#fff' : 'inherit', cursor: 'pointer' }}>{t === 'notes' ? 'Private notes' : t === 'correction' ? 'Suggest a correction' : t === 'questions' ? 'Ask Slayer' : 'Edition history'}</button>)}
   </div>
   {tab === 'notes' && <>
    <label htmlFor="annotation-quote">Selected passage</label><textarea id="annotation-quote" value={quote} onChange={e => setQuote(e.target.value)} maxLength={1000} rows={3} placeholder="Select text in the chapter, or paste a short passage here" style={inputStyle} />
@@ -68,6 +72,13 @@ export default function ReaderToolsPanel({ bookSlug, chapterSlug }: { bookSlug: 
    <label htmlFor="correction-suggestion">Suggested correction</label><textarea id="correction-suggestion" value={suggestion} onChange={e => setSuggestion(e.target.value)} maxLength={2000} rows={3} style={inputStyle} placeholder="What should it say instead?" />
    <label htmlFor="correction-details">Additional context (optional)</label><textarea id="correction-details" value={details} onChange={e => setDetails(e.target.value)} maxLength={1000} rows={2} style={inputStyle} placeholder="Explain why this needs correction" />
    <button type="button" disabled={busy || !quote.trim() || !suggestion.trim()} onClick={() => void submitCorrection()} style={{ padding: '0.65rem 1rem', borderRadius: 8 }}>Send to author</button>
+  </>}
+  {tab === 'questions' && <>
+   <p>Ask a question about this book or chapter. Your question and the author’s reply are private to your account.</p>
+   <label htmlFor="author-question">Your question</label><textarea id="author-question" value={question} onChange={e => setQuestion(e.target.value)} maxLength={1500} rows={4} style={inputStyle} placeholder="What would you like to ask the author?" />
+   <button type="button" disabled={busy || question.trim().length < 5} onClick={() => void submitQuestion()} style={{ padding: '0.65rem 1rem', borderRadius: 8 }}>Send question</button>
+   <h3>Your questions for Slayer</h3>
+   {questions.length === 0 ? <p>No questions yet for this chapter.</p> : questions.map(q => <article key={q.id} style={{ padding: '0.8rem 0', borderTop: '1px solid #ddd' }}><strong>{q.status === 'answered' ? 'Answered' : 'Awaiting reply'} · {q.chapterTitle}</strong><p style={{ whiteSpace: 'pre-wrap' }}>{q.question}</p>{q.answer && <blockquote style={{ margin: 0, paddingLeft: 12, borderLeft: '3px solid #69a7a6' }}><strong>Slayer’s reply</strong><p>{q.answer}</p></blockquote>}</article>)}
   </>}
   {tab === 'editions' && <>
    <h3>Published edition history</h3>
