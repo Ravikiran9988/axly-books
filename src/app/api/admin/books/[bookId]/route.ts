@@ -79,9 +79,9 @@ export async function PUT(
   try {
     const { bookId } = await params;
 
-    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+    if (!isDatabaseConfigured() || !db) {
       return NextResponse.json(
-        { error: 'Persistent database service is not configured.' },
+        { error: 'Persistent database service is not configured. Configure DATABASE_URL before changing books.' },
         { status: 503 }
       );
     }
@@ -164,7 +164,7 @@ export async function PUT(
       });
     }
 
-    return NextResponse.json({ success: true, message: 'Updated in development.' });
+    return NextResponse.json({ error: 'Persistent database service is required to update books.' }, { status: 503 });
   } catch (err: unknown) {
     console.error('Admin update book error:', err);
     return NextResponse.json({ error: 'Failed to update book.' }, { status: 500 });
@@ -183,9 +183,9 @@ export async function DELETE(
   try {
     const { bookId } = await params;
 
-    if (process.env.NODE_ENV === 'production' && (!isDatabaseConfigured() || !db)) {
+    if (!isDatabaseConfigured() || !db) {
       return NextResponse.json(
-        { error: 'Persistent database service is not configured.' },
+        { error: 'Persistent database service is not configured. Configure DATABASE_URL before changing books.' },
         { status: 503 }
       );
     }
@@ -262,7 +262,7 @@ export async function DELETE(
       });
     }
 
-    return NextResponse.json({ success: true, message: 'Deleted in development.' });
+    return NextResponse.json({ error: 'Persistent database service is required to delete books.' }, { status: 503 });
   } catch (err: unknown) {
     console.error('Admin delete book error:', err);
     return NextResponse.json({ error: 'Failed to delete book.' }, { status: 500 });
