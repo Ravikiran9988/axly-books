@@ -1,260 +1,254 @@
 # AXLY Books
 
 > **A World of Ideas, One Page at a Time.**  
-> An independent digital book-reading platform and author CMS by **Slayer** (Medicharla Ravi Kiran).  
-> Canonical Domain: **[https://books.axly.in](https://books.axly.in/)**
+> A free digital reading platform and author CMS by **Slayer** (Medicharla Ravi Kiran).  
+> **Website:** [books.axly.in](https://books.axly.in/) · **Source:** [GitHub](https://github.com/Ravikiran9988/axly-books)
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.4-black?style=flat&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
-[![Database](https://img.shields.io/badge/Neon-PostgreSQL-green?style=flat&logo=postgresql)](https://neon.tech/)
-[![ORM](https://img.shields.io/badge/Drizzle-ORM-orange?style=flat)](https://orm.drizzle.team/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
+[![Database](https://img.shields.io/badge/Database-Neon%20PostgreSQL-green?style=flat&logo=postgresql)](https://neon.tech/)
+[![ORM](https://img.shields.io/badge/ORM-Drizzle-orange?style=flat)](https://orm.drizzle.team/)
 [![Storage](https://img.shields.io/badge/Storage-Vercel%20Blob-black?style=flat)](https://vercel.com/storage/blob)
-[![Security](https://img.shields.io/badge/RBAC-Admin%20%7C%20Reader-emerald?style=flat)](#)
-[![License](https://img.shields.io/badge/Content-CC%20BY--NC%204.0-brightgreen)](#)
+[![Access](https://img.shields.io/badge/Access-Free%20to%20Read-brightgreen?style=flat)](#project-principles)
 
 ---
 
-## 1. Overview
+## About
 
-**AXLY Books** is a production-grade digital reading platform and content management system designed to publish original technical books freely online. It features:
-- An editorial, distraction-free reading interface with 3 reading themes (**Dark**, **Light**, **Sepia**), custom typography, instant chapter drawer, and full keyboard navigation.
-- Persistent cross-device reading progress, chapter bookmarks, and reader dashboard.
-- A fully isolated **Administrator Content Management System (CMS)** with draft segregation, chapter reordering, and technical code snippet/callout management.
-- **PDF book import:** upload an existing searchable PDF, extract text in the browser, review/edit detected chapter splits, run browser OCR on scanned pages, preview the extracted text in a reader-like layout, and import the original PDF plus interactive chapters without retyping.
-- Robust Role-Based Access Control (**RBAC**) separating general readers from platform administrators.
-- **100% Free Access Policy:** The platform strictly prohibits advertisements, paywalls, subscriptions, or book sales.
+**AXLY Books** is a web-based library for publishing and reading books online. It combines a reader-friendly chapter experience with an administrator content management system (CMS), so an author can manage books and chapters without editing application code.
 
----
+### Project principles
 
-## P4 chapter discussions
+- **Free access:** no advertisements, paywalls, subscriptions, or book sales.
+- **Reader privacy:** personal reading progress and bookmarks are associated with the signed-in reader.
+- **Safe publishing workflow:** draft content can be reviewed before it is made public.
+- **Original content:** publish only content you own or have permission to distribute.
 
-P4 adds chapter-specific discussions with threaded replies (one reply level), reader names, a Slayer author badge for administrator replies, editing/deleting your own comments, helpful votes, abuse reports, comment sorting and load-more pagination. Administrators can review the moderation queue at **Admin → Reader Comments**, hide/restore content, inspect reports, and delete comments.
+## Features on `main`
 
-Apply the new migration with `npm run db:migrate` after pulling the branch. The migration creates `comments`, `comment_votes`, and `comment_reports`. Comments require a persistent database and signed-in readers; reading published discussions remains public. Each account can cast one helpful vote and submit one report per comment. Comment text is limited to 2,000 characters.
+### Reading experience
+- Public catalogue and book detail pages for published books.
+- Chapter-based interactive reader with a chapter drawer, keyboard navigation, reading themes (dark, light, and sepia), and typography controls.
+- Reader dashboard with saved reading progress and bookmarks.
+- Original PDF link on book pages when the author enables it and configures a PDF URL.
 
-Moderation is intentionally conservative: reports are queued for an administrator, not auto-hidden based on untrusted report counts. The reader-facing platform remains free, without ads, subscriptions, paywalls, or book sales.
+### Book management and PDF import
+- Administrator-only CMS for creating and editing book metadata, covers, chapters, and chapter order.
+- Draft and publication status controls to keep unfinished content out of the public catalogue.
+- Import an existing searchable PDF instead of retyping the manuscript.
+- Extract PDF text in the browser, review and edit detected chapter boundaries, preview the result, and import editable chapters along with the original PDF URL.
+- English OCR fallback for scanned pages. PDF extraction and chapter detection are heuristic, so manually review the imported book before publication.
 
-## P3 launch readiness
+### Chapter discussions
+- Chapter-specific comments and one-level replies.
+- Edit or delete your own comments.
+- Helpful votes, report submission, newest/most-helpful sorting, and load-more pagination.
+- Administrator moderation to review reports and hide, restore, or delete comments.
+- Author/admin replies display the Slayer author badge.
 
-See [`docs/P3_LAUNCH_READINESS.md`](docs/P3_LAUNCH_READINESS.md) for the deployment configuration checklist, security/storage caveats, and the required preview smoke test. CI now includes regression checks that anonymous requests and forged session cookies cannot invoke the PDF import endpoint.
+### Accounts and platform security
+- Reader and administrator roles enforced on the server.
+- Password hashing, hashed session tokens, HTTP-only SameSite session cookies, input validation, and shared database-backed rate limiting.
+- Password-reset email delivery through Resend when configured.
+- Admin promotion through a CLI command rather than public registration.
 
-## PDF book import setup
-
-1. Configure `BLOB_READ_WRITE_TOKEN` in the deployment environment for Vercel Blob storage.
-2. Apply the new database migration with `npm run db:migrate` (or run `ALTER TABLE books ADD COLUMN original_pdf_url text;` once if you manage migrations manually).
-3. Open **Admin → Book Management → Import from PDF** or visit `/admin/books/import` as an administrator.
-4. Choose a PDF (maximum 25 MB). Text extraction runs in the browser using PDF.js; when you submit, the PDF uploads directly from the browser to Vercel Blob with an admin-authorized, short-lived upload token and visible progress. This avoids sending the file through a serverless function request body.
-5. Review the extracted chapter split and edit titles/content before importing. Keep the book unpublished until you have checked formatting and page headers/footers.
-
-**Storage security:** the current direct-upload flow targets a **public** Vercel Blob store. Original PDFs are therefore accessible to anyone who obtains the Blob URL, even when the reader download link is disabled. Use this only for manuscripts you are comfortable storing publicly; use a separate private-storage design for restricted originals. Do not upload confidential manuscripts.
-
-**Current limitations:** OCR fallback currently uses Tesseract.js in the browser and recognizes English (`eng`) only; quality and processing time depend on the PDF and device. Chapter splitting and repeated header/footer cleanup are heuristic, so review every chapter. The reader preview shows extracted text, not the original PDF layout. Embedded images/diagrams, tables, rich layout, and code formatting are not automatically reconstructed yet. The reader download link is shown only when `Allow readers to download the original PDF` is enabled; this is a UI control, not storage-level access control.
-
-## 2. Official Publication
-
-- **Title:** *ML + Deep Learning Fundamentals — Full Beginner to GenAI Edition*
-- **Author:** Slayer (Medicharla Ravi Kiran)
-- **License:** Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
-- **Topics:** Classical Machine Learning, Linear Algebra, Optimization, Deep Neural Networks, CNNs, Sequence Modeling, Transformers, and modern Generative AI.
+> **Feature scope:** This section describes the code and migrations currently represented by `main`. Ratings and reviews, private passage annotations/highlights, reader correction requests, author questions, and in-app notifications should not be considered available on `main` unless their implementation and migrations have been merged into it.
 
 ---
 
-## 3. Architecture & Tech Stack
+## Tech stack
+
+| Area | Technology |
+|---|---|
+| Application | Next.js App Router, React |
+| Language | TypeScript |
+| Database | Neon Serverless PostgreSQL |
+| ORM and migrations | Drizzle ORM / Drizzle Kit |
+| File storage | Vercel Blob |
+| Authentication | bcryptjs, server-side sessions, HTTP-only cookies |
+| Validation | Zod |
+| Email | Resend (optional; for password recovery) |
+| Tests and quality | ESLint, TypeScript, Node-based automated tests, Next.js production build |
+
+### Architecture
 
 ```mermaid
-graph TD
-    Client["Client Browser (React 19 / App Router)"] --> AppShell["AppShell & Next.js Router"]
-    AppShell --> PublicRoutes["Public / Reader Routes (/books, /read, /dashboard)"]
-    AppShell --> AdminRoutes["Admin CMS Routes (/admin, /admin/books)"]
-    
-    PublicRoutes --> API["API Layer (/api/*)"]
-    AdminRoutes --> AdminAPI["Admin API Layer (/api/admin/*)"]
-    
-    API --> RateLimit["Atomic PostgreSQL Rate Limiting"]
-    AdminAPI --> RateLimit
-    
-    RateLimit --> AuthGuard["Server Security Guards (requireAuth, requireAdmin)"]
-    AuthGuard --> DrizzleORM["Drizzle ORM Schema & Queries"]
-    DrizzleORM --> NeonDB["Neon Serverless PostgreSQL"]
-    AdminAPI --> ObjectStorage["Vercel Blob Persistent Storage"]
+flowchart TD
+    Browser[Reader / Admin Browser] --> App[Next.js Application]
+    App --> Public[Public Catalogue and Reader]
+    App --> CMS[Admin CMS]
+    Public --> API[API Routes]
+    CMS --> AdminAPI[Admin API Routes]
+    API --> Guards[Authentication and Authorization]
+    AdminAPI --> Guards
+    Guards --> ORM[Drizzle ORM]
+    ORM --> DB[(Neon PostgreSQL)]
+    CMS --> Blob[Vercel Blob Storage]
 ```
 
-- **Framework:** Next.js 16.4.2 (App Router with Cache Components & Partial Prerendering)
-- **Frontend:** React 19, Vanilla CSS Design System with curated design tokens, glassmorphism, responsive drawers
-- **Language:** TypeScript 5.0 (Strict mode enabled)
-- **Database:** Neon Serverless PostgreSQL (`@neondatabase/serverless`)
-- **ORM & Migrations:** Drizzle ORM (`drizzle-orm`, `drizzle-kit`) with versioned migrations
-- **Object Storage:** Vercel Blob (`@vercel/blob`) with deep content magic-bytes verification
-- **Authentication & Security:** bcrypt password hashing (12 salt rounds), SHA-256 session token hashing, HTTP-only SameSite cookies, atomic sliding-window distributed rate limiting, Zod schema validations
+## Local development
 
----
+### Requirements
+- Node.js 22 (matches the CI workflow)
+- npm
+- A PostgreSQL database such as Neon for persistent account, reader, and CMS data
+- A Vercel Blob token if you want to test cover uploads or PDF import
+- Resend credentials if you want to test production-style password recovery emails
 
-## 4. Role-Based Access Control (RBAC)
-
-The application strictly differentiates permissions between **`reader`** and **`admin`** users:
-
-| Permission / Surface | Reader (`reader`) | Administrator (`admin`) |
-| :--- | :---: | :---: |
-| Browse published book catalogue (`/books`) | ✅ | ✅ |
-| Read published chapters (`/read/[bookSlug]`) | ✅ | ✅ |
-| Preview unpublished / draft books | ❌ (404 Not Found) | ✅ |
-| Personal Reader Dashboard (`/dashboard`) | ✅ | ✅ |
-| Save personal reading progress & bookmarks | ✅ | ✅ |
-| Access Admin CMS Dashboard (`/admin`) | ❌ (Redirected to `/dashboard`) | ✅ |
-| Manage Books (Create, Edit, Delete) (`/admin/books`) | ❌ (403 Forbidden) | ✅ |
-| Upload Cover Images (`/api/admin/upload`) | ❌ (403 Forbidden) | ✅ |
-| Manage Chapters & Sections (`/admin/books/[id]/chapters`) | ❌ (403 Forbidden) | ✅ |
-| Toggle Book Publication Status (Draft vs Published) | ❌ (403 Forbidden) | ✅ |
-| Reorder Chapter Indexing | ❌ (403 Forbidden) | ✅ |
-| Elevate User Roles (CLI only) | ❌ | CLI Script Only |
-
-### Server-Enforced Security Guards
-All admin operations and sensitive reader endpoints are guarded on the server by centralized helpers in `src/lib/auth.ts`:
-- `requireAuth(request?)`: Ensures a valid, unexpired session exists.
-- `requireAdmin(request?)`: Validates that the session belongs to a user with `role === 'admin'`. Rejects unauthenticated callers with 401 and non-admin readers with 403.
-- `assertRecordOwnership(userId, ownerId)`: Strictly prevents cross-user modification of progress or bookmarks.
-
-### Rate limiting and password-reset delivery
-
-- Production authentication and password-reset endpoints fail closed with HTTP 503 if the shared Neon-backed rate limiter cannot make a decision; they do not silently fall back to process-local rate limits.
-- Local development and tests may use the process-local limiter when the database is not configured.
-- Password recovery currently supports Resend through `RESEND_API_KEY`; setting `SMTP_HOST` alone is not enough because no SMTP transport is implemented.
-- Resend's HTTP response is checked. If the provider rejects the request or the request times out, the generated reset token is invalidated and a safe error is logged.
-- The password-reset endpoint returns a generic HTTP 202 response to avoid revealing whether an email belongs to an account. This confirms receipt of the request, not email delivery. Configure `RESEND_API_KEY`, `EMAIL_FROM`, and `NEXT_PUBLIC_APP_URL` in production.
-
----
-
-## 5. Persistent Object Storage (Image Uploads)
-
-Cover images for books and technical diagrams use **Vercel Blob** (`@vercel/blob`):
-1. **Endpoint:** `POST /api/admin/upload` (multipart form-data).
-2. **Access Control:** Strictly restricted to authenticated Administrators via `requireAdmin()`.
-3. **Deep Content Inspection:** Inspects binary magic bytes before accepting files:
-   - JPEG: `0xFF 0xD8 0xFF`
-   - PNG: `0x89 0x50 0x4E 0x47 0x0D 0x0A 0x1A 0x0A`
-   - WebP: `RIFF...WEBP` (`0x52 0x49 0x46 0x46` and `0x57 0x45 0x42 0x50`)
-4. **Collision Protection:** Filenames are sanitized and appended with timestamps and cryptographic random hex suffixes (e.g. `covers/title-timestamp-randomhex.png`).
-5. **Graceful Degrade:** If `BLOB_READ_WRITE_TOKEN` is unset, the endpoint returns an honest HTTP 503 explaining that uploads are disabled, while preserving direct image URL editing in the CMS.
-
----
-
-## 6. CLI Administrator Provisioning
-
-For maximum security, admin privileges cannot be granted through public registration or client-side toggles. Admin promotion is executed strictly via a secure, audited CLI script:
+### 1. Get the code and install dependencies
 
 ```bash
-# Elevate an existing registered reader to Administrator
-npm run admin:promote -- ravikiran@axly.in
+git clone https://github.com/Ravikiran9988/axly-books.git
+cd axly-books
+npm ci
 ```
 
-### CLI Promotion Workflow:
-1. Connects to the real configured Neon PostgreSQL database.
-2. Normalizes email address (case-insensitive trim).
-3. Validates that the target user account exists.
-4. Performs an idempotent role update to `'admin'`.
-5. Logs confirmation with user ID, name, email, and timestamp without exposing secrets.
+### 2. Configure environment variables
 
----
+Create a local environment file:
 
-## 7. Database Setup, Migrations & Seeding
-
-### Environment Setup
-Copy the environment template:
 ```bash
 cp .env.example .env.local
 ```
-Configure your Neon PostgreSQL connection string in `.env.local`:
+
+At minimum, configure a valid database connection and the local application URL in `.env.local`:
+
 ```env
-DATABASE_URL="postgresql://user:password@endpoint-pooler.region.aws.neon.tech/dbname?sslmode=require"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
-### Versioned Migration & Verification Workflow
+Optional integrations:
+
+```env
+BLOB_READ_WRITE_TOKEN="your-vercel-blob-token"
+RESEND_API_KEY="your-resend-api-key"
+EMAIL_FROM="AXLY Books <noreply@books.axly.in>"
+```
+
+Use real credentials only in your local environment or hosting provider's secret store. **Never commit production credentials to Git.**
+
+### 3. Apply migrations and start the app
+
 ```bash
-# Generate SQL migrations based on schema updates
-npm run db:generate
-
-# Apply versioned migrations from ./drizzle using Neon serverless migrator
 npm run db:migrate
-
-# Audit and verify database connectivity, tables, constraints, and admin existence
 npm run db:verify
+npm run dev
+```
 
-# Seed official publication and chapter data (Idempotent: will not overwrite manual admin edits)
+Open [http://localhost:3000](http://localhost:3000).
+
+To seed the initial publication data, run:
+
+```bash
 npm run db:seed
 ```
 
----
+### 4. Create an administrator
 
-## 8. Quality Assurance & Automated Tests
-
-The repository maintains an automated test harness covering cryptographic functions, validation schemas, user journeys, and genuine HTTP route execution:
+Register an account through the application, then promote that existing account against the configured database:
 
 ```bash
-# Run all automated test suites (Phase 2 unit tests, E2E journey tests, and genuine route integration tests)
-npm test
+npm run admin:promote -- your-account@example.com
+```
 
-# Run ESLint validation (0 errors, 0 warnings enforced)
+Run the command only with the intended database configured. Public registration must not grant administrator privileges.
+
+---
+
+## PDF import: workflow and limitations
+
+1. Configure `BLOB_READ_WRITE_TOKEN` and apply the database migrations.
+2. Sign in as an administrator and open **Admin → Book Management → Import from PDF** (or `/admin/books/import`).
+3. Select a PDF, review the extracted text and suggested chapters, and edit titles or content where needed.
+4. Preview the imported reader view and keep the book unpublished until you have checked it thoroughly.
+5. Publish only when the chapter order, formatting, and content are correct.
+
+### Important storage warning
+
+The current PDF import flow stores the original PDF in a **public Vercel Blob store**. Anyone who obtains the Blob URL may be able to access the file, even when the reader-facing download link is disabled. Disabling that link is not storage-level access control. Do not upload confidential, restricted, or personally sensitive PDFs.
+
+### Import limitations
+- Text extraction and chapter splitting depend on the PDF's text and layout. Always review the result.
+- OCR fallback currently targets English (`eng`) and may take time on scanned documents.
+- The reader preview is based on extracted text; it does not faithfully reconstruct the original PDF layout.
+- Embedded images, diagrams, tables, page layout, and code formatting may not be reconstructed automatically.
+- PDF import creates editable web chapters, but it is not a substitute for editorial review.
+
+---
+
+## Database commands
+
+The repository uses versioned SQL migrations in `drizzle/`.
+
+```bash
+# Generate a migration from schema changes
+npm run db:generate
+
+# Apply checked-in migrations
+npm run db:migrate
+
+# Verify database connectivity and expected setup
+npm run db:verify
+
+# Seed publication and chapter data
+npm run db:seed
+```
+
+Avoid using schema push against a production database as a replacement for reviewing and applying versioned migrations.
+
+## Quality checks
+
+Run the same core checks locally before submitting changes:
+
+```bash
 npm run lint
-
-# Run TypeScript strict type-check (0 errors)
 npx tsc --noEmit
-
-# Compile production build with Next.js Turbopack
+npm test
 npm run build
 ```
 
----
-
-## 9. Deployment Runbook (Vercel & Neon)
-
-### Step 1: Provision Neon PostgreSQL
-1. Create a project at [https://console.neon.tech](https://console.neon.tech).
-2. Copy the **Pooled Connection String** (`sslmode=require`).
-
-### Step 2: Apply Migrations & Seed Baseline Data
-Run migrations and baseline seeding against your live Neon database:
-```bash
-DATABASE_URL="<your-neon-pooled-url>" npm run db:migrate
-DATABASE_URL="<your-neon-pooled-url>" npm run db:verify
-DATABASE_URL="<your-neon-pooled-url>" npm run db:seed
-```
-
-### Step 3: Configure Vercel Project
-1. Import repository `Ravikiran9988/axly-books` into Vercel.
-2. Under **Project Settings > Environment Variables**, add:
-   - `DATABASE_URL`: Your Neon pooled connection string (Mandatory).
-   - `NEXT_PUBLIC_APP_URL`: `https://books.axly.in` (Mandatory).
-   - `BLOB_READ_WRITE_TOKEN`: Token from Vercel Storage Blob (Optional, for cover uploads).
-   - `RESEND_API_KEY`: API key from Resend (Optional, for password recovery emails).
-   - `EMAIL_FROM`: `AXLY Books <noreply@books.axly.in>` (Optional).
-   - `NODE_ENV`: `production`.
-
-### Step 4: Provision Administrator Account
-1. Open `https://books.axly.in/register` and register the owner's account (e.g. `ravikiran@axly.in`).
-2. Run the promotion script targeting the live database:
-   ```bash
-   DATABASE_URL="<your-neon-pooled-url>" npm run admin:promote -- ravikiran@axly.in
-   ```
-3. Log in at `https://books.axly.in/login` and navigate to `https://books.axly.in/admin` to manage books.
-
-### Step 5: Connect Custom Domain
-1. In Vercel, navigate to **Settings > Domains** and add `books.axly.in`.
-2. Configure DNS CNAME record at your DNS provider:
-   - Host: `books`
-   - Type: `CNAME`
-   - Target: `cname.vercel-dns.com`
+The automated test suite covers validation and security behavior, reader journeys, route integration, PDF-import access controls, and chapter-comment protections. A passing test suite does not verify production environment variables, applied live migrations, Blob permissions, or the deployed user experience; perform a preview smoke test before release.
 
 ---
 
-## 10. Author & Legal Identity
+## Deployment overview (Vercel + Neon)
 
-- **Author / Pen Name:** Slayer
-- **Full Legal Name:** Medicharla Ravi Kiran
-- **Role:** AI/ML Engineer and Full-Stack Developer
-- **Contact:** `ravikiran@axly.in` | `books.axly.in`
-- **GitHub:** [https://github.com/Ravikiran9988](https://github.com/Ravikiran9988)
-- **LinkedIn:** [https://www.linkedin.com/in/medicharla-ravi-kiran/](https://www.linkedin.com/in/medicharla-ravi-kiran/)
+1. Create a Neon PostgreSQL project and copy its pooled connection string.
+2. Apply migrations and verify the target database before switching traffic.
+3. Import `Ravikiran9988/axly-books` into Vercel.
+4. Configure environment variables in the appropriate Vercel environments:
+   - `DATABASE_URL` — required.
+   - `NEXT_PUBLIC_APP_URL` — use `https://books.axly.in` for production.
+   - `BLOB_READ_WRITE_TOKEN` — required for Blob-backed uploads and PDF import.
+   - `RESEND_API_KEY` and `EMAIL_FROM` — required for password-reset email delivery.
+5. Register the intended administrator and run `npm run admin:promote -- email@example.com` against the production database.
+6. Configure `books.axly.in` in Vercel Domains and follow the DNS values Vercel provides.
 
-All original book contents and publications are licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Software architecture and platform codebase are owned by Medicharla Ravi Kiran.
+Do not assume a deployment is ready solely because a build succeeds. Confirm migrations, environment variables, authentication, uploads, permissions, and the main reading flows in a preview or staging environment.
+
+## Publication and content licence
+
+The currently documented publication is:
+
+- **Title:** *ML + Deep Learning Fundamentals — Full Beginner to GenAI Edition*
+- **Author / pen name:** Slayer
+- **Copyright holder:** Medicharla Ravi Kiran
+- **Book content licence:** [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/)
+- **Topics:** classical machine learning, linear algebra, optimization, deep neural networks, CNNs, sequence modeling, transformers, and Generative AI.
+
+The book-content licence applies to the relevant published content; it does not automatically license the AXLY Books software codebase.
+
+## Author
+
+- **Pen name:** Slayer
+- **Full name:** Medicharla Ravi Kiran
+- **Contact:** `ravikiran@axly.in`
+- **Website:** [books.axly.in](https://books.axly.in/)
+- **GitHub:** [Ravikiran9988](https://github.com/Ravikiran9988)
+- **LinkedIn:** [Medicharla Ravi Kiran](https://www.linkedin.com/in/medicharla-ravi-kiran/)
+
+---
+
+AXLY Books is intended to remain a free reading platform: no advertisements, paywalls, subscriptions, or book sales.
