@@ -171,6 +171,26 @@ export const commentReports = pgTable(
   (table) => [uniqueIndex('comment_report_user_idx').on(table.commentId, table.userId)]
 );
 
+// --- Book Ratings & Reviews ---
+// One review per reader per book; ratings are constrained to 1–5 by the API.
+export const bookReviews = pgTable(
+  'book_reviews',
+  {
+    id: text('id').primaryKey(),
+    bookId: text('book_id').notNull().references(() => books.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    rating: integer('rating').notNull(),
+    title: text('title'),
+    content: text('content').notNull(),
+    status: text('status').default('published').notNull(), // published | hidden
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('book_review_user_idx').on(table.bookId, table.userId),
+  ]
+);
+
 // --- Rate Limits Table (Shared Multi-Instance Persistence) ---
 export const rateLimits = pgTable('rate_limits', {
   key: text('key').primaryKey(),
@@ -251,6 +271,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   readingProgress: many(readingProgress),
   bookmarks: many(bookmarks),
   comments: many(comments),
+  reviews: many(bookReviews),
   commentVotes: many(commentVotes),
   commentReports: many(commentReports),
   preferences: one(readerPreferences, {
@@ -268,6 +289,7 @@ export const booksRelations = relations(books, ({ many, one }) => ({
   readingProgress: many(readingProgress),
   bookmarks: many(bookmarks),
   comments: many(comments),
+  reviews: many(bookReviews),
 }));
 
 export const chaptersRelations = relations(chapters, ({ one }) => ({
@@ -276,6 +298,11 @@ export const chaptersRelations = relations(chapters, ({ one }) => ({
     references: [books.id],
   }),
   comments: many(comments),
+}));
+
+export const bookReviewsRelations = relations(bookReviews, ({ one }) => ({
+  book: one(books, { fields: [bookReviews.bookId], references: [books.id] }),
+  user: one(users, { fields: [bookReviews.userId], references: [users.id] }),
 }));
 
 export const commentsRelations = relations(comments, ({ one, many }) => ({
