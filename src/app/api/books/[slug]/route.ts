@@ -46,6 +46,8 @@ export async function GET(
         success: true,
         book: {
           ...book,
+          // Never serialize the private Blob pathname into a public-facing response.
+          originalPdfPath: undefined,
           coverImage: book.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
           author: book.authorName || 'Slayer',
           publicationStatus: book.status || 'Available Free',
