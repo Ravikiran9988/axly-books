@@ -88,6 +88,8 @@ export default function PdfBookImporter() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [needsOcr, setNeedsOcr] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState('');
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -105,7 +107,7 @@ export default function PdfBookImporter() {
     setBook((previous) => ({ ...previous, [field]: value }));
   };
 
-  async function extractPdf(selectedFile: File) {
+  async function extractPdf(selectedFile: File, useOcr = false) {
     if (selectedFile.size > 25 * 1024 * 1024) {
       setNotice({ type: 'error', text: 'PDF must be 25 MB or smaller.' });
       return;
@@ -116,6 +118,7 @@ export default function PdfBookImporter() {
     }
     setFile(selectedFile);
     setChapters([]);
+    setNeedsOcr(false);
     const defaultTitle = selectedFile.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
     setBook((previous) => ({
       ...previous,
@@ -131,6 +134,7 @@ export default function PdfBookImporter() {
       const pdfjs = await loadPdfJs();
       const pdf = await pdfjs.getDocument({ data: new Uint8Array(await selectedFile.arrayBuffer()) }).promise;
       const pageTexts: string[] = [];
+      let pagesWithText = 0;
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
         setProgress(`Extracting text from page ${pageNumber} of ${pdf.numPages}…`);
         const page = await pdf.getPage(pageNumber);
@@ -144,22 +148,43 @@ export default function PdfBookImporter() {
           else grouped.push({ y, text: item.str || '' });
         }
         grouped.sort((a, b) => b.y - a.y);
-        pageTexts.push(grouped.map((line) => line.text.trim()).filter(Boolean).join('\n'));
+        const pageText = grouped.map((line) => line.text.trim()).filter(Boolean).join('\n');
+        pageTexts.push(pageText);
+        if (pageText.length > 20) pagesWithText += 1;
       }
-      const extractedText = pageTexts.join('\n\n').trim();
+      let extractedText = pageTexts.join('\n\n').trim();
+      if (useOcr || extractedText.length < 100 || pagesWithText < Math.max(1, Math.ceil(pdf.numPages * 0.25))) {
+        const tesseract = await loadTesseract();
+        const ocrTexts: string[] = [];
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          setProgress(`OCR scanning page ${pageNumber} of ${pdf.numPages}…`);
+          const page = await pdf.getPage(pageNumber);
+          const viewport = page.getViewport({ scale: 1.6 });
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+          const context = canvas.getContext('2d');
+          if (!context) throw new Error('Your browser could not prepare a canvas for OCR.');
+          await page.render({ canvasContext: context, viewport }).promise;
+          const result = await tesseract.recognize(canvas, 'eng', {
+            logger: (message) => { if (message.status === 'recognizing text' && typeof message.progress === 'number') setProgress(`OCR page ${pageNumber}/${pdf.numPages}: ${Math.round(message.progress * 100)}%…`); },
+          });
+          ocrTexts.push(result.data.text.trim());
+          canvas.width = 0; canvas.height = 0;
+        }
+        const ocrText = ocrTexts.filter(Boolean).join('\n\n');
+        if (ocrText.length > extractedText.length) extractedText = ocrText;
+      }
       if (extractedText.length < 100) {
-        setNotice({ type: 'error', text: 'Very little selectable text was found. This PDF may be scanned or image-only; OCR is not included in this first version. Try an OCR-enabled/searchable PDF.' });
-        setProgress('');
-        return;
+        setNeedsOcr(true);
+        setNotice({ type: 'error', text: 'Not enough text could be recovered. The PDF may be low quality, protected, or use a language other than English. Try a clearer or searchable PDF.' });
+        setProgress(''); return;
       }
       const detected = splitIntoChapters(extractedText);
       setChapters(detected);
       setProgress('');
-      setNotice({
-        type: 'info',
-        text: `Extracted ${extractedText.length.toLocaleString()} characters from ${pdf.numPages} pages and detected ${detected.length} chapter section(s). Please review the split before importing.`,
-      });
+      setNotice({ type: 'info', text: `Extracted ${extractedText.length.toLocaleString()} characters from ${pdf.numPages} pages and detected ${detected.length} chapter section(s). Page numbers and repeated short headers/footers were filtered heuristically. Review every chapter before importing.` });
     } catch (error) {
+      setNeedsOcr(true);
       setNotice({ type: 'error', text: error instanceof Error ? error.message : 'Could not read this PDF.' });
       setProgress('');
     } finally {
