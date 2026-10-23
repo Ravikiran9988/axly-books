@@ -50,3 +50,19 @@ CREATE TABLE IF NOT EXISTS book_editions (
   CONSTRAINT book_edition_book_label_idx UNIQUE(book_id, edition)
 );
 CREATE INDEX IF NOT EXISTS book_editions_book_date_idx ON book_editions(book_id, published_at DESC);
+
+CREATE TABLE IF NOT EXISTS author_questions (
+  id text PRIMARY KEY,
+  book_id text NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  chapter_id text NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  question text NOT NULL,
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'answered')),
+  answer text,
+  answered_at timestamptz,
+  answered_by text REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS author_questions_status_created_idx ON author_questions(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS author_questions_user_created_idx ON author_questions(user_id, created_at DESC);
