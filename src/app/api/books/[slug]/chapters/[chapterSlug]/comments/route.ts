@@ -24,6 +24,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     const limit = Math.min(30, Math.max(1, Number.parseInt(url.searchParams.get('limit') || '20', 10) || 20));
     const sort = url.searchParams.get('sort') === 'relevant' ? 'relevant' : 'newest';
     const currentUser = await getCurrentUser(request);
+    const [countRow] = await db.select({ total: sql<number>`count(*)::int` }).from(schema.comments).where(and(eq(schema.comments.bookId, bookRows[0].id), eq(schema.comments.chapterId, chapterRows[0].id), eq(schema.comments.status, 'published')));
     const order = sort === 'relevant'
       ? [desc(sql`(select count(*) from comment_votes where comment_id = ${schema.comments.id})`), desc(schema.comments.createdAt)]
       : [desc(schema.comments.createdAt)];
@@ -84,6 +85,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       })),
       nextOffset: hasMore ? offset + limit : null,
       totalOnPage: page.length,
+      totalCount: Number(countRow?.total ?? 0),
       sort,
     });
   } catch (error) {
