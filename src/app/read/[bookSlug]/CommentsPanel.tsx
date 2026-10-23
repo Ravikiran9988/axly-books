@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { BadgeCheck, Flag, Heart, MessageCircle, MoreHorizontal, Pencil, Reply, Send, ShieldCheck, Trash2, X } from 'lucide-react';
+import { BadgeCheck, Flag, Heart, MessageCircle, Pencil, Reply, Send, ShieldCheck, Trash2, X } from 'lucide-react';
 import styles from './CommentsPanel.module.css';
 
 type CommentItem = {
@@ -61,12 +61,12 @@ export default function CommentsPanel({ bookSlug, chapterSlug }: { bookSlug: str
   useEffect(() => {
     let cancelled = false;
     fetch('/api/auth/me', { cache: 'no-store' }).then((r) => r.json()).then((data) => {
-      if (!cancelled) setUser(data.user ? { id: data.user.id, displayName: data.user.displayName, role: data.user.role } : null);
+      if (!cancelled) setUser(data.user ? { id: data.user.id, displayName: data.user.displayName, role: data.user.role } : null); // eslint-disable-line react-hooks/set-state-in-effect
     }).catch(() => undefined);
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => { setComments([]); setOffset(0); void load(true); }, [endpoint, sort]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(true); }, [endpoint, sort]); // eslint-disable-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
 
   async function submitComment(event: FormEvent, parentCommentId: string | null = null) {
     event.preventDefault();
