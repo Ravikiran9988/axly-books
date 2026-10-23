@@ -37,6 +37,13 @@ export default function CommentsPanel({ bookSlug, chapterSlug }: { bookSlug: str
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
 
+  const displayComments = useMemo(() => {
+    const roots = comments.filter((item) => !item.parentCommentId);
+    const nested = roots.flatMap((root) => [root, ...comments.filter((item) => item.parentCommentId === root.id)]);
+    const orphaned = comments.filter((item) => item.parentCommentId && !comments.some((parent) => parent.id === item.parentCommentId));
+    return [...nested, ...orphaned.filter((item) => !nested.some((nestedItem) => nestedItem.id === item.id))];
+  }, [comments]);
+
   const endpoint = useMemo(() => `/api/books/${encodeURIComponent(bookSlug)}/chapters/${encodeURIComponent(chapterSlug)}/comments`, [bookSlug, chapterSlug]);
 
   const load = useCallback(async (reset = false) => {
@@ -141,7 +148,7 @@ export default function CommentsPanel({ bookSlug, chapterSlug }: { bookSlug: str
       {notice && <p className={styles.notice} role="status">{notice}</p>}
       <div className={styles.commentList}>
         {loaded && comments.length === 0 && <div className={styles.empty}><MessageCircle size={25} /><strong>Start the discussion</strong><span>No comments yet. Be the first to share a thought.</span></div>}
-        {comments.map((comment) => (
+        {displayComments.map((comment) => (
           <article key={comment.id} className={`${styles.comment} ${comment.parentCommentId ? styles.replyComment : ''}`}>
             <div className={styles.avatar}>{(comment.user.isAuthor ? 'S' : comment.user.displayName).slice(0, 1).toUpperCase()}</div>
             <div className={styles.commentBody}>
