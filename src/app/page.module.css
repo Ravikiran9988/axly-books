@@ -34,11 +34,13 @@
 }
 
 .headline {
-  font-size: clamp(2.3rem, 5vw, 3.6rem);
+  font-size: clamp(1.75rem, 6.5vw, 3.6rem);
   font-weight: 800;
   line-height: 1.18;
   letter-spacing: -0.03em;
   color: var(--text-primary);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .headlineHighlight {
@@ -536,29 +538,102 @@
 }
 
 @media (max-width: 640px) {
+  .heroSection {
+    padding: 2.25rem 0 2rem;
+  }
+  .heroContent {
+    gap: 1.25rem;
+  }
+  .brandPill {
+    font-size: 0.72rem;
+    padding: 0.35rem 0.75rem;
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+  .heroCopy {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
   .heroFeatures {
     flex-direction: column;
     align-items: center;
     gap: 0.65rem;
+    width: 100%;
   }
   .ctaGroup {
     flex-direction: column;
     width: 100%;
+    gap: 0.75rem;
   }
   .ctaGroup > * {
     width: 100%;
+    justify-content: center;
   }
-  .booksGrid {
-    grid-template-columns: 1fr;
+  .section {
+    padding: 3rem 0;
   }
-  .previewGrid {
-    grid-template-columns: 1fr;
+  .previewBox {
+    padding: 1.5rem 1rem;
+    border-radius: var(--radius-lg);
+  }
+  .previewCard {
+    padding: 1.25rem 1rem;
+  }
+  .authorBanner {
+    padding: 1.75rem 1rem;
+    border-radius: var(--radius-lg);
+  }
+  .authorAvatar {
+    width: 84px;
+    height: 84px;
+    font-size: 2.2rem;
+    border-radius: var(--radius-lg);
   }
   .authorLinksRow {
     flex-direction: column;
     width: 100%;
+    gap: 0.75rem;
   }
   .authorLinksRow > * {
     width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .spotlightCard {
+    padding: 1.15rem 0.85rem;
+    border-radius: var(--radius-lg);
+  }
+  .spotlightBody {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+  .spotlightCoverFrame {
+    width: 125px;
+    margin: 0 auto;
+  }
+  .spotlightDetails {
+    align-items: center;
+    text-align: center;
+    width: 100%;
+  }
+  .spotlightMeta {
+    justify-content: center;
+  }
+  .spotlightActions {
+    width: 100%;
+  }
+  .spotlightReadBtn {
+    width: 100%;
+    justify-content: center;
+  }
+  .spotlightFooterInfo {
+    justify-content: center;
+    text-align: center;
+    font-size: 0.74rem;
   }
 }
