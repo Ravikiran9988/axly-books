@@ -15,9 +15,13 @@ export async function PATCH(request: Request) {
  if (!isDatabaseConfigured() || !db) return NextResponse.json({ error: 'Correction review requires the database.' }, { status: 503 });
  const body = await request.json().catch(() => null) as { id?: unknown; status?: unknown; response?: unknown } | null;
  if (typeof body?.id !== 'string' || !['accepted', 'rejected', 'pending'].includes(String(body.status))) return NextResponse.json({ error: 'Correction id and valid status are required.' }, { status: 400 });
+ const [existing] = await db.select({ id: schema.correctionSubmissions.id, userId: schema.correctionSubmissions.userId, bookId: schema.correctionSubmissions.bookId }).from(schema.correctionSubmissions).where(eq(schema.correctionSubmissions.id, body.id)).limit(1);
+ if (!existing) return NextResponse.json({ error: 'Correction submission not found.' }, { status: 404 });
  const response = typeof body.response === 'string' ? body.response.trim().slice(0, 1000) : null;
- const [row] = await db.update(schema.correctionSubmissions).set({ status: body.status as 'accepted' | 'rejected' | 'pending', adminResponse: response, reviewedAt: body.status === 'pending' ? null : new Date(), reviewedBy: body.status === 'pending' ? null : auth.user.id, updatedAt: new Date() }).where(eq(schema.correctionSubmissions.id, body.id)).returning({ id: schema.correctionSubmissions.id, userId: schema.correctionSubmissions.userId, bookSlug: schema.books.slug });
- if (!row) return NextResponse.json({ error: 'Correction submission not found.' }, { status: 404 });
- if (body.status !== 'pending') await db.insert(schema.readerNotifications).values({ id: 'ntf_' + crypto.randomUUID(), userId: row.userId, type: 'correction_update', title: 'Correction reviewed', message: body.status === 'accepted' ? 'The author accepted your correction suggestion for follow-up.' : 'The author reviewed your correction suggestion.', href: '/books/' + row.bookSlug });
+ await db.update(schema.correctionSubmissions).set({ status: body.status as 'accepted' | 'rejected' | 'pending', adminResponse: response, reviewedAt: body.status === 'pending' ? null : new Date(), reviewedBy: body.status === 'pending' ? null : auth.user.id, updatedAt: new Date() }).where(eq(schema.correctionSubmissions.id, body.id));
+ if (body.status !== 'pending') {
+  const [book] = await db.select({ slug: schema.books.slug }).from(schema.books).where(eq(schema.books.id, existing.bookId)).limit(1);
+  await db.insert(schema.readerNotifications).values({ id: 'ntf_' + crypto.randomUUID(), userId: existing.userId, type: 'correction_update', title: 'Correction reviewed', message: body.status === 'accepted' ? (response || 'The author accepted your correction suggestion for follow-up.') : (response || 'The author reviewed your correction suggestion.'), href: book ? '/books/' + book.slug : '/dashboard' });
+ }
  return NextResponse.json({ success: true, status: body.status });
 }
