@@ -67,6 +67,13 @@ export async function POST(request: Request) {
     }
 
     const data = parseResult.data;
+    if (data.isPublished) {
+      return NextResponse.json(
+        { error: 'Create this book as a draft, add at least one published chapter, then publish it.' },
+        { status: 400 }
+      );
+    }
+
     const now = new Date();
     const bookId = `book_${crypto.randomUUID()}`;
 
