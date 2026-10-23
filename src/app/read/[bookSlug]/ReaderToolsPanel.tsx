@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 type Annotation = { id: string; quote: string; note: string; anchor: string | null; createdAt: string };
 type Edition = { id: string; edition: string; changeSummary: string; publishedAt: string };
 
-const panelStyle: React.CSSProperties = { maxWidth: 820, margin: '2rem auto', padding: '1.25rem', border: '1px solid var(--border-subtle, #ddd)', borderRadius: 14, background: 'var(--surface, #fff)', color: 'var(--text-primary, #222)' };
+const panelStyle: CSSProperties = { maxWidth: 820, margin: '2rem auto', padding: '1.25rem', border: '1px solid var(--border-subtle, #ddd)', borderRadius: 14, background: 'var(--surface, #fff)', color: 'var(--text-primary, #222)' };
 const inputStyle: React.CSSProperties = { width: '100%', padding: '0.7rem', borderRadius: 8, border: '1px solid #aaa', margin: '0.35rem 0 0.8rem', font: 'inherit', boxSizing: 'border-box' };
 
 export default function ReaderToolsPanel({ bookSlug, chapterSlug }: { bookSlug: string; chapterSlug: string }) {
