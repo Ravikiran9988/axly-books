@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   ExternalLink,
   Code2,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 import { getServerPublishedBooks } from '@/services/serverBookService';
 import BookCard from '@/components/BookCard';
@@ -24,7 +26,7 @@ export default function HomePage() {
 
 async function HomePageContent() {
   const publishedBooks = await getServerPublishedBooks();
-  const featuredBook = publishedBooks[0] ?? null;
+  const featuredBook = publishedBooks[0] || null;
 
   return (
     <>
@@ -74,31 +76,94 @@ async function HomePageContent() {
             </div>
           </div>
 
-          {/* Featured Book Presentation */}
-          <div className={styles.featuredShowcase}>
+          {/* Featured Publication Spotlight Banner Card */}
+          <div className={styles.heroSpotlightWrapper}>
+            <div className={styles.spotlightGlow} aria-hidden="true" />
             {featuredBook ? (
-              <div className={styles.book3dWrapper}>
-                <div className={styles.bookCoverGlow} />
-                <Link
-                  href={`/books/${featuredBook.slug}`}
-                  className={styles.book3dFrame}
-                  aria-label={`View ${featuredBook.title}`}
-                >
-                  <Image
-                    src={featuredBook.coverImage || '/images/ml-deep-learning-cover.jpg'}
-                    alt={`Cover of ${featuredBook.title}`}
-                    width={340}
-                    height={510}
-                    className={styles.bookImage}
-                    style={{ width: '100%', height: 'auto' }}
-                    priority
-                  />
-                </Link>
+              <div className={styles.spotlightCard}>
+                <div className={styles.spotlightHeader}>
+                  <div className={styles.spotlightPill}>
+                    <span className={styles.pulseDot} />
+                    <span>Featured Publication</span>
+                  </div>
+                  <span className={styles.spotlightBadge}>100% Free</span>
+                </div>
+
+                <div className={styles.spotlightBody}>
+                  <Link
+                    href={`/books/${featuredBook.slug}`}
+                    className={styles.spotlightCoverLink}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  >
+                    <div className={styles.spotlightCoverFrame}>
+                      <Image
+                        src={featuredBook.coverImage || '/images/ml-deep-learning-cover.jpg'}
+                        alt={`Cover of ${featuredBook.title}`}
+                        width={180}
+                        height={270}
+                        className={styles.spotlightCoverImg}
+                        priority
+                      />
+                    </div>
+                  </Link>
+
+                  <div className={styles.spotlightDetails}>
+                    <span className={styles.spotlightCategory}>{featuredBook.category}</span>
+                    <h3 className={styles.spotlightTitle}>
+                      <Link href={`/books/${featuredBook.slug}`}>{featuredBook.title}</Link>
+                    </h3>
+                    <p className={styles.spotlightAuthor}>
+                      By <strong>{featuredBook.author}</strong>
+                    </p>
+
+                    <div className={styles.spotlightMeta}>
+                      <span className={styles.spotlightMetaItem}>
+                        <BookOpen size={13} />
+                        {featuredBook.totalChapters} Chapters
+                      </span>
+                      <span className={styles.spotlightMetaItem}>
+                        <Clock size={13} />
+                        ~{Math.round(featuredBook.estimatedReadingTimeMinutes / 60)}h Read
+                      </span>
+                    </div>
+
+                    <div className={styles.spotlightActions}>
+                      <Link
+                        href={`/read/${featuredBook.slug}`}
+                        className={`btn btn-primary ${styles.spotlightReadBtn}`}
+                      >
+                        <BookOpen size={15} />
+                        <span>Start Reading</span>
+                      </Link>
+                      <Link
+                        href={`/books/${featuredBook.slug}`}
+                        className={`btn btn-secondary ${styles.spotlightDetailsBtn}`}
+                        title="View book details and table of contents"
+                        aria-label={`View details of ${featuredBook.title}`}
+                      >
+                        <ArrowRight size={15} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.spotlightFooter}>
+                  <div className={styles.spotlightFooterInfo}>
+                    <Sparkles size={14} className={styles.spotlightSparkle} />
+                    <span>Immediate access — no paywalls or sign-up required</span>
+                  </div>
+                </div>
               </div>
             ) : (
-              <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
-                No books are currently published. Check back soon.
-              </p>
+              <div className={styles.spotlightCard}>
+                <div className={styles.spotlightHeader}>
+                  <span className={styles.spotlightPill}>Axly Library</span>
+                </div>
+                <p style={{ color: 'var(--text-muted)', padding: '1.5rem 0' }}>
+                  No published books yet. New publications will appear here as soon as they are released.
+                </p>
+              </div>
             )}
           </div>
         </div>

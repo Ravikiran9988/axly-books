@@ -1,10 +1,10 @@
 // Mock CSS module imports for pure Node/tsx environment
-// @ts-expect-error Node require.extensions hook
 require.extensions['.css'] = (module) => {
   const proxy = new Proxy({}, { get: (_, prop) => String(prop) });
   module.exports = proxy;
   module.exports.default = proxy;
 };
+
 
 
 import assert from 'node:assert/strict';
