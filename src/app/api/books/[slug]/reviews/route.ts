@@ -122,11 +122,14 @@ export async function POST(request: Request, { params }: RouteContext) {
       .from(schema.books).where(eq(schema.books.slug, slug)).limit(1);
     if (!book?.isPublished) return NextResponse.json({ error: 'Book not found.' }, { status: 404 });
 
-    const [existing] = await db.select({ id: schema.bookReviews.id })
+    const [existing] = await db.select({ id: schema.bookReviews.id, status: schema.bookReviews.status })
       .from(schema.bookReviews)
       .where(and(eq(schema.bookReviews.bookId, book.id), eq(schema.bookReviews.userId, auth.user.id)))
       .limit(1);
     const now = new Date();
+    if (existing?.status === 'hidden') {
+      return NextResponse.json({ error: 'Your review is hidden by a moderator. Please contact the site administrator before editing it.' }, { status: 403 });
+    }
     if (existing) {
       await db.update(schema.bookReviews).set({ rating, title: title || null, content, status: 'published', updatedAt: now })
         .where(eq(schema.bookReviews.id, existing.id));
