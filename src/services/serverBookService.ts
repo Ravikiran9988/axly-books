@@ -49,7 +49,7 @@ export async function getServerBookBySlug(slug: string): Promise<Book | null> {
         isFree: record.isFree,
         isPublished: record.isPublished,
         allowPdfDownload: record.allowPdfDownload,
-        originalPdfUrl: record.originalPdfUrl,
+        originalPdfUrl: record.allowPdfDownload ? record.originalPdfUrl : null,
         copyrightNotice: `© ${record.publishedYear} ${record.authorName || 'Slayer'}`,
         license: 'CC BY-NC 4.0',
         licenseUrl: 'https://creativecommons.org/licenses/by-nc/4.0/',
