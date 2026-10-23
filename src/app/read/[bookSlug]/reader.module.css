@@ -523,12 +523,15 @@
 
 @media (max-width: 640px) {
   .topToolbar {
-    padding: 0.6rem 0.75rem;
-    gap: 0.5rem;
+    padding: 0.5rem 0.65rem;
+    gap: 0.4rem;
   }
   .toolbarBookTitle {
-    max-width: 140px;
-    font-size: 0.85rem;
+    max-width: 120px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .settingsPanel {
     right: 0.5rem;
@@ -538,7 +541,7 @@
     top: calc(100% + 4px);
   }
   .mainArticle {
-    padding: 2rem 1rem 4rem;
+    padding: 1.75rem 0.85rem 4rem;
   }
   .bottomNav {
     flex-direction: column;
@@ -553,6 +556,20 @@
   .tocDrawer {
     width: 100%;
     max-width: 100vw;
+  }
+}
+
+@media (max-width: 380px) {
+  .topToolbar {
+    padding: 0.45rem 0.4rem;
+    gap: 0.25rem;
+  }
+  .toolbarBookTitle {
+    max-width: 85px;
+    font-size: 0.75rem;
+  }
+  .mainArticle {
+    padding: 1.5rem 0.65rem 3.5rem;
   }
 }
 

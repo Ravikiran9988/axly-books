@@ -121,3 +121,20 @@
     padding: 2rem 1.5rem;
   }
 }
+
+@media (max-width: 640px) {
+  .aboutContainer {
+    padding: 2rem 0 4rem;
+  }
+  .valuesGrid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .valueCard {
+    padding: 1.5rem 1.25rem;
+  }
+  .storyBlock {
+    padding: 1.5rem 1rem;
+    border-radius: var(--radius-lg);
+  }
+}

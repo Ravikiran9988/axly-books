@@ -50,7 +50,7 @@ export default function AuthorProfilePage() {
             </div>
             <div className={styles.metaItem}>
               <Code2 size={16} color="var(--color-brand-cyan)" />
-              <span>40+ Public Repositories · 1,251 GitHub Contributions in 2026</span>
+              <span>40+ Public Repositories · 1250+ GitHub Contributions</span>
             </div>
           </div>
 
@@ -112,7 +112,7 @@ export default function AuthorProfilePage() {
 
             <p className={styles.bioParagraph}>
               I maintain a portfolio of <strong>40+ public GitHub repositories</strong> and recorded{' '}
-              <strong>1,251 GitHub contributions in 2026</strong>, reflecting my ongoing development
+              <strong>1250+ GitHub contributions</strong>, reflecting my ongoing development
               activity and commitment to learning by building.
             </p>
 
@@ -211,7 +211,7 @@ export default function AuthorProfilePage() {
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Code Portfolio</span>
-              <span className={styles.infoValue}>40+ Public Repositories · 1,251 Contributions in 2026</span>
+              <span className={styles.infoValue}>40+ Public Repositories · 1250+ Contributions</span>
             </div>
           </div>
 

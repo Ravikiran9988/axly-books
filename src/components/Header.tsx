@@ -236,7 +236,7 @@ export default function Header({ onOpenSearch }: HeaderProps) {
             >
               About AXLY
             </Link>
-            {authState.isAuthenticated && (
+            {authState.isAuthenticated ? (
               <>
                 {authState.user?.role === 'admin' && (
                   <Link
@@ -269,7 +269,38 @@ export default function Header({ onOpenSearch }: HeaderProps) {
                 >
                   Reader Profile
                 </Link>
+                <button
+                  type="button"
+                  className={styles.mobileLogoutBtn}
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out</span>
+                </button>
               </>
+            ) : (
+              <div className={styles.mobileAuthRow}>
+                <Link
+                  href="/login"
+                  className="btn btn-outline"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ flex: 1, justifyContent: 'center', width: '100%' }}
+                >
+                  <LogIn size={16} />
+                  <span>Log In</span>
+                </Link>
+                <Link
+                  href="/register"
+                  className="btn btn-primary"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ flex: 1, justifyContent: 'center', width: '100%' }}
+                >
+                  <span>Register</span>
+                </Link>
+              </div>
             )}
           </nav>
         </div>
