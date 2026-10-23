@@ -27,6 +27,14 @@
 
 ---
 
+## P4 chapter discussions
+
+P4 adds chapter-specific discussions with threaded replies (one reply level), reader names, a Slayer author badge for administrator replies, editing/deleting your own comments, helpful votes, abuse reports, comment sorting and load-more pagination. Administrators can review the moderation queue at **Admin → Reader Comments**, hide/restore content, inspect reports, and delete comments.
+
+Apply the new migration with `npm run db:migrate` after pulling the branch. The migration creates `comments`, `comment_votes`, and `comment_reports`. Comments require a persistent database and signed-in readers; reading published discussions remains public. Each account can cast one helpful vote and submit one report per comment. Comment text is limited to 2,000 characters.
+
+Moderation is intentionally conservative: reports are queued for an administrator, not auto-hidden based on untrusted report counts. The reader-facing platform remains free, without ads, subscriptions, paywalls, or book sales.
+
 ## P3 launch readiness
 
 See [`docs/P3_LAUNCH_READINESS.md`](docs/P3_LAUNCH_READINESS.md) for the deployment configuration checklist, security/storage caveats, and the required preview smoke test. CI now includes regression checks that anonymous requests and forged session cookies cannot invoke the PDF import endpoint.
