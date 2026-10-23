@@ -448,10 +448,11 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
                       </button>
 
                       <Link
-                        href={`/books/${book.slug}`}
+                        href={book.isPublished ? `/books/${book.slug}` : `/admin/books/${book.id}/chapters`}
                         target="_blank"
                         className={styles.btnAction}
-                        title="Preview reader page"
+                        title={book.isPublished ? 'Preview reader page' : 'Review draft chapters'}
+                        aria-label={book.isPublished ? `Preview ${book.title}` : `Review chapters for draft ${book.title}`}
                       >
                         <Eye size={14} />
                       </Link>
