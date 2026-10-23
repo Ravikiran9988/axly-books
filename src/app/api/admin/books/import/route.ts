@@ -75,6 +75,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The import is limited to 1,000,000 characters. Split the book into smaller imports.' }, { status: 413 });
     }
     const data = parsedBook.data;
+    if (data.isPublished && !chapters.some((chapter) => chapter.isPublished)) {
+      return NextResponse.json(
+        { error: 'The imported book must include at least one published chapter before it can be published.' },
+        { status: 400 }
+      );
+    }
 
     const existing = await db.select({ id: schema.books.id }).from(schema.books).where(eq(schema.books.slug, data.slug)).limit(1);
     if (existing.length) {
