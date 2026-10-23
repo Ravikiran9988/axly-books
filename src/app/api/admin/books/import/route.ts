@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { del, put } from '@vercel/blob';
+import { del } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 import { bookCreateSchema, chapterCreateSchema } from '@/lib/validations';
 
-export const runtime = 'nodejs';
-export const maxDuration = 60;
-
-const MAX_PDF_BYTES = 25 * 1024 * 1024;
 const MAX_CHAPTERS = 100;
 
 export async function POST(request: Request) {
@@ -20,38 +16,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'A configured persistent database is required to import a book.' }, { status: 503 });
   }
 
-  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!blobToken) {
-    return NextResponse.json({ error: 'PDF storage is not configured. Set BLOB_READ_WRITE_TOKEN before importing books.' }, { status: 503 });
-  }
-
   let createdBookId: string | null = null;
   let uploadedBlobUrl: string | null = null;
   try {
-    const form = await request.formData();
-    const file = form.get('file');
-    const rawBook = form.get('book');
-    const rawChapters = form.get('chapters');
-
-    if (!(file instanceof File) || typeof rawBook !== 'string' || typeof rawChapters !== 'string') {
-      return NextResponse.json({ error: 'Upload a PDF and provide book metadata and extracted chapters.' }, { status: 400 });
-    }
-    if (file.size <= 0 || file.size > MAX_PDF_BYTES) {
-      return NextResponse.json({ error: 'PDF must be between 1 byte and 25 MB.' }, { status: 400 });
-    }
-    const bytes = Buffer.from(await file.arrayBuffer());
-    if (bytes.length < 5 || bytes.subarray(0, 5).toString('ascii') !== '%PDF-') {
-      return NextResponse.json({ error: 'The selected file does not have a valid PDF signature.' }, { status: 400 });
+    const body = await request.json().catch(() => null) as {
+      book?: unknown;
+      chapters?: unknown;
+      originalPdfUrl?: unknown;
+    } | null;
+    if (!body || typeof body !== 'object' || !body.book || !Array.isArray(body.chapters) || typeof body.originalPdfUrl !== 'string') {
+      return NextResponse.json({ error: 'Provide book metadata, extracted chapters, and the uploaded PDF URL.' }, { status: 400 });
     }
 
-    let bookInput: unknown;
-    let chapterInput: unknown;
+    let originalPdfUrl: URL;
     try {
-      bookInput = JSON.parse(rawBook);
-      chapterInput = JSON.parse(rawChapters);
+      originalPdfUrl = new URL(body.originalPdfUrl);
     } catch {
-      return NextResponse.json({ error: 'Book metadata or chapter data is not valid JSON.' }, { status: 400 });
+      return NextResponse.json({ error: 'The uploaded PDF URL is invalid.' }, { status: 400 });
     }
+    if (
+      originalPdfUrl.protocol !== 'https:' ||
+      !(originalPdfUrl.hostname.endsWith('.public.blob.vercel-storage.com') || originalPdfUrl.hostname.endsWith('.blob.vercel-storage.com')) ||
+      !originalPdfUrl.pathname.toLowerCase().endsWith('.pdf')
+    ) {
+      return NextResponse.json({ error: 'The PDF must be uploaded to the configured Vercel Blob public store.' }, { status: 400 });
+    }
+
+    const bookInput = body.book;
+    const chapterInput = body.chapters;
 
     const parsedBook = bookCreateSchema.safeParse(bookInput);
     if (!parsedBook.success) {
@@ -89,14 +81,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `A book with slug "${data.slug}" already exists.` }, { status: 409 });
     }
 
-    const safeName = file.name.replace(/\.pdf$/i, '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'book';
-    const blob = await put(`books/originals/${safeName}-${Date.now()}-${crypto.randomBytes(5).toString('hex')}.pdf`, bytes, {
-      access: 'public',
-      token: blobToken,
-      contentType: 'application/pdf',
-      addRandomSuffix: false,
-    });
-    uploadedBlobUrl = blob.url;
+    uploadedBlobUrl = originalPdfUrl.toString();
 
     const now = new Date();
     createdBookId = `book_${crypto.randomUUID()}`;
@@ -121,7 +106,7 @@ export async function POST(request: Request) {
       totalChapters: chapters.length,
       estimatedReadingTimeMinutes: totalReadingMinutes,
       allowPdfDownload: data.allowPdfDownload,
-      originalPdfUrl: blob.url,
+      originalPdfUrl: uploadedBlobUrl,
       createdAt: now,
       updatedAt: now,
     });
@@ -146,7 +131,7 @@ export async function POST(request: Request) {
       success: true,
       bookId: createdBookId,
       slug: data.slug,
-      originalPdfUrl: blob.url,
+      originalPdfUrl: uploadedBlobUrl,
       chaptersImported: chapters.length,
       message: `Imported "${data.title}" with ${chapters.length} chapters. Review the chapters before publishing.`,
     }, { status: 201 });
