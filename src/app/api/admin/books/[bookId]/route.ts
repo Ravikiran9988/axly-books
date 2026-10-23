@@ -207,12 +207,15 @@ export async function DELETE(
           id: schema.books.id,
           coverImageUrl: schema.books.coverImageUrl,
           originalPdfUrl: schema.books.originalPdfUrl,
+          originalPdfPath: schema.books.originalPdfPath,
         })
         .from(schema.books);
       const referencedByOtherBook = (url: string | null | undefined) =>
         !!url && otherBooks.some((book) =>
           book.id !== target.id && (book.coverImageUrl === url || book.originalPdfUrl === url)
         );
+      const privatePathReferencedByOtherBook = (path: string | null | undefined) =>
+        !!path && otherBooks.some((book) => book.id !== target.id && book.originalPdfPath === path);
 
       // Delete the database record first. Chapter, comment, progress, and bookmark
       // rows are removed by the configured foreign-key cascades.
@@ -240,26 +243,55 @@ export async function DELETE(
         }
       });
 
-      let storageCleanupWarning: string | undefined;
+      const storageCleanupWarnings: string[] = [];
       let deletedBlobAssets = 0;
+
       if (blobUrls.length > 0 && blobToken) {
         try {
           await del(blobUrls, { token: blobToken });
-          deletedBlobAssets = blobUrls.length;
+          deletedBlobAssets += blobUrls.length;
         } catch (cleanupError) {
-          console.error('Book deleted but Blob asset cleanup failed:', cleanupError);
-          storageCleanupWarning =
-            'The book was deleted from the library, but one or more stored files could not be removed. Check Vercel Blob and clean up orphaned files if needed.';
+          console.error('Book deleted but public Blob asset cleanup failed:', cleanupError);
+          storageCleanupWarnings.push(
+            'One or more public Blob files could not be removed. Check Vercel Blob for orphaned files.'
+          );
         }
       } else if (blobUrls.length > 0 && !blobToken) {
-        storageCleanupWarning =
-          'The book was deleted from the library, but Blob cleanup was skipped because BLOB_READ_WRITE_TOKEN is not configured.';
+        storageCleanupWarnings.push(
+          'Public Blob cleanup was skipped because BLOB_READ_WRITE_TOKEN is not configured.'
+        );
+      }
+
+      const privatePdfPath = target.originalPdfPath;
+      if (privatePdfPath && !privatePathReferencedByOtherBook(privatePdfPath)) {
+        const privateToken = process.env.PDF_BLOB_READ_WRITE_TOKEN;
+        if (!privatePdfPath.startsWith('original-pdfs/')) {
+          storageCleanupWarnings.push(
+            'Private PDF cleanup was skipped because its path is outside the expected original-pdfs/ folder.'
+          );
+        } else if (!privateToken) {
+          storageCleanupWarnings.push(
+            'Private PDF cleanup was skipped because PDF_BLOB_READ_WRITE_TOKEN is not configured.'
+          );
+        } else {
+          try {
+            await del(privatePdfPath, { token: privateToken });
+            deletedBlobAssets += 1;
+          } catch (cleanupError) {
+            console.error('Book deleted but private PDF cleanup failed:', cleanupError);
+            storageCleanupWarnings.push(
+              'The private original PDF could not be removed. Check the private Vercel Blob store for an orphaned file.'
+            );
+          }
+        }
       }
 
       return NextResponse.json({
         success: true,
         message: `Book "${target.title}" and its chapters, comments, bookmarks, and reading progress were deleted.`,
-        ...(storageCleanupWarning ? { storageCleanupWarning } : {}),
+        ...(storageCleanupWarnings.length
+          ? { storageCleanupWarning: storageCleanupWarnings.join(' ') }
+          : {}),
         deletedBlobAssets,
       });
     }
