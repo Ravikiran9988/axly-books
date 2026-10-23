@@ -21,10 +21,21 @@
 - An editorial, distraction-free reading interface with 3 reading themes (**Dark**, **Light**, **Sepia**), custom typography, instant chapter drawer, and full keyboard navigation.
 - Persistent cross-device reading progress, chapter bookmarks, and reader dashboard.
 - A fully isolated **Administrator Content Management System (CMS)** with draft segregation, chapter reordering, and technical code snippet/callout management.
+- **PDF book import:** upload an existing searchable PDF, extract text in the browser, review/edit detected chapter splits, and import the original PDF plus interactive chapters without retyping.
 - Robust Role-Based Access Control (**RBAC**) separating general readers from platform administrators.
 - **100% Free Access Policy:** The platform strictly prohibits advertisements, paywalls, subscriptions, or book sales.
 
 ---
+
+## PDF book import setup
+
+1. Configure `BLOB_READ_WRITE_TOKEN` in the deployment environment for Vercel Blob storage.
+2. Apply the new database migration with `npm run db:migrate` (or run `ALTER TABLE books ADD COLUMN original_pdf_url text;` once if you manage migrations manually).
+3. Open **Admin → Book Management → Import from PDF** or visit `/admin/books/import` as an administrator.
+4. Choose a PDF (maximum 25 MB). Text extraction runs in the browser using PDF.js; the PDF is uploaded to Vercel Blob only when you submit the import.
+5. Review the extracted chapter split and edit titles/content before importing. Keep the book unpublished until you have checked formatting and page headers/footers.
+
+**Current limitations:** this first version extracts selectable PDF text only. Scanned/image-only PDFs require OCR before import. Chapter detection is heuristic, so review every chapter. Embedded images/diagrams, layout, and code formatting are not automatically reconstructed yet. Original PDFs are stored in Vercel Blob; only display the download link when `Allow readers to download the original PDF` is enabled in the import form.
 
 ## 2. Official Publication
 
