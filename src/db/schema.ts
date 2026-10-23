@@ -58,7 +58,7 @@ export const authors = pgTable('authors', {
   linkedinUrl: text('linkedin_url').notNull(),
   email: text('email').notNull(),
   projectsCount: integer('projects_count').default(10).notNull(),
-  githubContributions: integer('github_contributions').default(700).notNull(),
+  githubContributions: integer('github_contributions').default(1250).notNull(),
   writingPhilosophy: jsonb('writing_philosophy')
     .$type<Array<{ title: string; description: string }>>()
     .default([])
