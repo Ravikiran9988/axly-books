@@ -202,7 +202,7 @@ export default function PdfBookImporter() {
         return {
           chapterNumber: index + 1,
           title: chapter.title.trim(),
-          slug: slugify(chapter.title) || `chapter-${index + 1}`,
+          slug: `${slugify(chapter.title).slice(0, 108) || 'chapter'}-${index + 1}`,
           summary: content.slice(0, 180).trim().slice(0, 175) + (content.length > 175 ? '…' : ''),
           content: [{ title: chapter.title.trim(), content }],
           estimatedReadingTimeMinutes: Math.max(1, Math.ceil(words / 220)),
