@@ -10,10 +10,8 @@ import {
   ExternalLink,
   Code2,
   Clock,
-  Sparkles,
 } from 'lucide-react';
 import { getServerPublishedBooks } from '@/services/serverBookService';
-import BookCard from '@/components/BookCard';
 import styles from './page.module.css';
 
 export default function HomePage() {
@@ -27,6 +25,7 @@ export default function HomePage() {
 async function HomePageContent() {
   const publishedBooks = await getServerPublishedBooks();
   const featuredBook = publishedBooks[0] || null;
+
 
   return (
     <>
@@ -150,8 +149,8 @@ async function HomePageContent() {
 
                 <div className={styles.spotlightFooter}>
                   <div className={styles.spotlightFooterInfo}>
-                    <Sparkles size={14} className={styles.spotlightSparkle} />
-                    <span>Immediate access — no paywalls or sign-up required</span>
+                    <CheckCircle2 size={13} className={styles.spotlightSparkle} />
+                    <span>No paywalls or sign-up required</span>
                   </div>
                 </div>
               </div>
@@ -169,33 +168,7 @@ async function HomePageContent() {
         </div>
       </section>
 
-      {/* Featured Book Spotlight */}
-      <section className={styles.section} style={{ paddingTop: '2rem' }}>
-        <div className="container">
-          <div className={styles.sectionHeaderRow}>
-            <div>
-              <span className={styles.sectionTag}>Featured Publication</span>
-              <h2 className={styles.sectionTitle}>Essential Reading for AI Practitioners</h2>
-            </div>
-            {featuredBook && (
-              <Link href={`/books/${featuredBook.slug}`} className="btn btn-outline">
-                <span>View Book Details</span>
-                <ArrowRight size={16} />
-              </Link>
-            )}
-          </div>
 
-          <div className={styles.booksGrid}>
-            {publishedBooks.length > 0 ? (
-              publishedBooks.map((book) => <BookCard key={book.id} book={book} />)
-            ) : (
-              <p style={{ color: 'var(--text-muted)' }}>
-                No published books yet. New titles will appear here when they are ready.
-              </p>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* Reading Experience Preview */}
       <section className={styles.section}>
