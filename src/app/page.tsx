@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -14,9 +14,15 @@ import { getServerPublishedBooks } from '@/services/serverBookService';
 import BookCard from '@/components/BookCard';
 import styles from './page.module.css';
 
-export const dynamic = 'force-dynamic';
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="container" style={{ padding: '4rem 0', color: 'var(--text-muted)' }}>Loading published books...</div>}>
+      <HomePageContent />
+    </Suspense>
+  );
+}
 
-export default async function HomePage() {
+async function HomePageContent() {
   const publishedBooks = await getServerPublishedBooks();
   const featuredBook = publishedBooks[0] ?? null;
 
