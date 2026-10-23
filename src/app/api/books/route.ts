@@ -34,6 +34,7 @@ export async function GET(request: Request) {
       totalChapters: number;
       estimatedReadingTimeMinutes: number;
       allowPdfDownload: boolean;
+      originalPdfPath?: string | null;
     }> = [];
 
     if (isDatabaseConfigured() && db) {
@@ -97,6 +98,8 @@ export async function GET(request: Request) {
 
     const mappedBooks = booksList.map((b) => ({
       ...b,
+      // Private Blob paths are server-only, even for administrator catalogue responses.
+      originalPdfPath: undefined,
       coverImage: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
       coverImageUrl: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
       author: b.authorName || 'Slayer',
