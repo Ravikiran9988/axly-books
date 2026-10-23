@@ -114,7 +114,26 @@ Cover images for books and technical diagrams use **Vercel Blob** (`@vercel/blob
 
 ---
 
-## 6. CLI Administrator Provisioning
+## 6. PDF Book Import Workflow
+
+Administrators can import a manuscript from **Admin → Books & Chapters → Import PDF** (`/admin/books/import`). The importer extracts selectable text, detects likely chapter headings, estimates reading time, and creates an editable book draft with draft chapters. Review the result in the existing chapter manager before publishing; importing never makes a book public automatically.
+
+### Requirements and limitations
+
+- Use a separate **Private** Vercel Blob store for original manuscripts and set `PDF_BLOB_READ_WRITE_TOKEN`. Do not reuse the public cover-image token. Original files are stored privately and served through a role-checked route; raw Blob paths are not returned by public book APIs.
+- The first importer version accepts PDF files up to **4 MB** and up to **600 pages**, with a maximum of 80 detected chapters.
+- Selectable-text PDFs are supported. Scanned/image-only PDFs currently require OCR before upload.
+- Chapter detection is heuristic, so inspect headings, line breaks, code snippets, and content before publishing. Images and diagrams are not extracted in this version.
+- Enable “Allow readers to download the original PDF” only when you want the original file downloadable after publication. Administrators can access the original PDF for draft review.
+- The importer requires a configured Neon database and the latest migrations. If storage is not configured, the importer reports a setup error instead of accepting a file without durable storage.
+
+Apply the new schema migration to your configured database with:
+
+```bash
+npm run db:migrate
+```
+
+## 7. CLI Administrator Provisioning
 
 For maximum security, admin privileges cannot be granted through public registration or client-side toggles. Admin promotion is executed strictly via a secure, audited CLI script:
 
@@ -132,7 +151,7 @@ npm run admin:promote -- ravikiran@axly.in
 
 ---
 
-## 7. Database Setup, Migrations & Seeding
+## 8. Database Setup, Migrations & Seeding
 
 ### Environment Setup
 Copy the environment template:
@@ -162,7 +181,7 @@ npm run db:seed
 
 ---
 
-## 8. Quality Assurance & Automated Tests
+## 9. Quality Assurance & Automated Tests
 
 The repository maintains an automated test harness covering cryptographic functions, validation schemas, user journeys, and genuine HTTP route execution:
 
@@ -182,7 +201,7 @@ npm run build
 
 ---
 
-## 9. Deployment Runbook (Vercel & Neon)
+## 10. Deployment Runbook (Vercel & Neon)
 
 ### Step 1: Provision Neon PostgreSQL
 1. Create a project at [https://console.neon.tech](https://console.neon.tech).
@@ -201,7 +220,8 @@ DATABASE_URL="<your-neon-pooled-url>" npm run db:seed
 2. Under **Project Settings > Environment Variables**, add:
    - `DATABASE_URL`: Your Neon pooled connection string (Mandatory).
    - `NEXT_PUBLIC_APP_URL`: `https://books.axly.in` (Mandatory).
-   - `BLOB_READ_WRITE_TOKEN`: Token from Vercel Storage Blob (Optional, for cover uploads).
+   - `BLOB_READ_WRITE_TOKEN`: Token from Vercel Storage Blob (Optional, for public cover uploads).
+   - `PDF_BLOB_READ_WRITE_TOKEN`: Token from a separate Vercel Blob store whose access level is **Private** (required for original-PDF imports and secure PDF delivery).
    - `RESEND_API_KEY`: API key from Resend (Optional, for password recovery emails).
    - `EMAIL_FROM`: `AXLY Books <noreply@books.axly.in>` (Optional).
    - `NODE_ENV`: `production`.
@@ -223,7 +243,7 @@ DATABASE_URL="<your-neon-pooled-url>" npm run db:seed
 
 ---
 
-## 10. Author & Legal Identity
+## 11. Author & Legal Identity
 
 - **Author / Pen Name:** Slayer
 - **Full Legal Name:** Medicharla Ravi Kiran
