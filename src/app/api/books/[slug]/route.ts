@@ -46,7 +46,15 @@ export async function GET(
         success: true,
         book: {
           ...book,
-          originalPdfUrl: book.allowPdfDownload ? book.originalPdfUrl : null,
+          // Never expose the private Vercel Blob pathname in public responses.
+          originalPdfPath: null,
+          originalPdfUrl: book.allowPdfDownload
+            ? book.originalPdfPath
+              ? `/api/books/${encodeURIComponent(book.slug)}/pdf`
+              : book.originalPdfUrl
+            : null,
+          license: book.license || 'All Rights Reserved',
+          licenseUrl: book.licenseUrl || null,
           coverImage: book.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
           author: book.authorName || 'Slayer',
           publicationStatus: book.status || 'Available Free',
