@@ -32,6 +32,7 @@ export default function PdfImportForm() {
   const [publishedYear, setPublishedYear] = useState(String(new Date().getFullYear()));
   const [tags, setTags] = useState('');
   const [allowPdfDownload, setAllowPdfDownload] = useState(false);
+  const [license, setLicense] = useState('All Rights Reserved');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -55,6 +56,7 @@ export default function PdfImportForm() {
       form.set('description', description); form.set('synopsis', synopsis);
       form.set('edition', edition); form.set('publishedYear', publishedYear);
       form.set('tags', tags); form.set('allowPdfDownload', String(allowPdfDownload));
+      form.set('license', license);
       const response = await fetch('/api/admin/books/import', { method: 'POST', body: form });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'PDF import failed.');
@@ -113,6 +115,7 @@ export default function PdfImportForm() {
               <div className="form-group"><label className="form-label" htmlFor="pdf-category">Category *</label><input id="pdf-category" className="form-input" required minLength={2} maxLength={100} value={category} onChange={(e) => setCategory(e.target.value)} /></div>
               <div className="form-group"><label className="form-label" htmlFor="pdf-edition">Edition</label><input id="pdf-edition" className="form-input" value={edition} maxLength={120} onChange={(e) => setEdition(e.target.value)} /></div>
               <div className="form-group"><label className="form-label" htmlFor="pdf-year">Publication year</label><input id="pdf-year" className="form-input" type="number" min={2000} max={2100} value={publishedYear} onChange={(e) => setPublishedYear(e.target.value)} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="pdf-license">Book license *</label><select id="pdf-license" className="form-input" value={license} onChange={(e) => setLicense(e.target.value)}><option value="All Rights Reserved">All Rights Reserved</option><option value="Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)">CC BY-NC 4.0 (Attribution, Non-Commercial)</option></select><p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>Choose the license that applies to your manuscript.</p></div>
               <div className="form-group" style={{ gridColumn: '1 / -1' }}><label className="form-label" htmlFor="pdf-description">Short description *</label><textarea id="pdf-description" className="form-input" rows={3} required minLength={10} maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe what readers will learn from this book." /></div>
               <div className="form-group" style={{ gridColumn: '1 / -1' }}><label className="form-label" htmlFor="pdf-synopsis">Synopsis *</label><textarea id="pdf-synopsis" className="form-input" rows={4} required minLength={10} maxLength={10000} value={synopsis} onChange={(e) => setSynopsis(e.target.value)} placeholder="A longer overview for the book detail page." /></div>
               <div className="form-group" style={{ gridColumn: '1 / -1' }}><label className="form-label" htmlFor="pdf-tags">Tags (comma-separated)</label><input id="pdf-tags" className="form-input" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="Python, Machine Learning, Beginners" /></div>
