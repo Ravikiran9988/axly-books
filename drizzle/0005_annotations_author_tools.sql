@@ -31,7 +31,7 @@ CREATE INDEX IF NOT EXISTS correction_submissions_status_created_idx ON correcti
 CREATE TABLE IF NOT EXISTS reader_notifications (
   id text PRIMARY KEY,
   user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  type text NOT NULL CHECK (type IN ('correction_update', 'edition_update')),
+  type text NOT NULL CHECK (type IN ('correction_update', 'edition_update', 'author_reply')),
   title text NOT NULL,
   message text NOT NULL,
   href text,
