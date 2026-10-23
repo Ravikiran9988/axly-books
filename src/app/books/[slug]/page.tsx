@@ -6,6 +6,7 @@ import { Clock, ChevronRight, Download } from 'lucide-react';
 import { getServerBookBySlug } from '@/services/serverBookService';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import BookActions from './BookActions';
+import ReviewsPanel from './ReviewsPanel';
 import styles from './page.module.css';
 
 export function generateStaticParams() {
@@ -188,6 +189,8 @@ export default async function BookDetailPage({ params }: BookPageProps) {
           </div>
         </div>
       </div>
+
+      <ReviewsPanel bookSlug={book.slug} />
 
       {/* Table of Contents */}
       <section className={styles.tocSection}>
