@@ -14,6 +14,7 @@ export async function getServerBookBySlug(slug: string): Promise<Book | null> {
     return getStaticBookBySlug(slug) ?? null;
   }
 
+  const staticPublication = getStaticBookBySlug(slug);
   const user = await getCurrentUser();
   const isAdmin = user?.role === 'admin';
   const [record] = await db
@@ -64,8 +65,9 @@ export async function getServerBookBySlug(slug: string): Promise<Book | null> {
     isFree: record.isFree,
     isPublished: record.isPublished,
     allowPdfDownload: record.allowPdfDownload,
-    copyrightNotice: 'Publication copyright as specified by the author.',
-    license: 'See this publication’s copyright notice.',
+    copyrightNotice: staticPublication?.copyrightNotice ?? `© ${record.publishedYear} Medicharla Ravi Kiran`,
+    license: staticPublication?.license ?? record.license ?? 'All Rights Reserved',
+    licenseUrl: staticPublication?.licenseUrl ?? record.licenseUrl ?? undefined,
     chapters,
   };
 }
