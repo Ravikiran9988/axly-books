@@ -159,22 +159,24 @@ Run the command only with the intended database configured. Public registration 
 
 ## PDF import: workflow and limitations
 
-1. Configure `BLOB_READ_WRITE_TOKEN` and apply the database migrations.
-2. Sign in as an administrator and open **Admin → Book Management → Import from PDF** (or `/admin/books/import`).
-3. Select a PDF, review the extracted text and suggested chapters, and edit titles or content where needed.
-4. Preview the imported reader view and keep the book unpublished until you have checked it thoroughly.
-5. Publish only when the chapter order, formatting, and content are correct.
+1. Configure `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN` for the existing upload features, and a separate **private** Vercel Blob store using `PDF_BLOB_READ_WRITE_TOKEN`.
+2. Apply the database migrations with `npm run db:migrate`.
+3. Sign in as an administrator and open **Admin → Book Management → Import from PDF** (or `/admin/books/import`).
+4. Upload a text-based PDF (maximum **4 MB**), review the detected chapter titles and text, and then edit the draft chapters.
+5. Imports always create an unpublished book and unpublished chapters. Review everything before publishing.
 
-### Important storage warning
+### Original PDF storage and access
 
-The current PDF import flow stores the original PDF in a **public Vercel Blob store**. Anyone who obtains the Blob URL may be able to access the file, even when the reader-facing download link is disabled. Disabling that link is not storage-level access control. Do not upload confidential, restricted, or personally sensitive PDFs.
+New imports store the original PDF in a **private Vercel Blob store**. The database holds its private pathname; public APIs do not expose that pathname. Original PDF downloads go through `/api/books/[slug]/pdf`, which checks publication status and the download permission before reading private storage. Set `PDF_BLOB_READ_WRITE_TOKEN` to the token for that separate private Blob store.
+
+Previously imported PDFs that use `original_pdf_url` in a public Blob store are not migrated automatically by this change. Their existing URLs may remain accessible to anyone who has the URL, regardless of the reader-facing download toggle. Review or re-import those files if storage-level privacy is required.
 
 ### Import limitations
-- Text extraction and chapter splitting depend on the PDF's text and layout. Always review the result.
-- OCR fallback currently targets English (`eng`) and may take time on scanned documents.
-- The reader preview is based on extracted text; it does not faithfully reconstruct the original PDF layout.
-- Embedded images, diagrams, tables, page layout, and code formatting may not be reconstructed automatically.
-- PDF import creates editable web chapters, but it is not a substitute for editorial review.
+- Server-side text extraction relies on PDF objects and text layout; it is not a full PDF renderer. Some fonts, encodings, or layouts may extract imperfectly.
+- Scanned/image-only PDFs are not OCR'd by this importer. Export a searchable PDF or run OCR before importing.
+- The import is limited to 600 pages, 80 chapters, and 1.2 million extracted characters.
+- Images, diagrams, tables, page layout, and code formatting are not reconstructed automatically.
+- Chapter-heading detection is heuristic. Review all titles, summaries, order, and text before publishing.
 
 ---
 
@@ -221,7 +223,8 @@ The automated test suite covers validation and security behavior, reader journey
 4. Configure environment variables in the appropriate Vercel environments:
    - `DATABASE_URL` — required.
    - `NEXT_PUBLIC_APP_URL` — use `https://books.axly.in` for production.
-   - `BLOB_READ_WRITE_TOKEN` — required for Blob-backed uploads and PDF import.
+   - `BLOB_READ_WRITE_TOKEN` — used for the existing public Blob uploads and cover assets.
+   - `PDF_BLOB_READ_WRITE_TOKEN` — required for the separate private Blob store used by newly imported original PDFs.
    - `RESEND_API_KEY` and `EMAIL_FROM` — required for password-reset email delivery.
 5. Register the intended administrator and run `npm run admin:promote -- email@example.com` against the production database.
 6. Configure `books.axly.in` in Vercel Domains and follow the DNS values Vercel provides.
