@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { put } from '@vercel/blob';
+import { del, put } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
@@ -26,6 +26,7 @@ export async function POST(request: Request) {
   }
 
   let createdBookId: string | null = null;
+  let uploadedBlobUrl: string | null = null;
   try {
     const form = await request.formData();
     const file = form.get('file');
@@ -69,6 +70,18 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     const chapters = parsedChapters.map((result) => (result.success ? result.data : null)).filter((value) => value !== null);
+    const chapterNumbers = chapters.map((chapter) => chapter.chapterNumber);
+    const chapterSlugs = chapters.map((chapter) => chapter.slug);
+    if (new Set(chapterNumbers).size !== chapterNumbers.length) {
+      return NextResponse.json({ error: 'Chapter numbers must be unique.' }, { status: 400 });
+    }
+    if (new Set(chapterSlugs).size !== chapterSlugs.length) {
+      return NextResponse.json({ error: 'Chapter slugs must be unique.' }, { status: 400 });
+    }
+    const totalCharacters = chapters.reduce((sum, chapter) => sum + chapter.content.reduce((sectionSum, section) => sectionSum + section.content.length, 0), 0);
+    if (totalCharacters > 1_000_000) {
+      return NextResponse.json({ error: 'The import is limited to 1,000,000 characters. Split the book into smaller imports.' }, { status: 413 });
+    }
     const data = parsedBook.data;
 
     const existing = await db.select({ id: schema.books.id }).from(schema.books).where(eq(schema.books.slug, data.slug)).limit(1);
@@ -83,6 +96,7 @@ export async function POST(request: Request) {
       contentType: 'application/pdf',
       addRandomSuffix: false,
     });
+    uploadedBlobUrl = blob.url;
 
     const now = new Date();
     createdBookId = `book_${crypto.randomUUID()}`;
@@ -141,7 +155,14 @@ export async function POST(request: Request) {
       try {
         await db.delete(schema.books).where(eq(schema.books.id, createdBookId));
       } catch (cleanupError) {
-        console.error('PDF import cleanup failed:', cleanupError);
+        console.error('PDF import database cleanup failed:', cleanupError);
+      }
+    }
+    if (uploadedBlobUrl) {
+      try {
+        await del(uploadedBlobUrl, { token: process.env.BLOB_READ_WRITE_TOKEN });
+      } catch (cleanupError) {
+        console.error('PDF import blob cleanup failed:', cleanupError);
       }
     }
     console.error('PDF book import failed:', error);
