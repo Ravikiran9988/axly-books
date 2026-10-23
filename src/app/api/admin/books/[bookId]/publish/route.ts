@@ -43,7 +43,7 @@ export async function PATCH(
       // Validation rule: when publishing, ensure metadata and public chapters exist
       if (nextIsPublished) {
         const chapters = await db
-          .select({ id: schema.chapters.id })
+          .select({ id: schema.chapters.id, isPublished: schema.chapters.isPublished })
           .from(schema.chapters)
           .where(eq(schema.chapters.bookId, book.id));
         const publishedChapters = chapters.filter((chapter) => chapter.isPublished);
