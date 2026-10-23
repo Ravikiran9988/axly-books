@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -6,8 +6,6 @@ import { Clock, ChevronRight, Download } from 'lucide-react';
 import { getServerBookBySlug } from '@/services/serverBookService';
 import BookActions from './BookActions';
 import styles from './page.module.css';
-
-export const dynamic = 'force-dynamic';
 
 interface BookPageProps {
   params: Promise<{ slug: string }>;
@@ -24,7 +22,15 @@ export async function generateMetadata({ params }: BookPageProps) {
   };
 }
 
-export default async function BookDetailPage({ params }: BookPageProps) {
+export default function BookDetailPage({ params }: BookPageProps) {
+  return (
+    <Suspense fallback={<div className="container" style={{ padding: '4rem 0', color: 'var(--text-muted)' }}>Loading publication...</div>}>
+      <BookDetailContent params={params} />
+    </Suspense>
+  );
+}
+
+async function BookDetailContent({ params }: BookPageProps) {
   const { slug } = await params;
   const book = await getServerBookBySlug(slug);
 
