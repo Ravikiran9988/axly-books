@@ -1,4 +1,5 @@
 import React from 'react';
+import { connection } from 'next/server';
 import { notFound } from 'next/navigation';
 import { eq, or, asc } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
@@ -17,6 +18,7 @@ export default async function AdminChaptersPage({
 }: {
   params: Promise<{ bookId: string }>;
 }) {
+  await connection();
   const { bookId } = await params;
 
   let bookDetails: {
