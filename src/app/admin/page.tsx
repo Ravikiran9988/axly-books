@@ -1,4 +1,5 @@
 import React from 'react';
+import { connection } from 'next/server';
 import Link from 'next/link';
 import Image from 'next/image';
 import { desc, sql } from 'drizzle-orm';
@@ -18,6 +19,7 @@ import styles from './admin.module.css';
 export const instant = false;
 
 export default async function AdminOverviewPage() {
+  await connection();
   let booksList: Array<{
     id: string;
     slug: string;
