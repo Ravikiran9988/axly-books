@@ -1,14 +1,8 @@
 import React, { Suspense } from 'react';
+import { connection } from 'next/server';
 import { notFound } from 'next/navigation';
 import { getServerBookBySlug } from '@/services/serverBookService';
-import { PUBLISHED_BOOKS } from '@/data/booksData';
 import InteractiveReader from './InteractiveReader';
-
-export function generateStaticParams() {
-  return PUBLISHED_BOOKS.map((b) => ({
-    bookSlug: b.slug,
-  }));
-}
 
 interface ReaderPageProps {
   params: Promise<{ bookSlug: string }>;
@@ -16,7 +10,11 @@ interface ReaderPageProps {
 
 export async function generateMetadata({ params }: ReaderPageProps) {
   const { bookSlug } = await params;
+
+  // Book metadata comes from the database at request time, not during prerendering.
+  await connection();
   const book = await getServerBookBySlug(bookSlug);
+
   if (!book) return { title: 'Book Reader · AXLY' };
 
   return {
@@ -26,6 +24,9 @@ export async function generateMetadata({ params }: ReaderPageProps) {
 }
 
 export default async function ReaderPage({ params }: ReaderPageProps) {
+  // The reader is database-backed and must render on request rather than during build.
+  await connection();
+
   const { bookSlug } = await params;
   const book = await getServerBookBySlug(bookSlug);
 
