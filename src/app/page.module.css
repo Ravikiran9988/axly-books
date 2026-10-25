@@ -317,6 +317,11 @@
   padding: 4.5rem 0;
 }
 
+.section {
+  padding: 4.5rem 0;
+  position: relative;
+}
+
 .sectionHeader {
   display: flex;
   flex-direction: column;
