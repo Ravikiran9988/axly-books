@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
     // Resend is the email provider implemented by this route. Do not treat SMTP_HOST
     // alone as configured because this code has no SMTP transport implementation.
-    const resendApiKey = process.env.RESEND_API_KEY;
+    const resendApiKey = process.env.RESEND_API_KEY || process.env.AXLY_BOOKS_RESEND_API_KEY;
     if (process.env.NODE_ENV === 'production' && !resendApiKey) {
       return NextResponse.json(
         { error: 'Password recovery is temporarily unavailable because email delivery is not configured.' },

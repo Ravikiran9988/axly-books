@@ -418,16 +418,20 @@ async function runRealRouteIntegrationTests() {
     // Keep tests hermetic even if a developer has a real Resend key in their shell.
     const forgotRes = await (async () => {
       const previousResendKey = process.env.RESEND_API_KEY;
+      const previousAxlyResendKey = process.env.AXLY_BOOKS_RESEND_API_KEY;
       const previousDatabaseUrl = process.env.DATABASE_URL;
       const previousNodeEnv = process.env.NODE_ENV;
       try {
         delete process.env.RESEND_API_KEY;
+        delete process.env.AXLY_BOOKS_RESEND_API_KEY;
         delete process.env.DATABASE_URL;
         Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, enumerable: true, writable: true });
         return await forgotPasswordHandler(forgotReq);
       } finally {
         if (previousResendKey === undefined) delete process.env.RESEND_API_KEY;
         else process.env.RESEND_API_KEY = previousResendKey;
+        if (previousAxlyResendKey === undefined) delete process.env.AXLY_BOOKS_RESEND_API_KEY;
+        else process.env.AXLY_BOOKS_RESEND_API_KEY = previousAxlyResendKey;
         if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
         else process.env.DATABASE_URL = previousDatabaseUrl;
         if (previousNodeEnv === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
