@@ -1,5 +1,6 @@
 .aboutContainer {
-  padding: 3.5rem 0 6rem;
+  padding-top: 3.5rem;
+  padding-bottom: 6rem;
 }
 
 .heroHeader {
@@ -124,7 +125,8 @@
 
 @media (max-width: 640px) {
   .aboutContainer {
-    padding: 2rem 0 4rem;
+    padding-top: 2rem;
+    padding-bottom: 4rem;
   }
   .valuesGrid {
     grid-template-columns: 1fr;
