@@ -143,9 +143,8 @@ export default function BooksPage() {
       {/* Clear Editorial Architecture Notice */}
       <div className={styles.catalogNote}>
         <strong>Note on AXLY Publishing Catalog:</strong> Currently, AXLY exclusively hosts original
-        works written and published by Slayer (Medicharla Ravi Kiran). In accordance with Phase 1
-        specifications, no fabricated books are presented. Additional volumes and editions will appear
-        here as they are published and connected to the backend service in Phase 2.
+        works written and published by Slayer (Medicharla Ravi Kiran). Additional volumes and editions will appear
+        here as they are published.
       </div>
     </div>
   );

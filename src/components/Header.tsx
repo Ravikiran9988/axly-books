@@ -79,6 +79,12 @@ export default function Header({ onOpenSearch }: HeaderProps) {
             Books
           </Link>
           <Link
+            href="/my-library"
+            className={`${styles.navLink} ${isActive('/my-library') ? styles.navLinkActive : ''}`}
+          >
+            My Library
+          </Link>
+          <Link
             href="/author/slayer"
             className={`${styles.navLink} ${isActive('/author/slayer') ? styles.navLinkActive : ''}`}
           >
@@ -90,6 +96,15 @@ export default function Header({ onOpenSearch }: HeaderProps) {
           >
             About AXLY
           </Link>
+          {authState.isAuthenticated && authState.user?.role === 'admin' && (
+            <Link
+              href="/admin"
+              className={`${styles.navLink} ${isActive('/admin') ? styles.navLinkActive : ''}`}
+              style={{ color: 'var(--color-brand-cyan, #06b6d4)', fontWeight: 600 }}
+            >
+              Admin CMS
+            </Link>
+          )}
         </nav>
 
         {/* Actions & User State */}

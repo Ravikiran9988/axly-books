@@ -199,13 +199,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-
-      {/* Phase 2 Architecture Notice */}
-      <div className={styles.authNotice}>
-        <strong>Backend Migration Ready:</strong> In Phase 2, this reader profile will link directly
-        with the production PostgreSQL / Supabase user store and sync preferences across multiple
-        browsers and mobile devices.
-      </div>
     </div>
   );
 }

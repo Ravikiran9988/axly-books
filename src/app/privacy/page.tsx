@@ -26,34 +26,32 @@ export default function PrivacyPage() {
         </section>
 
         <section className={styles.section}>
-          <h2 className={styles.sectionHeading}>2. Data We Process in Phase 1</h2>
+          <h2 className={styles.sectionHeading}>2. Data We Process</h2>
           <p>
-            During Phase 1 (Frontend Foundation), AXLY functions primarily on client-side storage:
+            AXLY Books processes minimal data strictly necessary to deliver an exceptional reading experience:
           </p>
           <ul className={styles.list}>
             <li>
               <strong>Reading Preferences:</strong> Chosen theme (Dark, Light, Sepia), font sizes,
-              and line spacing are kept strictly in your local browser storage.
+              and line spacing to personalize your reading interface.
             </li>
             <li>
-              <strong>Reading Progress & Bookmarks:</strong> Saved chapters, percentages, and
-              bookmarks are persisted locally on your device.
+              <strong>Reading Progress & Bookmarks:</strong> Saved chapters, reading percentages, and
+              bookmarks to allow seamless resumption across sessions.
             </li>
             <li>
-              <strong>Account Information:</strong> Reader registration and login in Phase 1 use a
-              client-side simulation to allow feature evaluation without sending credentials to an
-              unauthenticated server.
+              <strong>Account Information:</strong> For registered readers, account credentials (email and
+              cryptographically hashed passwords) and session tokens to secure your personal library.
             </li>
           </ul>
         </section>
 
         <section className={styles.section}>
-          <h2 className={styles.sectionHeading}>3. Phase 2 Backend Evolution</h2>
+          <h2 className={styles.sectionHeading}>3. Security & Data Protection</h2>
           <p>
-            When the production backend is connected in Phase 2, readers who choose to create an
-            account will have their reading progress securely synchronized across devices via encrypted
-            API channels. Passwords will be hashed using industry-standard cryptographic algorithms
-            (e.g., Argon2 or bcrypt).
+            All passwords are salted and hashed using industry-standard bcrypt encryption before
+            persisting. Network communication is conducted over encrypted TLS/HTTPS channels, and
+            session tokens are protected with secure, HttpOnly cookie controls.
           </p>
         </section>
 
