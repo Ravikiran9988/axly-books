@@ -1,4 +1,5 @@
 import React from 'react';
+import { connection } from 'next/server';
 import { desc } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
@@ -12,6 +13,7 @@ export const metadata = {
 };
 
 export default async function AdminBooksPage() {
+  await connection();
   let booksList: Array<{
     id: string;
     slug: string;
