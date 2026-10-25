@@ -8,8 +8,12 @@ const REQUIRED_TABLES = [
   'users',
   'sessions',
   'password_resets',
+  'authors',
   'books',
   'chapters',
+  'comments',
+  'comment_votes',
+  'comment_reports',
   'reading_progress',
   'bookmarks',
   'reader_preferences',
@@ -21,10 +25,15 @@ async function verifyDatabase() {
 
   console.log('🔍 [DB VERIFICATION] Starting database audit and verification...');
 
-  if (!connectionString || connectionString.includes('placeholder_user') || connectionString.includes('placeholder_password')) {
-    console.warn('⚠️  [DB VERIFICATION] DATABASE_URL is not set or contains placeholder credentials.');
-    console.log('   The application is operating in offline/mock development mode.');
-    console.log('   Configure DATABASE_URL in .env.local to audit a live Neon database.');
+  if (
+    !connectionString ||
+    connectionString.includes('placeholder_neon_database_url') ||
+    connectionString.includes('placeholder_user') ||
+    connectionString.includes('placeholder_password')
+  ) {
+    console.error('❌ [DB VERIFICATION] DATABASE_URL is not configured or contains placeholder credentials.');
+    console.error('   Configure the intended Neon PostgreSQL connection in .env.local, then rerun this check.');
+    process.exitCode = 1;
     return;
   }
 
@@ -88,14 +97,16 @@ async function verifyDatabase() {
       if (allTablesPresent) {
         console.log('✅ DATABASE INTEGRITY VERIFIED: All core tables and schemas match requirements.');
       } else {
-        console.log('⚠️  DATABASE INCOMPLETE: Some tables are missing. Please execute: npm run db:migrate');
+        console.error('❌ DATABASE INCOMPLETE: Required tables are missing. Verify DATABASE_URL, then execute npm run db:migrate.');
+        process.exitCode = 1;
       }
       console.log('======================================================\n');
     } finally {
       client.release();
     }
   } catch (err: unknown) {
-    console.error('❌ [DB VERIFICATION] Connection failed:', err);
+    console.error('❌ [DB VERIFICATION] Connection or integrity check failed:', err);
+    process.exitCode = 1;
   } finally {
     try {
       await pool.end();
