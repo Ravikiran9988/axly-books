@@ -65,8 +65,7 @@ export default function ForgotPasswordPage() {
               Recovery instructions have been dispatched to <strong>{email}</strong>.
             </div>
             <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-              (Phase 1 simulation: In production Phase 2, this will issue a cryptographically signed
-              reset token via transactional email).
+              Please check your inbox (including your spam folder) and follow the link to reset your password.
             </p>
             <Link href="/login" className="btn btn-secondary" style={{ marginTop: '0.5rem' }}>
               <ArrowLeft size={16} />

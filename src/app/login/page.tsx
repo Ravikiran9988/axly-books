@@ -116,12 +116,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className={styles.devNotice}>
-          <strong>Phase 1 Notice:</strong> Uses a simulated local client-side session so you can test
-          all features (progress tracking, profile, and library). Real backend authentication with
-          encrypted tokens will be wired in Phase 2.
-        </div>
-
         <div className={styles.authFooter}>
           Don&apos;t have an account yet? <Link href="/register">Create an account</Link>
         </div>

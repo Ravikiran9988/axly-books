@@ -173,11 +173,6 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <div className={styles.devNotice}>
-          <strong>Client-Side Test Account:</strong> No real passwords are stored in plaintext. This
-          session will enable you to explore saved library state locally prior to Phase 2.
-        </div>
-
         <div className={styles.authFooter}>
           Already registered? <Link href="/login">Sign in to your account</Link>
         </div>
