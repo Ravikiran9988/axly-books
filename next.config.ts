@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Cache Components currently causes production prerender failures for
+  // request-time authentication and time-dependent values in this app.
+  // Re-enable only after migrating these routes to explicit request-time
+  // boundaries and validating a production build.
 
   // Production security headers
   async headers() {
