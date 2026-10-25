@@ -1,4 +1,5 @@
 import React from 'react';
+import { connection } from 'next/server';
 import Link from 'next/link';
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
@@ -26,6 +27,7 @@ export const metadata = {
 };
 
 export default async function ReaderDashboardPage() {
+  await connection();
   const user = await getCurrentUser();
   if (!user) {
     redirect('/login?returnTo=' + encodeURIComponent('/dashboard'));
