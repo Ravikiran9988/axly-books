@@ -1,4 +1,5 @@
 import React from 'react';
+import { connection } from 'next/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
@@ -24,6 +25,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  await connection();
   const user = await getCurrentUser();
 
   // Enforce server-side role check
