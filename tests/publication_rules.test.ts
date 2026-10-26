@@ -36,3 +36,11 @@ assert.equal(isBookPublishable({
   originalPdfPath: 'original-pdfs/example.pdf',
 }), false, 'Unpublished chapters cannot be bypassed via the PDF-only exception');
 console.log('Publication rules tests passed.');
+
+
+assert.equal(isBookPublishable({
+  totalChapters: 3,
+  hasPublishedChapter: false,
+  allowPdfDownload: true,
+  originalPdfPath: 'original-pdfs/example.pdf',
+}), true, 'A private downloadable PDF can publish without published chapters even when draft chapters exist');

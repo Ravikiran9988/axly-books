@@ -12,7 +12,5 @@ export interface PublicationEligibility {
  */
 export function isBookPublishable(input: PublicationEligibility): boolean {
   if (input.hasPublishedChapter) return true;
-  return input.totalChapters === 0
-    && input.allowPdfDownload
-    && Boolean(input.originalPdfPath);
+  return input.allowPdfDownload && Boolean(input.originalPdfPath);
 }
