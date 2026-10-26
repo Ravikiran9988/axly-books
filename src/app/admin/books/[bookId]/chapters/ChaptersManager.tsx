@@ -13,6 +13,8 @@ import {
   X,
   AlertTriangle,
   Layers,
+  UploadCloud,
+  FilePlus2,
 } from 'lucide-react';
 import styles from '../../../admin.module.css';
 
@@ -58,6 +60,7 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
   const [editingChapter, setEditingChapter] = useState<ChapterItem | null>(null);
   const [deletingChapter, setDeletingChapter] = useState<ChapterItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImportingMarkdown, setIsImportingMarkdown] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -197,6 +200,34 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
     });
   };
 
+
+  const handleAddMarkdownFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsImportingMarkdown(true);
+    setFeedback(null);
+    try {
+      const body = new FormData();
+      body.set('file', file);
+      const response = await fetch(`/api/admin/books/${encodeURIComponent(book.id)}/import-markdown`, {
+        method: 'POST',
+        body,
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        showToast('error', payload.error || 'Could not add Markdown files.');
+        return;
+      }
+      setChapters((current) => [...current, ...payload.chapters].sort((a, b) => a.chapterNumber - b.chapterNumber));
+      showToast('success', payload.message || 'Markdown files added as draft chapters.');
+    } catch {
+      showToast('error', 'Network error while adding Markdown files.');
+    } finally {
+      setIsImportingMarkdown(false);
+      event.target.value = '';
+    }
+  };
+
   // Submit Create Chapter
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -326,11 +357,23 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
           </div>
           <h1 className={styles.pageTitle}>Chapters: {book.title}</h1>
           <p className={styles.pageDesc}>
-            Manage and author structured chapter contents, code snippets, and callout blocks.
+            Edit or delete imported chapters, add new chapters, or append more .md files and ZIP archives. New imports are added as drafts.
           </p>
         </div>
 
-        <div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+          <input
+            id="add-markdown-files"
+            type="file"
+            accept=".md,.zip,text/markdown,text/plain,application/zip,application/x-zip-compressed"
+            onChange={handleAddMarkdownFiles}
+            disabled={isImportingMarkdown}
+            style={{ display: 'none' }}
+          />
+          <label htmlFor="add-markdown-files" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', cursor: isImportingMarkdown ? 'wait' : 'pointer', opacity: isImportingMarkdown ? 0.65 : 1 }}>
+            <UploadCloud size={16} />
+            <span>{isImportingMarkdown ? 'Importing…' : 'Add Markdown Files'}</span>
+          </label>
           <button type="button" onClick={handleOpenCreate} className="btn btn-primary btn-sm">
             <Plus size={16} />
             <span>Add Chapter</span>
