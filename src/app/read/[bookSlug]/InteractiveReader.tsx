@@ -86,7 +86,8 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
       currentChapter.chapterNumber,
       currentChapter.slug,
       percent,
-      true // immediate save on chapter change
+      true, // immediate save on chapter change
+      currentChapter.title
     );
 
     // If anchor hash exists in URL, scroll to anchor; else scroll to top
