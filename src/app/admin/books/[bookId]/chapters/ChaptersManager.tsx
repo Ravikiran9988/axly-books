@@ -244,26 +244,40 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
 
   const handleDeleteSelected = async () => {
     if (!selectedChapterIds.length || isBulkDeleting) return;
-    const selected = chapters.filter((chapter) => selectedChapterIds.includes(chapter.id));
-    if (!window.confirm(`Delete ${selected.length} selected chapter${selected.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    const chapterIds = [...selectedChapterIds];
+    if (!window.confirm(`Delete ${chapterIds.length} selected chapter${chapterIds.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+
     setIsBulkDeleting(true);
-    const deleted = new Set<string>();
-    const failures: string[] = [];
-    for (const chapter of selected) {
-      try {
-        const response = await fetch(`/api/admin/books/${encodeURIComponent(book.id)}/chapters/${encodeURIComponent(chapter.id)}`, { method: 'DELETE' });
-        const payload = await response.json();
-        if (!response.ok) failures.push(`${chapter.title}: ${payload.error || 'Delete failed'}`);
-        else deleted.add(chapter.id);
-      } catch { failures.push(`${chapter.title}: network error`); }
+    setFeedback(null);
+    try {
+      // One batch request replaces the old per-chapter request loop. This is
+      // much faster for large imports and avoids repeated stats recalculation.
+      const response = await fetch(
+        `/api/admin/books/${encodeURIComponent(book.id)}/chapters/bulk-delete`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chapterIds }),
+        }
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        showToast('error', payload.error || 'Could not delete the selected chapters.');
+        return;
+      }
+
+      const deletedIds = new Set<string>(
+        Array.isArray(payload.deletedChapterIds) ? payload.deletedChapterIds : chapterIds
+      );
+      setChapters((current) => current.filter((chapter) => !deletedIds.has(chapter.id)));
+      setSelectedChapterIds((current) => current.filter((id) => !deletedIds.has(id)));
+      setPreviewChapter((current) => current && deletedIds.has(current.id) ? null : current);
+      showToast('success', payload.message || `Deleted ${deletedIds.size} selected chapter${deletedIds.size === 1 ? '' : 's'}.`);
+    } catch {
+      showToast('error', 'Network error while deleting the selected chapters. Refresh and try again.');
+    } finally {
+      setIsBulkDeleting(false);
     }
-    if (deleted.size) {
-      setChapters((current) => current.filter((chapter) => !deleted.has(chapter.id)));
-      setSelectedChapterIds((current) => current.filter((id) => !deleted.has(id)));
-    }
-    setIsBulkDeleting(false);
-    if (failures.length) showToast('error', `Deleted ${deleted.size}; ${failures.length} failed. ${failures[0]}`);
-    else showToast('success', `Deleted ${deleted.size} selected chapter${deleted.size === 1 ? '' : 's'}.`);
   };
 
   // Submit Create Chapter
@@ -477,7 +491,7 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
           </button>
           <button type="button" className="btn btn-sm" onClick={handleDeleteSelected} disabled={!selectedChapterIds.length || isBulkDeleting}
             style={{ background: 'var(--status-error)', color: '#fff', border: 0 }}>
-            <Trash2 size={15} /> {isBulkDeleting ? 'Deleting…' : `Delete selected (${selectedChapterIds.length})`}
+            <Trash2 size={15} /> {isBulkDeleting ? `Deleting ${selectedChapterIds.length} chapters…` : `Delete selected (${selectedChapterIds.length})`}
           </button>
         </div>
       )}
