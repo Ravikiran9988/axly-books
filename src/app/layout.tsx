@@ -24,9 +24,9 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'Slayer (Medicharla Ravi Kiran)' }],
   icons: {
-    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-    shortcut: ['/icon.svg'],
-    apple: ['/icon.svg'],
+    icon: [{ url: '/icon.svg?v=2', type: 'image/svg+xml' }],
+    shortcut: ['/icon.svg?v=2'],
+    apple: ['/icon.svg?v=2'],
   },
   openGraph: {
     title: 'AXLY Books — A World of Ideas, One Page at a Time',
