@@ -29,6 +29,7 @@ export async function GET(request: Request) {
       totalChapters: number;
       estimatedReadingTimeMinutes: number;
       allowPdfDownload: boolean;
+      allowOnlineReading?: boolean;
       originalPdfUrl?: string | null;
       originalPdfPath?: string | null;
       license?: string;
@@ -63,6 +64,7 @@ export async function GET(request: Request) {
         totalChapters: b.totalChapters,
         estimatedReadingTimeMinutes: b.estimatedReadingTimeMinutes,
         allowPdfDownload: b.allowPdfDownload,
+        allowOnlineReading: b.allowOnlineReading !== false,
       })).filter((b) => b.isPublished);
     }
 
@@ -117,6 +119,7 @@ export async function GET(request: Request) {
         // Never send private Blob paths to readers; private downloads go through an authenticated proxy route.
         originalPdfPath: null,
         totalChapters: chapterCount,
+        allowOnlineReading: b.allowOnlineReading !== false,
         coverImage: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
         coverImageUrl: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
         author: b.authorName || 'Slayer',
