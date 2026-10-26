@@ -38,7 +38,7 @@
 - Draft and publication status controls to keep unfinished content out of the public catalogue.
 - Exactly two import options: **PDF — download only** and **Markdown — read online**.
 - PDF uploads are stored in private Vercel Blob storage and create a draft with no reader chapters.
-- A single Markdown (`.md`) manuscript is split by H1 headings, or H2 headings when no H1 exists. If there are no headings, it remains one full-book section.
+- A single Markdown (`.md`) manuscript is split by H1 headings; H2 headings are used when H1 headings are absent or the only H1 repeats the book title. If there are no section headings, the manuscript remains one Full Book entry.
 - Markdown source text is preserved and rendered with a safe React Markdown renderer that does not execute embedded HTML. Review the generated chapter titles and rendered content before publication.
 
 ### Chapter discussions
@@ -164,7 +164,7 @@ Run the command only with the intended database configured. Public registration 
 2. Apply checked-in migrations with `npm run db:migrate`.
 3. Sign in as an administrator and open `/admin/books/import` to choose one of exactly two options.
 4. **PDF — download only:** Upload a PDF of at most **4 MB**. The original is stored privately, downloads are enabled automatically, and no online-reader chapters are extracted. Publish the draft when ready.
-5. **Markdown — read online:** Upload one `.md` file of at most **2 MB**. H1 headings become chapters; H2 headings are used as chapter boundaries only when there are no H1 headings. A manuscript without headings stays as one section. Review the imported draft before publishing.
+5. **Markdown — read online:** Upload one `.md` file of at most **2 MB**. H1 headings become chapters; H2 headings are used when H1 headings are absent or the only H1 matches the book title. A manuscript without section headings stays as one Full Book entry. Review the imported draft before publishing.
 
 ### Original PDF storage and access
 
