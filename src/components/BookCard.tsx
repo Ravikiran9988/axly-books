@@ -47,8 +47,9 @@ export default function BookCard({ book }: BookCardProps) {
   const chapterCount = Math.max(0, book.totalChapters || (Array.isArray(book.chapters) ? book.chapters.length : 0));
   const canReadOnline = chapterCount > 0;
   const hasStarted = Boolean(canReadOnline && progress && progress.percentComplete > 0);
-  const readUrl = hasStarted
-    ? `/read/${book.slug}?chapter=${progress!.lastChapterSlug}`
+  const activeProgress = hasStarted ? progress : null;
+  const readUrl = activeProgress
+    ? `/read/${book.slug}?chapter=${activeProgress.lastChapterSlug}`
     : `/read/${book.slug}`;
   const isPrivatePdfRoute = Boolean(book.originalPdfUrl?.startsWith('/api/books/'));
 
@@ -187,16 +188,16 @@ export default function BookCard({ book }: BookCardProps) {
           )}
         </div>
 
-        {hasStarted && (
+        {activeProgress && (
           <div className={styles.progressBarContainer}>
             <div className={styles.progressLabel}>
               <span>Progress</span>
-              <span>{progress.percentComplete}%</span>
+              <span>{activeProgress.percentComplete}%</span>
             </div>
             <div className={styles.progressBarTrack}>
               <div
                 className={styles.progressBarFill}
-                style={{ width: `${progress.percentComplete}%` }}
+                style={{ width: `${activeProgress.percentComplete}%` }}
               />
             </div>
           </div>
