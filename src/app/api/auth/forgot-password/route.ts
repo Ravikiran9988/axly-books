@@ -141,8 +141,6 @@ async function createAndSendResetEmail(
     tokenHash = hashToken(rawResetToken);
     resetRecordId = `reset_${crypto.randomUUID()}`;
     const expiresAt = new Date(Date.now() + RESET_TOKEN_LIFETIME_MS);
-    const now = new Date();
-
     if (isDatabaseConfigured() && db) {
       // Rotate reset links: only the newest unused token for a user should remain active.
       // The partial unique index in migration 0005 protects this invariant under races.
