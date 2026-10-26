@@ -111,6 +111,7 @@ export async function POST(request: Request) {
         totalChapters: 0,
         estimatedReadingTimeMinutes: 0,
         allowPdfDownload: data.allowPdfDownload,
+        allowOnlineReading: data.allowOnlineReading,
         createdAt: now,
         updatedAt: now,
       });
