@@ -4,10 +4,8 @@ import { put, del } from '@vercel/blob';
 import { asc, eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
-import { extractPdfPages, splitPdfIntoChapters, slugifyImportedChapter } from '@/lib/pdfImport';
 
 const MAX_PDF_SIZE = 4 * 1024 * 1024;
-const MAX_EXTRACTED_CHARS = 1_200_000;
 
 function slugify(value: string): string {
   return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
@@ -48,10 +46,6 @@ export async function POST(request: Request) {
 
     const bytes = Buffer.from(await file.arrayBuffer());
     if (bytes.length < 8 || bytes.subarray(0, 5).toString('ascii') !== '%PDF-') return NextResponse.json({ error: 'The file does not have a valid PDF signature.' }, { status: 400 });
-    const pages = extractPdfPages(bytes);
-    const extractedTextSize = pages.reduce((sum, page) => sum + page.length, 0);
-    if (extractedTextSize > MAX_EXTRACTED_CHARS) return NextResponse.json({ error: 'The extracted text is too large to import at once. Split the PDF into smaller files.' }, { status: 413 });
-    const parsedChapters = splitPdfIntoChapters(pages);
 
     const title = field(form, 'title') || file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
     const slug = slugify(field(form, 'slug') || title);
@@ -91,20 +85,11 @@ export async function POST(request: Request) {
     await db.insert(schema.books).values({
       id: createdBookId, slug, title, subtitle, description, synopsis, authorName: 'Slayer',
       coverImageUrl: '/images/ml-deep-learning-cover.jpg', category, tags, edition, publishedYear,
-      status: 'Draft', isFree: true, isPublished: false, totalChapters: parsedChapters.length,
-      estimatedReadingTimeMinutes: parsedChapters.reduce((sum, chapter) => sum + chapter.estimatedReadingTimeMinutes, 0),
+      status: 'Draft', isFree: true, isPublished: false, totalChapters: 0,
+      estimatedReadingTimeMinutes: 0,
       allowPdfDownload, license, licenseUrl, originalPdfPath: uploadedPath, createdAt: now, updatedAt: now,
     });
 
-    const taken = new Set<string>();
-    const chapterRows = parsedChapters.map((chapter, index) => ({
-      id: 'ch_' + crypto.randomUUID(), bookId: createdBookId as string, chapterNumber: index + 1,
-      title: chapter.title, slug: uniqueSlug(slugifyImportedChapter(chapter.title, index + 1), taken),
-      summary: chapter.text.slice(0, 220).replace(/\s+/g, ' ').trim() || 'Imported from the original PDF.',
-      content: [{ title: 'Imported text', content: chapter.text }],
-      estimatedReadingTimeMinutes: chapter.estimatedReadingTimeMinutes, isPublished: false, createdAt: now, updatedAt: now,
-    }));
-    await db.insert(schema.chapters).values(chapterRows);
 
     const chapters = await db.select({
       id: schema.chapters.id, chapterNumber: schema.chapters.chapterNumber, title: schema.chapters.title,
@@ -115,9 +100,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       book: { id: createdBookId, slug, title, allowPdfDownload, isPublished: false },
-      pageCount: pages.length, importedTextCharacters: extractedTextSize,
-      chapters: chapters.map((chapter) => ({ ...chapter, wordCount: parsedChapters[chapter.chapterNumber - 1]?.wordCount ?? 0 })),
-      message: 'PDF imported as an unpublished draft. Review chapter titles and text before publishing.',
+      pageCount: 0, importedTextCharacters: 0,
+      chapters: [],
+      message: 'PDF saved as a download-only draft. No online-reading chapters were created. Publish the book and enable PDF downloads when ready.',
     }, { status: 201 });
   } catch (error: unknown) {
     if (createdBookId) {
