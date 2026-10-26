@@ -20,6 +20,7 @@ import {
   BookOpenText,
 } from 'lucide-react';
 import styles from '../admin.module.css';
+import ExistingBookMarkdownManager from './ExistingBookMarkdownManager';
 
 interface BookItem {
   id: string;
@@ -664,6 +665,11 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
                 </div>
 
 
+                {!isCreateOpen && editingBook && editingBook.totalChapters === 0 && editingBook.allowPdfDownload && editingBook.originalPdfPath && (
+                  <div className={styles.formFull}>
+                    <ExistingBookMarkdownManager bookId={editingBook.id} bookSlug={editingBook.slug} bookTitle={editingBook.title} />
+                  </div>
+                )}
                 {!isCreateOpen && editingBook && (
                   <div className={`form-group ${styles.formFull}`}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
