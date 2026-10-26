@@ -87,7 +87,9 @@ async function BookDetailContent({ params }: BookPageProps) {
           <BookShareAction title={book.title} slug={book.slug} />
           {book.allowPdfDownload && book.originalPdfUrl && (
             <a
-              href={`/api/books/${encodeURIComponent(book.slug)}/pdf`}
+              href={book.originalPdfUrl}
+              target={book.originalPdfUrl.startsWith('/api/books/') ? undefined : '_blank'}
+              rel={book.originalPdfUrl.startsWith('/api/books/') ? undefined : 'noopener noreferrer'}
               className="btn btn-secondary"
               style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.75rem', width: '100%' }}
             >
