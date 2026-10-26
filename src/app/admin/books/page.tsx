@@ -26,6 +26,8 @@ export default async function AdminBooksPage() {
     coverImageUrl: string;
     isPublished: boolean;
     totalChapters: number;
+    allowPdfDownload: boolean;
+    originalPdfPath: string | null;
   }> = [];
 
   if (isDatabaseConfigured() && db) {
@@ -48,6 +50,8 @@ export default async function AdminBooksPage() {
       coverImageUrl: b.coverImageUrl,
       isPublished: b.isPublished,
       totalChapters: b.totalChapters,
+      allowPdfDownload: b.allowPdfDownload,
+      originalPdfPath: b.originalPdfPath,
     }));
   } else {
     booksList = PUBLISHED_BOOKS.map((b) => ({
@@ -64,6 +68,8 @@ export default async function AdminBooksPage() {
       coverImageUrl: b.coverImage,
       isPublished: b.isPublished ?? true,
       totalChapters: b.totalChapters,
+      allowPdfDownload: false,
+      originalPdfPath: null,
     }));
   }
 

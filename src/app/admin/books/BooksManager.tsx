@@ -35,6 +35,8 @@ interface BookItem {
   coverImageUrl: string;
   isPublished: boolean;
   totalChapters: number;
+  allowPdfDownload: boolean;
+  originalPdfPath: string | null;
 }
 
 interface BooksManagerProps {
@@ -55,6 +57,7 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
   const [deletingBook, setDeletingBook] = useState<BookItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -99,6 +102,7 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
     publishedYear: new Date().getFullYear(),
     coverImageUrl: '',
     isPublished: false,
+      allowPdfDownload: false,
   });
 
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -120,6 +124,7 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
       publishedYear: new Date().getFullYear(),
       coverImageUrl: '',
       isPublished: false,
+      allowPdfDownload: false,
     });
     setIsCreateOpen(true);
   };
@@ -139,7 +144,27 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
       publishedYear: book.publishedYear,
       coverImageUrl: book.coverImageUrl,
       isPublished: book.isPublished,
+      allowPdfDownload: book.allowPdfDownload,
     });
+  };
+
+
+  const handlePrivatePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingBook) return;
+    setIsUploadingPdf(true);
+    try {
+      const body = new FormData();
+      body.set('file', file);
+      const response = await fetch(`/api/admin/books/${encodeURIComponent(editingBook.id)}/pdf`, { method: 'POST', body });
+      const payload = await response.json();
+      if (!response.ok) { showToast('error', payload.error || 'Failed to attach private PDF.'); return; }
+      setBooks((current) => current.map((book) => book.id === editingBook.id ? { ...book, originalPdfPath: payload.originalPdfPath, allowPdfDownload: true } : book));
+      setEditingBook((current) => current && current.id === editingBook.id ? { ...current, originalPdfPath: payload.originalPdfPath, allowPdfDownload: true } : current);
+      setFormData((current) => ({ ...current, allowPdfDownload: true }));
+      showToast('success', 'Private PDF attached and downloads enabled.');
+    } catch { showToast('error', 'Network error while attaching the private PDF.'); }
+    finally { setIsUploadingPdf(false); e.target.value = ''; }
   };
 
   // Title -> Slug auto-fill helper
@@ -637,6 +662,24 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
                     className="form-input"
                   />
                 </div>
+
+
+                {!isCreateOpen && editingBook && (
+                  <div className={`form-group ${styles.formFull}`}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={formData.allowPdfDownload} onChange={(e) => setFormData({ ...formData, allowPdfDownload: e.target.checked })} />
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600 }}>Allow original PDF downloads</span>
+                    </label>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      {editingBook.originalPdfPath ? 'A private original PDF is attached. This book can publish without a published chapter.' : 'No private original PDF is attached. Attach one below to enable download-only publication.'}
+                    </p>
+                    <label className="form-label" style={{ marginTop: '0.8rem', display: 'block' }}>Attach or replace private original PDF</label>
+                    <input type="file" accept="application/pdf,.pdf" onChange={handlePrivatePdfUpload} disabled={isUploadingPdf} className="form-input" />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'block' }}>
+                      {isUploadingPdf ? 'Uploading PDF securely…' : 'PDF only, maximum 4 MB. Stored privately, never as a public link.'}
+                    </span>
+                  </div>
+                )}
 
                 <div className={`form-group ${styles.formFull}`}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
