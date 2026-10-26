@@ -111,18 +111,18 @@ export async function PUT(
 
       // Prevent the edit endpoint from bypassing the publication guard used by the Publish action.
       if (updates.isPublished === true && !targetBook.isPublished) {
-        const publishedChapters = await db
+        const existingChapters = await db
           .select({ id: schema.chapters.id })
           .from(schema.chapters)
-          .where(and(
-            eq(schema.chapters.bookId, targetBook.id),
-            eq(schema.chapters.isPublished, true)
-          ))
+          .where(eq(schema.chapters.bookId, targetBook.id))
           .limit(1);
+        const isDownloadOnlyPdf = existingChapters.length === 0
+          && targetBook.allowPdfDownload
+          && Boolean(targetBook.originalPdfPath);
 
-        if (publishedChapters.length === 0) {
+        if (existingChapters.length === 0 && !isDownloadOnlyPdf) {
           return NextResponse.json(
-            { error: 'Cannot publish a book without at least one published chapter. Publish a chapter first, then try again.' },
+            { error: 'Publish at least one chapter for online reading, or enable downloads for a private original PDF.' },
             { status: 400 }
           );
         }
