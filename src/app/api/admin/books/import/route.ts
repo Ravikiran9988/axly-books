@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { put, del } from '@vercel/blob';
-import { asc, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 
@@ -14,13 +14,6 @@ function slugify(value: string): string {
 function field(form: FormData, key: string, fallback = ''): string {
   const value = form.get(key);
   return typeof value === 'string' ? value.trim() : fallback;
-}
-function uniqueSlug(base: string, taken: Set<string>): string {
-  let value = base;
-  let suffix = 2;
-  while (taken.has(value)) value = base.slice(0, 108) + '-' + suffix++;
-  taken.add(value);
-  return value;
 }
 
 export async function POST(request: Request) {
@@ -51,7 +44,7 @@ export async function POST(request: Request) {
     const slug = slugify(field(form, 'slug') || title);
     const subtitle = field(form, 'subtitle');
     const category = field(form, 'category', 'General') || 'General';
-    const description = field(form, 'description') || 'A free book imported from an original PDF. Review the extracted chapters before publishing.';
+    const description = field(form, 'description') || 'A free book provided as a downloadable original PDF.';
     const synopsis = field(form, 'synopsis') || description;
     const edition = field(form, 'edition', 'First Edition (2026)') || 'First Edition (2026)';
     const requestedYear = Number(field(form, 'publishedYear', String(new Date().getFullYear())));
@@ -91,11 +84,7 @@ export async function POST(request: Request) {
     });
 
 
-    const chapters = await db.select({
-      id: schema.chapters.id, chapterNumber: schema.chapters.chapterNumber, title: schema.chapters.title,
-      slug: schema.chapters.slug, summary: schema.chapters.summary,
-      estimatedReadingTimeMinutes: schema.chapters.estimatedReadingTimeMinutes,
-    }).from(schema.chapters).where(eq(schema.chapters.bookId, createdBookId)).orderBy(asc(schema.chapters.chapterNumber));
+
 
     return NextResponse.json({
       success: true,
