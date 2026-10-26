@@ -85,7 +85,7 @@ async function BookDetailContent({ params }: BookPageProps) {
           {/* Interactive Start/Continue Reading CTA (Client Component) */}
           <BookActions book={book} />
           <BookShareAction title={book.title} slug={book.slug} />
-          {book.allowPdfDownload && (book.originalPdfUrl || book.totalChapters === 0) && (
+          {book.allowPdfDownload && book.originalPdfUrl && (
             <a
               href={book.originalPdfUrl || '/api/books/' + encodeURIComponent(book.slug) + '/pdf'}
               target="_blank"
@@ -121,12 +121,12 @@ async function BookDetailContent({ params }: BookPageProps) {
           {/* Key Metadata Grid */}
           <div className={styles.metaGrid}>
             <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>Total Chapters</span>
-              <span className={styles.metaVal}>{book.totalChapters} Chapters</span>
+              <span className={styles.metaLabel}>{book.chapters.length > 0 ? 'Total Chapters' : 'Format'}</span>
+              <span className={styles.metaVal}>{book.chapters.length > 0 ? `${book.totalChapters} Chapters` : (book.originalPdfUrl ? 'Download-only PDF' : 'No reader content')}</span>
             </div>
             <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>Reading Time</span>
-              <span className={styles.metaVal}>~{hours} Hours</span>
+              <span className={styles.metaLabel}>{book.chapters.length > 0 ? 'Reading Time' : 'Availability'}</span>
+              <span className={styles.metaVal}>{book.chapters.length > 0 ? `~${hours} Hours` : (book.originalPdfUrl ? 'PDF download' : 'Not available')}</span>
             </div>
             <div className={styles.metaItem}>
               <span className={styles.metaLabel}>Edition</span>
@@ -230,7 +230,7 @@ async function BookDetailContent({ params }: BookPageProps) {
         <section className={styles.tocSection}>
           <h2 className={styles.tocTitle}>Publication format</h2>
           <p className={styles.tocDesc}>
-            {book.allowPdfDownload
+            {book.allowPdfDownload && book.originalPdfUrl
               ? 'This publication is provided as a downloadable PDF rather than an online chapter reader.'
               : 'Online reading content is not currently available for this publication.'}
           </p>
