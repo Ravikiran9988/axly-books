@@ -36,14 +36,14 @@ export default function MarkdownImportForm() {
   function selectFile(next: File | null) {
     setFile(next); setError(''); setResult(null);
     if (!next) return;
-    const derived = next.name.replace(/\\.md$/i, '').replace(/[_-]+/g, ' ').trim();
+    const derived = next.name.replace(/\.(md|zip)$/i, '').replace(/[_-]+/g, ' ').trim();
     if (!title.trim()) setTitle(derived);
     if (!slugEdited) setSlug(slugify(derived));
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!file) { setError('Select a Markdown (.md) file first.'); return; }
+    if (!file) { setError('Select a Markdown (.md) file or ZIP archive first.'); return; }
     setBusy(true); setError(''); setResult(null);
     try {
       const form = new FormData();
@@ -66,7 +66,7 @@ export default function MarkdownImportForm() {
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
         <UploadCloud size={24} color="var(--color-brand-cyan)" />
         <div><h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Upload Markdown manuscript</h2>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Upload one complete .md file. H1 headings become chapter entries; H2 headings are used when there are no H1s or the only H1 repeats the book title. Without section headings, the manuscript stays together as one Full Book entry. Review the draft before publishing.</p>
+          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Upload one .md manuscript or a ZIP containing multiple .md files. ZIP files are extracted safely, Markdown files are sorted by filename, and headings create draft chapters. Review the draft before publishing.</p>
         </div>
       </div>
       {error && <div className={styles.alertBox + ' ' + styles.alertError} role="alert" style={{ marginBottom: '1rem' }}><AlertTriangle size={16} /><span>{error}</span></div>}
@@ -89,8 +89,8 @@ export default function MarkdownImportForm() {
         </div>
         <p style={{ marginTop: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>This book is still a draft. It will not be visible to readers until you publish it.</p>
       </div> : <form onSubmit={submit} style={{ display: 'grid', gap: '1rem' }}>
-        <div className="form-group"><label className="form-label" htmlFor="md-file">Markdown file (.md) *</label><input id="md-file" type="file" accept=".md,text/markdown,text/plain" required onChange={e => selectFile(e.target.files?.[0] ?? null)} className="form-input" />
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>Maximum 2 MB. Upload one complete manuscript, not separate chapter files.</p>
+        <div className="form-group"><label className="form-label" htmlFor="md-file">Markdown manuscript (.md or .zip) *</label><input id="md-file" type="file" accept=".md,.zip,text/markdown,text/plain,application/zip,application/x-zip-compressed" required onChange={e => selectFile(e.target.files?.[0] ?? null)} className="form-input" />
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>Single .md: maximum 2 MB. ZIP: maximum 10 MB, up to 100 entries, 25 MB extracted Markdown total. Non-Markdown files are ignored.</p>
           {file && <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.35rem' }}>{file.name} · {(file.size / 1024).toFixed(1)} KB</p>}
         </div>
         <div className={styles.formGrid}>

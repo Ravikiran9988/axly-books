@@ -17,7 +17,7 @@ export default function AdminMarkdownImportPage() {
           <ArrowLeft size={16} /> Back to import options
         </Link>
         <h1 className={styles.pageTitle}>Import a Markdown Book</h1>
-        <p className={styles.pageDesc}>Upload one .md manuscript, review the generated reading sections, then publish for online reading.</p>
+        <p className={styles.pageDesc}>Upload one .md manuscript or a ZIP of chapter Markdown files, review the generated reading sections, then publish for online reading.</p>
       </div>
     </header>
     <MarkdownImportForm />

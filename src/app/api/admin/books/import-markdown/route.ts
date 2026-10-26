@@ -4,8 +4,10 @@ import { asc, eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 import { splitMarkdownIntoChapters } from '@/lib/markdownImport';
+import { extractMarkdownFilesFromZip } from '@/lib/markdownZipImport';
 
 const MAX_MARKDOWN_SIZE = 2 * 1024 * 1024;
+const MAX_ZIP_SIZE = 10 * 1024 * 1024;
 function slugify(value: string): string {
   return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90);
@@ -27,15 +29,20 @@ export async function POST(request: Request) {
     if (!fileValue || typeof fileValue === 'string') return NextResponse.json({ error: 'Choose a Markdown (.md) file.' }, { status: 400 });
     const file = fileValue as File;
     if (!file.size) return NextResponse.json({ error: 'The Markdown file is empty.' }, { status: 400 });
-    if (file.size > MAX_MARKDOWN_SIZE) return NextResponse.json({ error: 'Markdown files must be 2 MB or smaller.' }, { status: 413 });
-    if (!/\.md$/i.test(file.name)) {
-      return NextResponse.json({ error: 'Upload a file with the .md extension.' }, { status: 400 });
-    }
-    const markdown = await file.text();
-    if (!markdown.trim()) return NextResponse.json({ error: 'The Markdown file contains no readable text.' }, { status: 400 });
-    const title = field(form, 'title') || file.name.replace(/\.md$/i, '').replace(/[_-]+/g, ' ').trim();
-    const parsedChapters = splitMarkdownIntoChapters(markdown, title);
-    if (parsedChapters.length > 100) return NextResponse.json({ error: 'A book can contain at most 100 sections/chapters.' }, { status: 413 });
+    const isZip = /\.zip$/i.test(file.name), isMarkdown = /\.md$/i.test(file.name);
+    if (!isZip && !isMarkdown) return NextResponse.json({ error: 'Upload a .md file or a .zip archive containing Markdown files.' }, { status: 400 });
+    if (isZip && file.size > MAX_ZIP_SIZE) return NextResponse.json({ error: 'ZIP archives must be 10 MB or smaller.' }, { status: 413 });
+    if (isMarkdown && file.size > MAX_MARKDOWN_SIZE) return NextResponse.json({ error: 'Single Markdown files must be 2 MB or smaller.' }, { status: 413 });
+    const files = isZip ? extractMarkdownFilesFromZip(Buffer.from(await file.arrayBuffer())) : [{ path: file.name, content: await file.text() }];
+    if (files.some(item => !item.content.trim())) return NextResponse.json({ error: 'A Markdown file in the upload is empty.' }, { status: 400 });
+    const title = field(form, 'title') || file.name.replace(/\.(md|zip)$/i, '').replace(/[_-]+/g, ' ').trim();
+    const parsedChapters = files.flatMap(item => {
+      const fileTitle = item.path.split('/').pop()!.replace(/\.md$/i, '').replace(/[_-]+/g, ' ').trim();
+      return splitMarkdownIntoChapters(item.content, isZip ? fileTitle : title);
+    });
+    if (parsedChapters.length > 100) return NextResponse.json({ error: 'A book can contain at most 100 sections/chapters. Reduce the Markdown files or headings.' }, { status: 413 });
+    const importedTextCharacters = files.reduce((total, item) => total + item.content.length, 0);
+    const importedMarkdown = files.map(item => item.content).join('\n\n');
     const slug = slugify(field(form, 'slug') || title);
     const subtitle = field(form, 'subtitle');
     const category = field(form, 'category', 'General') || 'General';
@@ -63,7 +70,7 @@ export async function POST(request: Request) {
       id: bookId, slug, title, subtitle, description, synopsis, authorName: 'Slayer',
       coverImageUrl: '/images/ml-deep-learning-cover.jpg', category, tags, edition, publishedYear,
       status: 'Draft', isFree: true, isPublished: false, totalChapters: parsedChapters.length,
-      estimatedReadingTimeMinutes: Math.max(1, Math.ceil(markdown.split(/\s+/).length / 200)),
+      estimatedReadingTimeMinutes: Math.max(1, Math.ceil(importedMarkdown.split(/\s+/).length / 200)),
       allowPdfDownload: false, license, licenseUrl, createdAt: now, updatedAt: now,
     });
     const taken = new Set<string>();
@@ -94,8 +101,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true, book: { id: bookId, slug, title, allowPdfDownload: false, isPublished: false },
       chapters: chapters.map((chapter, index) => ({ ...chapter, wordCount: parsedChapters[index].content.split(/\s+/).filter(Boolean).length })),
-      importedTextCharacters: markdown.length,
-      message: 'Markdown manuscript imported as an unpublished online-reading draft. Review the generated chapter/section titles before publishing.',
+      importedTextCharacters,
+      message: (isZip ? files.length + ' Markdown files extracted and imported' : 'Markdown manuscript imported') + ' as an unpublished online-reading draft. Review the generated chapter/section titles before publishing.',
     }, { status: 201 });
   } catch (error) {
     console.error('Markdown import error:', error);
