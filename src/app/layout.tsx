@@ -2,6 +2,11 @@ import type { Metadata } from 'next';
 import './globals.css';
 import AppShell from '@/components/AppShell';
 
+// The global shell uses pathname-aware navigation and client-side overlays.
+// Allow routes to render through their request-time shell instead of forcing
+// a static-shell validation that can fail on client navigation hooks.
+export const instant = false;
+
 export const metadata: Metadata = {
   title: 'AXLY Books — Digital Reading Platform by Slayer',
   description:
