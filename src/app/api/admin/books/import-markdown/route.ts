@@ -6,7 +6,7 @@ import { requireAdmin } from '@/lib/auth';
 
 const MAX_MARKDOWN_SIZE = 2 * 1024 * 1024;
 function slugify(value: string): string {
-  return value.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '')
+  return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90);
 }
 function field(form: FormData, key: string, fallback = ''): string {
@@ -14,8 +14,8 @@ function field(form: FormData, key: string, fallback = ''): string {
   return typeof value === 'string' ? value.trim() : fallback;
 }
 function splitMarkdown(markdown: string) {
-  const normalized = markdown.replace(/\\r\\n?/g, '\\n').trim();
-  const headingPattern = /^#{1,2}\\s+(.+)\\s*$/gm;
+  const normalized = markdown.replace(/\r\n?/g, '\n').trim();
+  const headingPattern = /^#{1,2}\s+(.+)\s*$/gm;
   const headings = [...normalized.matchAll(headingPattern)];
   if (!headings.length) {
     return [{ title: 'Full Book', text: normalized }];
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     const file = fileValue as File;
     if (!file.size) return NextResponse.json({ error: 'The Markdown file is empty.' }, { status: 400 });
     if (file.size > MAX_MARKDOWN_SIZE) return NextResponse.json({ error: 'Markdown files must be 2 MB or smaller.' }, { status: 413 });
-    if (!/\\.md$/i.test(file.name) && file.type !== 'text/markdown' && file.type !== 'text/plain') {
+    if (!/\.md$/i.test(file.name) && file.type !== 'text/markdown' && file.type !== 'text/plain') {
       return NextResponse.json({ error: 'Upload a .md Markdown file.' }, { status: 400 });
     }
     const markdown = await file.text();
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     const parsedChapters = splitMarkdown(markdown);
     if (parsedChapters.length > 100) return NextResponse.json({ error: 'A book can contain at most 100 sections/chapters.' }, { status: 413 });
 
-    const title = field(form, 'title') || file.name.replace(/\\.md$/i, '').replace(/[_-]+/g, ' ').trim();
+    const title = field(form, 'title') || file.name.replace(/\.md$/i, '').replace(/[_-]+/g, ' ').trim();
     const slug = slugify(field(form, 'slug') || title);
     const subtitle = field(form, 'subtitle');
     const category = field(form, 'category', 'General') || 'General';
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       id: bookId, slug, title, subtitle, description, synopsis, authorName: 'Slayer',
       coverImageUrl: '/images/ml-deep-learning-cover.jpg', category, tags, edition, publishedYear,
       status: 'Draft', isFree: true, isPublished: false, totalChapters: parsedChapters.length,
-      estimatedReadingTimeMinutes: Math.max(1, Math.ceil(markdown.split(/\\s+/).length / 200)),
+      estimatedReadingTimeMinutes: Math.max(1, Math.ceil(markdown.split(/\s+/).length / 200)),
       allowPdfDownload: false, license, licenseUrl, createdAt: now, updatedAt: now,
     });
     const taken = new Set<string>();
@@ -94,13 +94,13 @@ export async function POST(request: Request) {
         let suffix = 2;
         while (taken.has(chapterSlug)) chapterSlug = base + '-' + suffix++;
         taken.add(chapterSlug);
-        const wordCount = chapter.text.split(/\\s+/).filter(Boolean).length;
+        const wordCount = chapter.text.split(/\s+/).filter(Boolean).length;
         return {
           id: 'ch_' + crypto.randomUUID(), bookId, chapterNumber: index + 1, title: chapter.title.slice(0, 180),
-          slug: chapterSlug, summary: chapter.text.replace(/[#>*_`\\n]/g, ' ').replace(/\\s+/g, ' ').slice(0, 220) || 'Imported from Markdown.',
-          content: chapter.text.split(/\\n\\s*\\n/).map((paragraph, paragraphIndex) => ({
+          slug: chapterSlug, summary: chapter.text.replace(/[#>*_`\n]/g, ' ').replace(/\s+/g, ' ').slice(0, 220) || 'Imported from Markdown.',
+          content: chapter.text.split(/\n\s*\n/).map((paragraph, paragraphIndex) => ({
             title: paragraphIndex === 0 ? 'Reading' : ' ',
-            content: paragraph.trim().replace(/^#{1,6}\\s+/gm, '').replace(/^[-*+]\\s+/gm, '• ').replace(/^>\\s?/gm, ''),
+            content: paragraph.trim().replace(/^#{1,6}\s+/gm, '').replace(/^[-*+]\s+/gm, '• ').replace(/^>\s?/gm, ''),
           })).filter((section) => section.content.length > 0),
           estimatedReadingTimeMinutes: Math.max(1, Math.ceil(wordCount / 200)), isPublished: false, createdAt: now, updatedAt: now,
         };
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
     }).from(schema.chapters).where(eq(schema.chapters.bookId, bookId)).orderBy(asc(schema.chapters.chapterNumber));
     return NextResponse.json({
       success: true, book: { id: bookId, slug, title, allowPdfDownload: false, isPublished: false },
-      chapters: chapters.map((chapter, index) => ({ ...chapter, wordCount: parsedChapters[index].text.split(/\\s+/).filter(Boolean).length })),
+      chapters: chapters.map((chapter, index) => ({ ...chapter, wordCount: parsedChapters[index].text.split(/\s+/).filter(Boolean).length })),
       importedTextCharacters: markdown.length,
       message: 'Markdown manuscript imported as an unpublished online-reading draft. Review the generated chapter/section titles before publishing.',
     }, { status: 201 });
