@@ -55,7 +55,11 @@ export async function PATCH(
           originalPdfPath: book.originalPdfPath,
         })) {
           return NextResponse.json(
-            { error: 'This book has no published chapter. Open Chapters, publish at least one chapter, then try again. For PDF-only books, enable downloads and attach a private original PDF.' },
+            { error: !book.allowPdfDownload
+            ? 'This book has no published chapter. Publish a chapter, or enable PDF downloads for a PDF-only book.'
+            : !book.originalPdfPath
+              ? 'This book has no published chapter. Publish a chapter, or attach a private original PDF to enable PDF-only publication.'
+              : 'This book has no published chapter. Publish a chapter, or enable PDF downloads and attach a private original PDF to publish as download-only.' },
             { status: 400 }
           );
         }
