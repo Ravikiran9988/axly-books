@@ -44,8 +44,19 @@ export default function BookCard({ book }: BookCardProps) {
     typeof book.originalPdfUrl === 'string' &&
     book.originalPdfUrl.trim().length > 0
   );
-  const chapterCount = Math.max(0, book.totalChapters || (Array.isArray(book.chapters) ? book.chapters.length : 0));
-  const canReadOnline = chapterCount > 0;
+
+  // Prefer the actual chapter list over the denormalized totalChapters value.
+  // Older/partially updated book records can have a stale or zero count even
+  // though the API supplies published chapters; that must not hide Read Book.
+  const publishedChapters = Array.isArray(book.chapters)
+    ? book.chapters.filter((chapter) => chapter.isPublished !== false)
+    : [];
+  const chapterCount = Math.max(
+    0,
+    publishedChapters.length,
+    Number.isFinite(book.totalChapters) ? book.totalChapters : 0
+  );
+  const canReadOnline = publishedChapters.length > 0 || chapterCount > 0;
   const hasStarted = Boolean(canReadOnline && progress && progress.percentComplete > 0);
   const activeProgress = hasStarted ? progress : null;
   const readUrl = activeProgress
@@ -284,4 +295,3 @@ export default function BookCard({ book }: BookCardProps) {
     </article>
   );
 }
-
