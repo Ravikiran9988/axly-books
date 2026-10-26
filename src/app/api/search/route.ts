@@ -20,9 +20,7 @@ export async function GET(request: Request) {
       .orderBy(desc(schema.books.createdAt))
       .limit(500);
 
-    const bookSlugs = new Map<string, string>();
     for (const book of publishedBooks) {
-      bookSlugs.set(book.id, book.slug);
       const matches = !query || [
         book.title, book.subtitle, book.description, book.synopsis, book.category,
         ...(Array.isArray(book.tags) ? book.tags : []),
@@ -39,7 +37,6 @@ export async function GET(request: Request) {
 
     if (query) {
       const chapterRows = await db.select({
-        bookId: schema.chapters.bookId,
         bookSlug: schema.books.slug,
         bookTitle: schema.books.title,
         chapterTitle: schema.chapters.title,
