@@ -170,14 +170,14 @@ Run the command only with the intended database configured. Public registration 
 
 New imports store the original PDF in a **private Vercel Blob store**. The database holds its private pathname; public APIs do not expose that pathname. Original PDF downloads go through `/api/books/[slug]/pdf`, which checks publication status and the download permission before reading private storage. Set `PDF_BLOB_READ_WRITE_TOKEN` to the token for that separate private Blob store.
 
-Previously imported PDFs that use `original_pdf_url` in a public Blob store are not migrated automatically by this change. Their existing URLs may remain accessible to anyone who has the URL, regardless of the reader-facing download toggle. Review or re-import those files if storage-level privacy is required.
+Previously imported PDFs that use `original_pdf_url` in a public Blob store remain public until you migrate them. Back up the database and both Blob stores first, then configure `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN` for the old public store, and `PDF_BLOB_READ_WRITE_TOKEN` for the private store. Run `npm run db:migrate-legacy-pdfs` for a dry run; inspect its count and ensure every listed file is safe to migrate. Then run `npm run db:migrate-legacy-pdfs -- --apply`. The script copies PDFs to private storage, updates their database path, and attempts to delete the old public blob. If deletion fails, the script reports the affected book for manual cleanup. This command is opt-in and does not run automatically during deployment.
 
 ### Import limitations
 - Server-side text extraction relies on PDF objects and text layout; it is not a full PDF renderer. Some fonts, encodings, or layouts may extract imperfectly.
 - PDF uploads are stored as original files; PDF text extraction and OCR are not part of the current download-only flow.
 - PDF uploads are limited to 4 MB. Compress the file if it exceeds this cap.
 - Markdown uploads are limited to 2 MB and 100 generated chapters/sections.
-- The reader supports Markdown headings, paragraphs, emphasis, links, lists, blockquotes, fenced code blocks, and horizontal rules. Complex Markdown extensions (including table syntax) are not currently rendered; preview the manuscript before publishing.
+- The reader supports Markdown headings, paragraphs, emphasis, links, lists, blockquotes, fenced code blocks, horizontal rules, and basic pipe tables. Advanced Markdown extensions and raw HTML rendering are intentionally not supported; preview the manuscript before publishing.
 - The Markdown splitter is heading-based rather than AI-generated. It preserves original manuscript text and does not invent chapter titles when no headings exist.
 
 ---
