@@ -42,6 +42,9 @@ async function main() {
   );
 
   console.log(`Found ${eligible.length} legacy public Vercel PDF URL(s) without a private path.`);
+  for (const book of eligible) {
+    console.log(` - ${book.slug}: ${new URL(book.originalPdfUrl!).hostname}`);
+  }
   if (!applyChanges) {
     console.log('DRY RUN: no files or database records were changed.');
     console.log('Review the count, then re-run with --apply to copy PDFs to private storage and remove their public copies.');
