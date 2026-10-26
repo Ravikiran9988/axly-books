@@ -50,8 +50,8 @@ export default function BooksPage() {
         </div>
         <h1 className={styles.libraryTitle}>All Published Books</h1>
         <p className={styles.librarySubtitle}>
-          Explore published books written by Slayer. All titles are available to read online for free
-          with distraction-free reading modes and saved progress.
+          Explore published books written by Slayer. Read books with published chapters online, or
+          download titles offered as PDFs. Every publication is free to access.
         </p>
       </div>
 
