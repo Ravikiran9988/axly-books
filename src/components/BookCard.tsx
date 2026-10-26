@@ -56,7 +56,7 @@ export default function BookCard({ book }: BookCardProps) {
     publishedChapters.length,
     Number.isFinite(book.totalChapters) ? book.totalChapters : 0
   );
-  const canReadOnline = publishedChapters.length > 0 || chapterCount > 0;
+  const canReadOnline = book.allowOnlineReading !== false && (publishedChapters.length > 0 || chapterCount > 0);
   const hasStarted = Boolean(canReadOnline && progress && progress.percentComplete > 0);
   const activeProgress = hasStarted ? progress : null;
   const readUrl = activeProgress
