@@ -1,4 +1,5 @@
 import React from 'react';
+import { connection } from 'next/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
@@ -12,8 +13,6 @@ import {
 import { getCurrentUser } from '@/lib/auth';
 import styles from './admin.module.css';
 
-export const instant = false;
-
 export const metadata = {
   title: 'Admin Dashboard — AXLY Books',
   description: 'Authorized Content Management System for AXLY Books.',
@@ -24,6 +23,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  await connection();
   const user = await getCurrentUser();
 
   // Enforce server-side role check

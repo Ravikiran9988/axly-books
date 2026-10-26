@@ -1,4 +1,5 @@
 import React from 'react';
+import { connection } from 'next/server';
 import Link from 'next/link';
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
@@ -18,14 +19,13 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import styles from './dashboard.module.css';
 
-export const instant = false;
-
 export const metadata = {
   title: 'Reader Dashboard — AXLY Books',
   description: 'Your personalized reading space, bookmarks, and progress tracking on AXLY Books.',
 };
 
 export default async function ReaderDashboardPage() {
+  await connection();
   const user = await getCurrentUser();
   if (!user) {
     redirect('/login?returnTo=' + encodeURIComponent('/dashboard'));

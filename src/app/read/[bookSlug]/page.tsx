@@ -4,10 +4,7 @@ import { notFound } from 'next/navigation';
 import { getServerBookBySlug } from '@/services/serverBookService';
 import InteractiveReader from './InteractiveReader';
 
-// This reader loads database-backed content at request time. With Cache Components
-// enabled, opt out of prerendering this route so runtime data does not block the build.
-export const instant = false;
-
+// This reader loads database-backed content at request time.
 interface ReaderPageProps {
   params: Promise<{ bookSlug: string }>;
 }

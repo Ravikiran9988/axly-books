@@ -33,7 +33,23 @@ export default function LoginPage() {
     setLoading(false);
 
     if (res.success) {
-      router.push('/my-library');
+      // Respect internal return destinations (for example, /admin after a
+      // protected-route redirect) without allowing an external open redirect.
+      const requestedReturnTo = new URLSearchParams(window.location.search).get('returnTo');
+      let destination = '/my-library';
+      if (requestedReturnTo?.startsWith('/') &&
+          !requestedReturnTo.startsWith('//') &&
+          !requestedReturnTo.includes('\\')) {
+        try {
+          const candidate = new URL(requestedReturnTo, window.location.origin);
+          if (candidate.origin === window.location.origin) {
+            destination = `${candidate.pathname}${candidate.search}${candidate.hash}`;
+          }
+        } catch {
+          // Fall back to the reader library for malformed return destinations.
+        }
+      }
+      router.push(destination);
     } else {
       setError(res.error || 'Failed to sign in. Please verify your credentials.');
     }

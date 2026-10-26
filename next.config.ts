@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Cache Components and partial prefetching stay enabled; routes that rely on
+  // authenticated request data explicitly opt into request-time rendering.
   cacheComponents: true,
   partialPrefetching: true,
 

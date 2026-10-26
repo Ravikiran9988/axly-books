@@ -1,11 +1,10 @@
 import React from 'react';
+import { connection } from 'next/server';
 import { notFound } from 'next/navigation';
 import { eq, or, asc } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { getBookBySlug, PUBLISHED_BOOKS } from '@/data/booksData';
 import ChaptersManager from './ChaptersManager';
-
-export const instant = false;
 
 export const metadata = {
   title: 'Manage Chapters — AXLY Admin',
@@ -17,6 +16,7 @@ export default async function AdminChaptersPage({
 }: {
   params: Promise<{ bookId: string }>;
 }) {
+  await connection();
   const { bookId } = await params;
 
   let bookDetails: {

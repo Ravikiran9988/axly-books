@@ -1,10 +1,9 @@
 import React from 'react';
+import { connection } from 'next/server';
 import { desc } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import BooksManager from './BooksManager';
-
-export const instant = false;
 
 export const metadata = {
   title: 'Manage Books — AXLY Admin',
@@ -12,6 +11,7 @@ export const metadata = {
 };
 
 export default async function AdminBooksPage() {
+  await connection();
   let booksList: Array<{
     id: string;
     slug: string;

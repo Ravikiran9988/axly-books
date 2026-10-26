@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Clock, ChevronRight, Download } from 'lucide-react';
 import { getServerBookBySlug } from '@/services/serverBookService';
 import BookActions from './BookActions';
+import BookShareAction from './BookShareAction';
 import styles from './page.module.css';
 
 interface BookPageProps {
@@ -83,6 +84,7 @@ async function BookDetailContent({ params }: BookPageProps) {
 
           {/* Interactive Start/Continue Reading CTA (Client Component) */}
           <BookActions book={book} />
+          <BookShareAction title={book.title} slug={book.slug} />
           {book.allowPdfDownload && book.originalPdfUrl && (
             <a
               href={book.originalPdfUrl}
