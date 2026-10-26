@@ -434,6 +434,23 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
         </div>
       )}
 
+      {chapters.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem', marginBottom: '0.85rem' }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{selectedChapterIds.length} of {chapters.length} selected</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={toggleSelectAllChapters} disabled={isBulkDeleting}>
+            {allChaptersSelected ? <Square size={15} /> : <CheckSquare size={15} />}
+            {allChaptersSelected ? 'Clear selection' : 'Select all'}
+          </button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedChapterIds([])} disabled={!selectedChapterIds.length || isBulkDeleting}>
+            <EyeOff size={15} /> Clear all
+          </button>
+          <button type="button" className="btn btn-sm" onClick={handleDeleteSelected} disabled={!selectedChapterIds.length || isBulkDeleting}
+            style={{ background: 'var(--status-error)', color: '#fff', border: 0 }}>
+            <Trash2 size={15} /> {isBulkDeleting ? 'Deleting…' : `Delete selected (${selectedChapterIds.length})`}
+          </button>
+        </div>
+      )}
+
       {/* Chapters Table */}
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
@@ -501,15 +518,10 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
                         <span>Edit</span>
                       </button>
 
-                      <Link
-                        href={`/read/${book.slug}?chapter=${ch.slug}`}
-                        target="_blank"
-                        className={styles.btnAction}
-                        title="Preview in reader"
-                      >
-                        <Eye size={14} />
-                        <span>Preview</span>
-                      </Link>
+                      <button type="button" onClick={() => setPreviewChapter(ch)}
+                        className={styles.btnAction} title="Preview chapter content">
+                        <Eye size={14} /><span>Preview</span>
+                      </button>
 
                       <button
                         type="button"
@@ -769,6 +781,42 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {previewChapter && (
+        <div className={styles.modalOverlay} role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setPreviewChapter(null);
+        }}>
+          <section className={styles.modalContent} role="dialog" aria-modal="true" aria-labelledby="chapter-preview-title"
+            style={{ maxWidth: '900px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div className={styles.modalHeader}>
+              <div>
+                <h2 id="chapter-preview-title" className={styles.modalTitle}>{previewChapter.chapterNumber}. {previewChapter.title}</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                  {previewChapter.isPublished ? 'Published chapter preview' : 'Draft preview — only admins can see this preview'}
+                </p>
+              </div>
+              <button type="button" onClick={() => setPreviewChapter(null)} className={styles.btnAction} aria-label="Close preview"><X size={18} /></button>
+            </div>
+            {previewChapter.summary && <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>{previewChapter.summary}</p>}
+            <div style={{ color: 'var(--text-primary)', lineHeight: 1.75 }}>
+              {(Array.isArray(previewChapter.content) ? previewChapter.content : []).map((section, index) => (
+                <section key={index} style={{ marginBottom: '1.5rem' }}>
+                  {section.title && section.title !== 'Content' && <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.5rem' }}>{section.title}</h3>}
+                  <MarkdownContent content={section.content || ''} />
+                  {section.codeSnippet && <pre style={{ whiteSpace: 'pre-wrap', overflowX: 'auto', padding: '0.85rem', borderRadius: '0.5rem', background: 'var(--bg-surface-elevated)' }}><code>{section.codeSnippet.code}</code></pre>}
+                  {section.callout && <aside style={{ borderLeft: '3px solid var(--color-brand-cyan)', paddingLeft: '0.8rem', marginTop: '0.75rem' }}>{section.callout.text}</aside>}
+                </section>
+              ))}
+              {(!previewChapter.content || previewChapter.content.length === 0) && <p>No content in this chapter yet.</p>}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setPreviewChapter(null); handleOpenEdit(previewChapter); }}>
+                <Edit2 size={14} /> Edit chapter
+              </button>
+            </div>
+          </section>
         </div>
       )}
 
