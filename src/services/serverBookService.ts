@@ -54,6 +54,7 @@ async function mapDatabaseBook(record: DatabaseBook): Promise<Book> {
     isFree: record.isFree,
     isPublished: record.isPublished,
     allowPdfDownload: record.allowPdfDownload,
+    allowOnlineReading: record.allowOnlineReading,
     originalPdfUrl: record.allowPdfDownload
       ? record.originalPdfPath
         ? `/api/books/${encodeURIComponent(record.slug)}/pdf`
