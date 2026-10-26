@@ -181,7 +181,7 @@ async function BookDetailContent({ params }: BookPageProps) {
               ) : (
                 <strong>{book.license}</strong>
               )}
-              . Free online access for individual educational study and technical advancement.
+              . Free access for individual educational study and technical advancement.
             </p>
           </div>
 
