@@ -106,7 +106,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function createAndSendResetEmail(
+export async function createAndSendResetEmail(
   normalizedEmail: string,
   resendApiKey: string,
   appUrl: string,
