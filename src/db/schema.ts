@@ -42,6 +42,11 @@ export const passwordResets = pgTable('password_resets', {
   tokenHash: text('token_hash').notNull().unique(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   usedAt: timestamp('used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  // The SQL migration removes historical duplicates before creating this index.
+  uniqueIndex('password_resets_active_user_idx').on(table.userId).where(sql`${table.usedAt} IS NULL`),
+]);
 
 export const authors = pgTable('authors', {
   id: text('id').primaryKey(),
