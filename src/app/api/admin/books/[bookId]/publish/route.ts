@@ -48,9 +48,10 @@ export async function PATCH(
           .where(eq(schema.chapters.bookId, book.id));
         const publishedChapters = chapters.filter((chapter) => chapter.isPublished);
 
-        if (publishedChapters.length === 0) {
+        const isDownloadOnlyPdf = chapters.length === 0 && book.allowPdfDownload && Boolean(book.originalPdfPath);
+        if (publishedChapters.length === 0 && !isDownloadOnlyPdf) {
           return NextResponse.json(
-            { error: 'Cannot publish a book without at least one published chapter. Publish a chapter first, then try again.' },
+            { error: 'Publish at least one chapter for online reading, or enable downloads for a private original PDF.' },
             { status: 400 }
           );
         }
