@@ -58,7 +58,7 @@ export async function GET(
           coverImage: book.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
           author: book.authorName || 'Slayer',
           publicationStatus: book.status || 'Available Free',
-          chapters: chaptersList,
+          chapters: isAdmin || book.allowOnlineReading !== false ? chaptersList : [],
         },
       });
     }
