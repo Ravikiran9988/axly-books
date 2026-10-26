@@ -43,6 +43,9 @@ const nextConfig: NextConfig = {
 
   // Image optimization configuration
   images: {
+    // Book covers accept administrator-supplied HTTPS URLs from many hosts.
+    // Disable Next's host-restricted optimizer so valid external covers render consistently.
+    unoptimized: true,
     formats: ["image/avif", "image/webp"],
   },
 
