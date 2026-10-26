@@ -82,12 +82,12 @@ export async function PUT(
       // A published book must retain at least one published chapter.
       if (updates.isPublished === false && chapter.isPublished) {
         const [parentBook] = await db
-          .select({ isPublished: schema.books.isPublished })
+          .select({ isPublished: schema.books.isPublished, allowOnlineReading: schema.books.allowOnlineReading })
           .from(schema.books)
           .where(eq(schema.books.id, chapter.bookId))
           .limit(1);
 
-        if (parentBook?.isPublished) {
+        if (parentBook?.isPublished && parentBook.allowOnlineReading) {
           const otherPublishedChapters = await db
             .select({ id: schema.chapters.id })
             .from(schema.chapters)
@@ -226,12 +226,12 @@ export async function DELETE(
       // Do not let deletion leave a published book with no published chapters.
       if (chapter.isPublished) {
         const [parentBook] = await db
-          .select({ isPublished: schema.books.isPublished })
+          .select({ isPublished: schema.books.isPublished, allowOnlineReading: schema.books.allowOnlineReading })
           .from(schema.books)
           .where(eq(schema.books.id, bookId))
           .limit(1);
 
-        if (parentBook?.isPublished) {
+        if (parentBook?.isPublished && parentBook.allowOnlineReading) {
           const otherPublishedChapters = await db
             .select({ id: schema.chapters.id })
             .from(schema.chapters)
