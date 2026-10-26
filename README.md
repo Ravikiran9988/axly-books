@@ -163,7 +163,7 @@ Run the command only with the intended database configured. Public registration 
 1. Configure `DATABASE_URL` and a separate **private** Vercel Blob store using `PDF_BLOB_READ_WRITE_TOKEN`. The public `BLOB_READ_WRITE_TOKEN` remains for existing cover/image uploads.
 2. Apply checked-in migrations with `npm run db:migrate`.
 3. Sign in as an administrator and open `/admin/books/import` to choose one of exactly two options.
-4. **PDF — download only:** Upload a PDF of at most **4 MB**. The original is stored privately; no reader chapters are extracted. Enable PDF downloads before publishing the book.
+4. **PDF — download only:** Upload a PDF of at most **4 MB**. The original is stored privately, downloads are enabled automatically, and no online-reader chapters are extracted. Publish the draft when ready.
 5. **Markdown — read online:** Upload one `.md` file of at most **2 MB**. H1 headings become chapters; H2 headings are used as chapter boundaries only when there are no H1 headings. A manuscript without headings stays as one section. Review the imported draft before publishing.
 
 ### Original PDF storage and access
