@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 import { del, put } from '@vercel/blob';
-import { eq, isNotNull, isNull } from 'drizzle-orm';
+import { eq, isNull } from 'drizzle-orm';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
