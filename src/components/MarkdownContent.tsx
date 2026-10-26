@@ -6,7 +6,32 @@ type Block =
   | { type: 'quote'; text: string; key: number }
   | { type: 'ul' | 'ol'; items: string[]; key: number }
   | { type: 'code'; language: string; text: string; key: number }
-  | { type: 'hr'; key: number };
+  | { type: 'hr'; key: number }
+  | { type: 'table'; headers: string[]; rows: string[][]; key: number };
+
+function splitTableRow(line: string): string[] {
+  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+  const cells: string[] = [];
+  let current = '';
+  let escaped = false;
+  for (const character of trimmed) {
+    if (character === '|' && !escaped) {
+      cells.push(current.trim());
+      current = '';
+    } else {
+      current += character;
+    }
+    if (character === '\\' && !escaped) escaped = true;
+    else escaped = false;
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
+function isTableSeparator(line: string): boolean {
+  const cells = splitTableRow(line);
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
 
 function parseBlocks(source: string): Block[] {
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
@@ -36,6 +61,19 @@ function parseBlocks(source: string): Block[] {
     if (heading) {
       blocks.push({ type: 'heading', level: heading[1].length, text: heading[2], key: key++ });
       index++;
+      continue;
+    }
+
+    // GitHub-flavoured Markdown tables.
+    if (index + 1 < lines.length && line.includes('|') && isTableSeparator(lines[index + 1])) {
+      const headers = splitTableRow(line);
+      index += 2;
+      const rows: string[][] = [];
+      while (index < lines.length && lines[index].trim() && lines[index].includes('|')) {
+        const cells = splitTableRow(lines[index++]);
+        rows.push(headers.map((_, cellIndex) => cells[cellIndex] ?? ''));
+      }
+      blocks.push({ type: 'table', headers, rows, key: key++ });
       continue;
     }
 
@@ -169,6 +207,28 @@ export default function MarkdownContent({ content }: { content: string }) {
         return <ListTag key={key} style={{ margin: '0 0 1em', paddingLeft: '1.6em' }}>
           {block.items.map((item, index) => <li key={index} style={{ paddingLeft: '0.2em', marginBottom: '0.25em' }}>{renderInline(item, key + '-' + index)}</li>)}
         </ListTag>;
+      }
+      if (block.type === 'table') {
+        const cellStyle: React.CSSProperties = {
+          border: '1px solid var(--border-subtle, rgba(127,127,127,0.3))',
+          padding: '0.55em 0.7em',
+          textAlign: 'left',
+          verticalAlign: 'top',
+        };
+        return <div key={key} style={{ margin: '1em 0', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
+            <thead><tr>{block.headers.map((header, index) =>
+              <th key={index} scope="col" style={{ ...cellStyle, fontWeight: 700, background: 'var(--reader-code-bg, rgba(127,127,127,0.08))' }}>
+                {renderInline(header, key + '-head-' + index)}
+              </th>
+            )}</tr></thead>
+            <tbody>{block.rows.map((row, rowIndex) =>
+              <tr key={rowIndex}>{row.map((cell, cellIndex) =>
+                <td key={cellIndex} style={cellStyle}>{renderInline(cell, key + '-' + rowIndex + '-' + cellIndex)}</td>
+              )}</tr>
+            )}</tbody>
+          </table>
+        </div>;
       }
       if (block.type === 'code') {
         return <div key={key} style={{ margin: '1em 0' }}>
