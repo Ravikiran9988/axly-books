@@ -16,8 +16,6 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import styles from './admin.module.css';
 
-export const instant = false;
-
 export default async function AdminOverviewPage() {
   await connection();
   let booksList: Array<{
