@@ -51,7 +51,7 @@ export default function BookShareAction({ title, slug }: BookShareActionProps) {
   }
 
   return (
-    <div style={{ marginTop: '0.75rem' }}>
+    <div>
       <button
         type="button"
         onClick={handleShare}

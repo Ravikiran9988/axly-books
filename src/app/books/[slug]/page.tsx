@@ -109,13 +109,6 @@ async function BookDetailContent({ params }: BookPageProps) {
             <p className={styles.mainSubtitle}>{book.subtitle}</p>
           </div>
 
-          <p className={styles.authorLine}>
-            Authored by{' '}
-            <Link href={`/author/${book.authorSlug}`}>
-              {book.author} ({book.authorRealName})
-            </Link>
-          </p>
-
           {/* Key Metadata Grid */}
           <div className={styles.metaGrid}>
             <div className={styles.metaItem}>
@@ -191,6 +184,13 @@ async function BookDetailContent({ params }: BookPageProps) {
               </span>
             ))}
           </div>
+
+          <p className={styles.authorLine}>
+            Authored by{' '}
+            <Link href={`/author/${book.authorSlug}`}>
+              {book.author} ({book.authorRealName})
+            </Link>
+          </p>
         </div>
       </div>
 
