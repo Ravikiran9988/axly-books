@@ -541,7 +541,7 @@
     top: calc(100% + 4px);
   }
   .mainArticle {
-    padding: 1.75rem 0.85rem 4rem;
+    padding: 1.75rem 1rem 4rem;
   }
   .bottomNav {
     flex-direction: column;
@@ -569,7 +569,7 @@
     font-size: 0.75rem;
   }
   .mainArticle {
-    padding: 1.5rem 0.65rem 3.5rem;
+    padding: 1.5rem 0.75rem 3.5rem;
   }
 }
 

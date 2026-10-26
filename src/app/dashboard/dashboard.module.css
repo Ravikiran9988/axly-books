@@ -308,7 +308,7 @@
 
 @media (max-width: 380px) {
   .dashboardContainer {
-    padding: 1.5rem 0.75rem 3rem;
+    padding: 1.5rem 1rem 3rem;
   }
   .title {
     font-size: 1.5rem;

@@ -52,7 +52,7 @@ export default function BookShareAction({ title, slug, variant = 'full' }: BookS
   }
 
   return (
-    <div style={{ marginTop: variant === 'full' ? '0.75rem' : 0, display: variant === 'compact' ? 'inline-flex' : 'block' }}>
+    <div style={{ marginTop: 0, display: variant === 'compact' ? 'inline-flex' : 'block' }}>
       <button
         type="button"
         onClick={handleShare}
