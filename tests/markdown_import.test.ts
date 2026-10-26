@@ -41,6 +41,23 @@ assert.equal(h2Only.length, 2);
 assert.equal(h2Only[0].title, 'Section One');
 assert.equal(h2Only[1].title, 'Section Two');
 
+// A matching H1 document title should not become a duplicate reader chapter.
+const titledManuscript = splitMarkdownIntoChapters(
+  '# Deep Learning Handbook\n\nShort opening text.\n\n## Chapter 1\n\nChapter one.\n\n## Chapter 2\n\nChapter two.',
+  'Deep Learning Handbook'
+);
+assert.equal(titledManuscript.length, 3);
+assert.equal(titledManuscript[0].title, 'Introduction');
+assert.equal(titledManuscript[1].title, 'Chapter 1');
+assert.equal(titledManuscript[2].title, 'Chapter 2');
+
+// Heading-looking code comments must not split a manuscript.
+const fencedHeading = splitMarkdownIntoChapters(
+  '# First Chapter\n\n```python\n# This is a code comment, not a chapter\nprint(1)\n```\n\n# Second Chapter\n\nText.',
+);
+assert.equal(fencedHeading.length, 2);
+assert.match(fencedHeading[0].content, /# This is a code comment, not a chapter/);
+
 // If a manuscript has no headings, do not fabricate chapter divisions.
 const fullBook = splitMarkdownIntoChapters('Plain manuscript text.\n\nSecond paragraph.');
 assert.deepEqual(fullBook, [{ title: 'Full Book', content: 'Plain manuscript text.\n\nSecond paragraph.' }]);
