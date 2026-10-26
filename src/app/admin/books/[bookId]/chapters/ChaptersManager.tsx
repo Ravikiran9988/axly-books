@@ -15,8 +15,12 @@ import {
   Layers,
   UploadCloud,
   FilePlus2,
+  CheckSquare,
+  Square,
+  EyeOff,
 } from 'lucide-react';
 import styles from '../../../admin.module.css';
+import MarkdownContent from '@/components/MarkdownContent';
 
 interface ChapterSection {
   title: string;
@@ -61,6 +65,9 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
   const [deletingChapter, setDeletingChapter] = useState<ChapterItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImportingMarkdown, setIsImportingMarkdown] = useState(false);
+  const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([]);
+  const [previewChapter, setPreviewChapter] = useState<ChapterItem | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -228,6 +235,38 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
     }
   };
 
+  const allChaptersSelected = chapters.length > 0 && selectedChapterIds.length === chapters.length;
+
+  const toggleChapterSelection = (chapterId: string) => {
+    setSelectedChapterIds((current) => current.includes(chapterId) ? current.filter((id) => id !== chapterId) : [...current, chapterId]);
+  };
+
+  const toggleSelectAllChapters = () => setSelectedChapterIds(allChaptersSelected ? [] : chapters.map((chapter) => chapter.id));
+
+  const handleDeleteSelected = async () => {
+    if (!selectedChapterIds.length || isBulkDeleting) return;
+    const selected = chapters.filter((chapter) => selectedChapterIds.includes(chapter.id));
+    if (!window.confirm(`Delete ${selected.length} selected chapter${selected.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    setIsBulkDeleting(true);
+    const deleted = new Set<string>();
+    const failures: string[] = [];
+    for (const chapter of selected) {
+      try {
+        const response = await fetch(`/api/admin/books/${encodeURIComponent(book.id)}/chapters/${encodeURIComponent(chapter.id)}`, { method: 'DELETE' });
+        const payload = await response.json();
+        if (!response.ok) failures.push(`${chapter.title}: ${payload.error || 'Delete failed'}`);
+        else deleted.add(chapter.id);
+      } catch { failures.push(`${chapter.title}: network error`); }
+    }
+    if (deleted.size) {
+      setChapters((current) => current.filter((chapter) => !deleted.has(chapter.id)));
+      setSelectedChapterIds((current) => current.filter((id) => !deleted.has(id)));
+    }
+    setIsBulkDeleting(false);
+    if (failures.length) showToast('error', `Deleted ${deleted.size}; ${failures.length} failed. ${failures[0]}`);
+    else showToast('success', `Deleted ${deleted.size} selected chapter${deleted.size === 1 ? '' : 's'}.`);
+  };
+
   // Submit Create Chapter
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -331,6 +370,8 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
       }
 
       setChapters((prev) => prev.filter((c) => c.id !== deletingChapter.id));
+      setSelectedChapterIds((prev) => prev.filter((id) => id !== deletingChapter.id));
+      setPreviewChapter((current) => current?.id === deletingChapter.id ? null : current);
       showToast('success', data.message || `Deleted Chapter ${deletingChapter.chapterNumber}.`);
       setDeletingChapter(null);
     } catch {
@@ -398,6 +439,7 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
         <table className={styles.table}>
           <thead>
             <tr>
+              <th><input type="checkbox" aria-label={allChaptersSelected ? 'Clear all chapter selections' : 'Select all chapters'} checked={allChaptersSelected} onChange={toggleSelectAllChapters} disabled={chapters.length === 0 || isBulkDeleting} /></th>
               <th>#</th>
               <th>Chapter Title & Slug</th>
               <th>Sections</th>
@@ -409,13 +451,14 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
           <tbody>
             {chapters.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
                   No chapters authored yet for this book. Click &quot;Add Chapter&quot; to begin.
                 </td>
               </tr>
             ) : (
               chapters.map((ch) => (
                 <tr key={ch.id}>
+                  <td><input type="checkbox" aria-label={`Select chapter ${ch.chapterNumber}: ${ch.title}`} checked={selectedChapterIds.includes(ch.id)} onChange={() => toggleChapterSelection(ch.id)} disabled={isBulkDeleting} /></td>
                   <td style={{ fontWeight: 700, width: '40px' }}>{ch.chapterNumber}</td>
                   <td>
                     <div>
