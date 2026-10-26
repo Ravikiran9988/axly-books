@@ -21,6 +21,7 @@ import { ReadingPreferences } from '@/types/reading';
 import { progressService } from '@/services/progressService';
 import styles from './reader.module.css';
 import CommentsPanel from './CommentsPanel';
+import MarkdownContent from '@/components/MarkdownContent';
 
 const DEFAULT_PREFERENCES: ReadingPreferences = {
   theme: 'light',
@@ -462,8 +463,10 @@ export default function InteractiveReader({ book }: InteractiveReaderProps) {
         {/* Structured Sections with Stable Anchors */}
         {currentChapter.sections.map((section, idx) => (
           <section key={idx} id={`sec-${idx + 1}`} className={styles.contentSection}>
-            <h2 className={styles.sectionHeading}>{section.title}</h2>
-            <p className={styles.paragraph}>{section.content}</p>
+            {!['content', 'reading'].includes(section.title.trim().toLowerCase()) && (
+              <h2 className={styles.sectionHeading}>{section.title}</h2>
+            )}
+            <MarkdownContent content={section.content} />
 
             {/* Optional Conceptual Callout */}
             {section.callout && (
