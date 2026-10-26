@@ -50,7 +50,8 @@ export async function POST(request: Request) {
     const requestedYear = Number(field(form, 'publishedYear', String(new Date().getFullYear())));
     const publishedYear = Number.isInteger(requestedYear) && requestedYear >= 2000 && requestedYear <= 2100 ? requestedYear : new Date().getFullYear();
     const tags = field(form, 'tags').split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 20);
-    const allowPdfDownload = field(form, 'allowPdfDownload') === 'true';
+    // This route is explicitly the PDF-download-only import option; downloads must be enabled.
+    const allowPdfDownload = true;
     const license = field(form, 'license') === 'Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)'
       ? 'Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)'
       : 'All Rights Reserved';
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
       book: { id: createdBookId, slug, title, allowPdfDownload, isPublished: false },
       pageCount: 0, importedTextCharacters: 0,
       chapters: [],
-      message: 'PDF saved as a download-only draft. No online-reading chapters were created. Publish the book and enable PDF downloads when ready.',
+      message: 'PDF saved as a downloadable draft. No online-reading chapters were created. Publish the book when ready.',
     }, { status: 201 });
   } catch (error: unknown) {
     if (createdBookId) {
