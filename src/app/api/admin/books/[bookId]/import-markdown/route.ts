@@ -22,7 +22,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     return NextResponse.json({ error: 'Adding Markdown files requires the configured persistent database.' }, { status: 503 });
   }
 
-  let insertedIds: string[] = [];
+  const insertedIds: string[] = [];
   try {
     const { bookId } = await params;
     const [book] = await db.select().from(schema.books).where(eq(schema.books.id, bookId)).limit(1);

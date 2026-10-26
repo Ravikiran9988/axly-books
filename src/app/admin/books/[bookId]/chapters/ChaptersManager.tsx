@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   Layers,
   UploadCloud,
-  FilePlus2,
   CheckSquare,
   Square,
   EyeOff,
