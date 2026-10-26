@@ -486,9 +486,11 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
             {allChaptersSelected ? <Square size={15} /> : <CheckSquare size={15} />}
             {allChaptersSelected ? 'Clear selection' : 'Select all'}
           </button>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedChapterIds([])} disabled={!selectedChapterIds.length || isBulkDeleting}>
-            <EyeOff size={15} /> Clear selection
-          </button>
+          {!allChaptersSelected && selectedChapterIds.length > 0 && (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedChapterIds([])} disabled={isBulkDeleting}>
+              <EyeOff size={15} /> Clear selection
+            </button>
+          )}
           <button type="button" className="btn btn-sm" onClick={handleDeleteSelected} disabled={!selectedChapterIds.length || isBulkDeleting}
             style={{ background: 'var(--status-error)', color: '#fff', border: 0 }}>
             <Trash2 size={15} /> {isBulkDeleting ? `Deleting ${selectedChapterIds.length} chapters…` : `Delete selected (${selectedChapterIds.length})`}
