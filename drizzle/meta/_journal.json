@@ -43,6 +43,13 @@
       "when": 1793000000000,
       "tag": "0005_single_active_password_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793040000000,
+      "tag": "0006_allow_online_reading",
+      "breakpoints": true
     }
   ]
 }
