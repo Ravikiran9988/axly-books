@@ -16,9 +16,9 @@ This heading is part of the chapter body.
 - first item
 - second item
 
-```python
+\`\`\`python
 print("hello")
-```
+\`\`\`
 
 # Chapter 2: Applications
 
