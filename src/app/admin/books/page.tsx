@@ -27,6 +27,7 @@ export default async function AdminBooksPage() {
     isPublished: boolean;
     totalChapters: number;
     allowPdfDownload: boolean;
+    allowOnlineReading: boolean;
     originalPdfPath: string | null;
   }> = [];
 
@@ -51,6 +52,7 @@ export default async function AdminBooksPage() {
       isPublished: b.isPublished,
       totalChapters: b.totalChapters,
       allowPdfDownload: b.allowPdfDownload,
+      allowOnlineReading: b.allowOnlineReading,
       originalPdfPath: b.originalPdfPath,
     }));
   } else {
@@ -69,6 +71,7 @@ export default async function AdminBooksPage() {
       isPublished: b.isPublished ?? true,
       totalChapters: b.totalChapters,
       allowPdfDownload: false,
+      allowOnlineReading: b.allowOnlineReading ?? true,
       originalPdfPath: null,
     }));
   }
