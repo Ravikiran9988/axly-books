@@ -6,8 +6,6 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { getBookBySlug, PUBLISHED_BOOKS } from '@/data/booksData';
 import ChaptersManager from './ChaptersManager';
 
-export const instant = false;
-
 export const metadata = {
   title: 'Manage Chapters — AXLY Admin',
   description: 'Manage book chapters, sections, and technical listings on AXLY Books.',
