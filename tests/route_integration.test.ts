@@ -494,38 +494,25 @@ async function runRealRouteIntegrationTests() {
   }
 
   // =========================================================================
-  // SCENARIO 6: PUBLIC BOOK DISCOVERY & VISIBILITY ENFORCEMENT
+  // SCENARIO 6: PUBLIC CATALOGUE DOES NOT DEPEND ON DEMO SEED DATA
   // =========================================================================
   console.log('\n▶ Scenario 6: Public Book Discovery & Visibility Enforcement');
   {
-    // 6.1 Public visitor queries published catalogue
     const publicReq = createJsonRequest('http://localhost:3000/api/books', 'GET');
     const publicRes = await booksGetHandler(publicReq);
     assert.strictEqual(publicRes.status, 200, 'Public catalogue must be accessible to visitors');
     const publicData = await publicRes.json();
     assert(publicData.success === true, 'Public books response must indicate success');
-    assert(publicData.books.length > 0, 'Public catalogue must contain published books');
-    for (const b of publicData.books) {
-      assert.strictEqual(b.isPublished, true, 'Public visitor MUST ONLY see published books');
-    }
-    console.log('  ✔ Public library catalogue returns exclusively published books.');
+    assert(Array.isArray(publicData.books), 'Public catalogue must return a books array');
+    assert.strictEqual(publicData.books.length, 0, 'The static fallback must not reintroduce demo publications');
+    console.log('  ✔ Public catalogue returns a valid empty state when no real database publications exist.');
 
-    // 6.2 Public visitor loads book by slug
-    const slugReq = createJsonRequest('http://localhost:3000/api/books/ml-deep-learning-fundamentals', 'GET');
-    const slugRes = await bookSlugHandler(slugReq, { params: Promise.resolve({ slug: 'ml-deep-learning-fundamentals' }) });
-    assert.strictEqual(slugRes.status, 200, 'Published book must be viewable by visitor');
-    const slugData = await slugRes.json();
-    assert.strictEqual(slugData.book.slug, 'ml-deep-learning-fundamentals');
-    assert.strictEqual(slugData.book.author, 'Slayer');
-    assert.strictEqual(slugData.book.authorRealName, 'Medicharla Ravi Kiran');
-    assert.strictEqual(slugData.book.isFree, true);
-    console.log('  ✔ Visitor retrieves published book details with author attribution & free access.');
-
-    // 6.3 Non-existent or unpublished book returns 404 to visitor
-    const missingReq = createJsonRequest('http://localhost:3000/api/books/non-existent-draft-slug', 'GET');
-    const missingRes = await bookSlugHandler(missingReq, { params: Promise.resolve({ slug: 'non-existent-draft-slug' }) });
-    assert.strictEqual(missingRes.status, 404, 'Non-existent or draft books must return 404 to visitors');
-    console.log('  ✔ Non-existent and unpublished draft books safely hidden behind 404.');
+    const legacyDemoReq = createJsonRequest('http://localhost:3000/api/books/ml-deep-learning-fundamentals', 'GET');
+    const legacyDemoRes = await bookSlugHandler(legacyDemoReq, {
+      params: Promise.resolve({ slug: 'ml-deep-learning-fundamentals' }),
+    });
+    assert.strictEqual(legacyDemoRes.status, 404, 'Removed demo publication must not be served from static fallback');
+    console.log('  ✔ Removed sample book is not exposed by the public detail API.');
   }
 
   console.log('\n🎉 ALL GENUINE ROUTE INTEGRATION TESTS PASSED PERFECTLY!\n');
