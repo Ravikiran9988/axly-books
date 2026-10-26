@@ -13,6 +13,7 @@ export interface ReadingProgress {
   bookSlug: string;
   lastChapterNumber: number;
   lastChapterSlug: string;
+  lastChapterTitle?: string;
   percentComplete: number;
   lastReadTimestamp: number;
 }
