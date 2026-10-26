@@ -1,8 +1,6 @@
 import { MetadataRoute } from 'next';
 import { getServerPublishedBooks } from '@/services/serverBookService';
 
-export const dynamic = 'force-dynamic';
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://books.axly.in';
   const lastModified = new Date();
