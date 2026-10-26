@@ -38,7 +38,7 @@
     "eslint": "^10",
     "eslint-config-next": "16.4.2",
     "tsx": "^4.23.15",
-    "typescript": "^7"
+    "typescript": "^6.0.3"
   },
   "overrides": {
     "esbuild": "^0.25.12",
