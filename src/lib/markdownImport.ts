@@ -54,20 +54,46 @@ function findMarkdownHeadings(source: string): MarkdownHeading[] {
  * Fenced code blocks are ignored while finding headings. If there are no headings,
  * the entire manuscript becomes one full-book section.
  */
-export function splitMarkdownIntoChapters(markdown: string): MarkdownChapterDraft[] {
+function normalizeTitle(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/**
+ * Split a single Markdown manuscript into reader chapters without rewriting its content.
+ * H1 headings take priority, unless the only H1 is the document title matching bookTitle;
+ * in that case H2 headings provide chapter boundaries. Fenced code is ignored while
+ * detecting headings. If there are no headings, keep the whole manuscript as one section.
+ */
+export function splitMarkdownIntoChapters(markdown: string, bookTitle?: string): MarkdownChapterDraft[] {
   const normalized = markdown.replace(/\r\n?/g, '\n').trim();
   if (!normalized) return [];
 
   const allHeadings = findMarkdownHeadings(normalized);
-  const level = allHeadings.some((heading) => heading.level === 1) ? 1 : 2;
-  const headings = allHeadings.filter((heading) => heading.level === level);
+  const levelOne = allHeadings.filter((heading) => heading.level === 1);
+  const levelTwo = allHeadings.filter((heading) => heading.level === 2);
+  const onlyH1IsDocumentTitle = levelOne.length === 1
+    && Boolean(bookTitle?.trim())
+    && normalizeTitle(levelOne[0].title) === normalizeTitle(bookTitle!);
+
+  let headings: MarkdownHeading[];
+  let contentStart = 0;
+  if (onlyH1IsDocumentTitle) {
+    contentStart = levelOne[0].bodyStart;
+    headings = levelTwo;
+    if (!headings.length) {
+      const content = normalized.slice(contentStart).trim();
+      return [{ title: 'Full Book', content: content || normalized }];
+    }
+  } else {
+    headings = levelOne.length ? levelOne : levelTwo;
+  }
 
   if (!headings.length) {
     return [{ title: 'Full Book', content: normalized }];
   }
 
   const chapters: MarkdownChapterDraft[] = [];
-  const frontMatter = normalized.slice(0, headings[0].start).trim();
+  const frontMatter = normalized.slice(contentStart, headings[0].start).trim();
   if (frontMatter) chapters.push({ title: 'Introduction', content: frontMatter });
 
   headings.forEach((heading, index) => {
