@@ -73,10 +73,22 @@ async function runBookCardTests() {
 
     assert.ok(html.includes('href="/api/books/deep-learning-mastery/pdf"'), 'Download link must point to book.originalPdfUrl');
     assert.ok(html.includes('download=""') || html.includes('download'), 'Download link must contain the download attribute');
-    assert.ok(html.includes('target="_blank"'), 'Download link must specify target="_blank"');
-    assert.ok(html.includes('rel="noopener noreferrer"'), 'Download link must specify rel="noopener noreferrer"');
+    assert.ok(!html.includes('target="_blank"'), 'Private PDF proxy downloads should stay in the current tab');
+    assert.ok(!html.includes('rel="noopener noreferrer"'), 'Private PDF proxy links should not use external-target rel attributes');
     assert.ok(html.includes('aria-label="Download PDF of Deep Learning Mastery"'), 'Download link must have accessible aria-label');
     console.log('  ✔ Download PDF action renders correctly when allowPdfDownload is true and originalPdfUrl is present.');
+  }
+
+  // External PDF URLs should open safely in a new tab.
+  {
+    const externalPdfBook: Book = {
+      ...mockBookWithPdf,
+      originalPdfUrl: 'https://cdn.example.test/books/deep-learning-mastery.pdf',
+    };
+    const html = renderToString(React.createElement(BookCard, { book: externalPdfBook }));
+    assert.ok(html.includes('target="_blank"'), 'External PDF download links should open in a new tab');
+    assert.ok(html.includes('rel="noopener noreferrer"'), 'External PDF links should use safe rel attributes');
+    console.log('  ✔ External PDF download links open safely in a new tab.');
   }
 
   // Test 2: Book with PDF download disabled
