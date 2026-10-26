@@ -40,6 +40,7 @@ async function BookDetailContent({ params }: BookPageProps) {
   }
 
   const hours = Math.round(book.estimatedReadingTimeMinutes / 60);
+  const canReadOnline = book.allowOnlineReading !== false && book.chapters.length > 0;
 
   return (
     <div className={`container ${styles.container}`}>
@@ -83,7 +84,7 @@ async function BookDetailContent({ params }: BookPageProps) {
           </div>
 
           {/* Interactive Start/Continue Reading CTA (Client Component) */}
-          <BookActions book={book} />
+          <BookActions book={canReadOnline ? book : { ...book, chapters: [] }} />
           <BookShareAction title={book.title} slug={book.slug} />
           {book.allowPdfDownload && book.originalPdfUrl && (
             <a
@@ -114,12 +115,12 @@ async function BookDetailContent({ params }: BookPageProps) {
           {/* Key Metadata Grid */}
           <div className={styles.metaGrid}>
             <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>{book.chapters.length > 0 ? 'Total Chapters' : 'Format'}</span>
-              <span className={styles.metaVal}>{book.chapters.length > 0 ? `${book.totalChapters} Chapters` : (book.allowPdfDownload && book.originalPdfUrl ? 'Download-only PDF' : 'No reader content')}</span>
+              <span className={styles.metaLabel}>{canReadOnline ? 'Total Chapters' : 'Format'}</span>
+              <span className={styles.metaVal}>{canReadOnline ? `${book.chapters.length} Chapters` : (book.allowPdfDownload && book.originalPdfUrl ? 'Downloadable PDF' : book.allowOnlineReading === false ? 'Online reading disabled' : 'No reader content')}</span>
             </div>
             <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>{book.chapters.length > 0 ? 'Reading Time' : 'Availability'}</span>
-              <span className={styles.metaVal}>{book.chapters.length > 0 ? `~${hours} Hours` : (book.allowPdfDownload && book.originalPdfUrl ? 'PDF download' : 'Not available')}</span>
+              <span className={styles.metaLabel}>{canReadOnline ? 'Reading Time' : 'Availability'}</span>
+              <span className={styles.metaVal}>{canReadOnline ? `~${hours} Hours` : (book.allowPdfDownload && book.originalPdfUrl ? 'PDF download' : book.allowOnlineReading === false ? 'Online reading disabled' : 'Not available')}</span>
             </div>
             <div className={styles.metaItem}>
               <span className={styles.metaLabel}>Edition</span>
@@ -197,11 +198,11 @@ async function BookDetailContent({ params }: BookPageProps) {
       </div>
 
       {/* Reader navigation or download-only publication details */}
-      {book.chapters.length > 0 ? (
+      {canReadOnline ? (
         <section className={styles.tocSection}>
           <h2 className={styles.tocTitle}>Table of Contents</h2>
           <p className={styles.tocDesc}>
-            Browse the {book.totalChapters} published chapters and choose one to start reading.
+            Browse the {book.chapters.length} published chapters and choose one to start reading.
           </p>
           <div className={styles.tocList}>
             {book.chapters.map((chapter) => (
@@ -230,9 +231,13 @@ async function BookDetailContent({ params }: BookPageProps) {
         <section className={styles.tocSection}>
           <h2 className={styles.tocTitle}>Publication format</h2>
           <p className={styles.tocDesc}>
-            {book.allowPdfDownload && book.originalPdfUrl
-              ? 'This publication is provided as a downloadable PDF rather than an online chapter reader.'
-              : 'Online reading content is not currently available for this publication.'}
+            {book.allowOnlineReading === false
+              ? (book.allowPdfDownload && book.originalPdfUrl
+                ? 'Online reading is disabled. You can still download the original PDF.'
+                : 'Online reading is disabled for this publication.')
+              : book.allowPdfDownload && book.originalPdfUrl
+                ? 'This publication is provided as a downloadable PDF rather than an online chapter reader.'
+                : 'Online reading content is not currently available for this publication.'}
           </p>
         </section>
       )}
