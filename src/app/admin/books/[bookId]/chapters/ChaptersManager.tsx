@@ -442,7 +442,7 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
             {allChaptersSelected ? 'Clear selection' : 'Select all'}
           </button>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedChapterIds([])} disabled={!selectedChapterIds.length || isBulkDeleting}>
-            <EyeOff size={15} /> Clear all
+            <EyeOff size={15} /> Clear selection
           </button>
           <button type="button" className="btn btn-sm" onClick={handleDeleteSelected} disabled={!selectedChapterIds.length || isBulkDeleting}
             style={{ background: 'var(--status-error)', color: '#fff', border: 0 }}>
