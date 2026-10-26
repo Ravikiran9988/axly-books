@@ -28,8 +28,8 @@ export async function POST(request: Request) {
     const file = fileValue as File;
     if (!file.size) return NextResponse.json({ error: 'The Markdown file is empty.' }, { status: 400 });
     if (file.size > MAX_MARKDOWN_SIZE) return NextResponse.json({ error: 'Markdown files must be 2 MB or smaller.' }, { status: 413 });
-    if (!/\.md$/i.test(file.name) && file.type !== 'text/markdown' && file.type !== 'text/plain') {
-      return NextResponse.json({ error: 'Upload a .md Markdown file.' }, { status: 400 });
+    if (!/\.md$/i.test(file.name)) {
+      return NextResponse.json({ error: 'Upload a file with the .md extension.' }, { status: 400 });
     }
     const markdown = await file.text();
     if (!markdown.trim()) return NextResponse.json({ error: 'The Markdown file contains no readable text.' }, { status: 400 });
