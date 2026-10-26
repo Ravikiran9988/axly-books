@@ -23,6 +23,11 @@ export const metadata: Metadata = {
     'Generative AI',
   ],
   authors: [{ name: 'Slayer (Medicharla Ravi Kiran)' }],
+  icons: {
+    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    shortcut: ['/icon.svg'],
+    apple: ['/icon.svg'],
+  },
   openGraph: {
     title: 'AXLY Books — A World of Ideas, One Page at a Time',
     description:
