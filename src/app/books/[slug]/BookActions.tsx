@@ -31,7 +31,7 @@ export default function BookActions({ book }: BookActionsProps) {
   const chapters = Array.isArray(book.chapters)
     ? book.chapters.filter((chapter) => chapter.isPublished !== false)
     : [];
-  const hasChapters = chapters.length > 0;
+  const hasChapters = book.allowOnlineReading !== false && chapters.length > 0;
   const hasProgress = Boolean(hasChapters && progress && progress.percentComplete > 0);
   const continueUrl = hasProgress
     ? `/read/${book.slug}?chapter=${progress!.lastChapterSlug}`
