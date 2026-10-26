@@ -3,73 +3,74 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Search, X, BookOpen, FileText } from 'lucide-react';
-import { PUBLISHED_BOOKS } from '@/data/booksData';
 import styles from './SearchModal.module.css';
 
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+interface SearchResult {
+  type: 'book' | 'chapter';
+  title: string;
+  sub: string;
+  url: string;
+}
 
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose();
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
+    if (!isOpen) return;
+    const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 50);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
-  const trimmed = query.trim().toLowerCase();
-
-  // Search books and chapters
-  const results: Array<{
-    type: 'book' | 'chapter';
-    title: string;
-    sub: string;
-    url: string;
-  }> = [];
-
-  PUBLISHED_BOOKS.forEach((book) => {
-    if (!trimmed || book.title.toLowerCase().includes(trimmed) || book.description.toLowerCase().includes(trimmed)) {
-      results.push({
-        type: 'book',
-        title: book.title,
-        sub: `Book · ${book.category}`,
-        url: `/books/${book.slug}`,
-      });
+  useEffect(() => {
+    if (!isOpen) {
+      setResults([]);
+      setIsSearching(false);
+      return;
     }
-
-    book.chapters.forEach((ch) => {
-      if (
-        trimmed &&
-        (ch.title.toLowerCase().includes(trimmed) ||
-          ch.summary.toLowerCase().includes(trimmed) ||
-          ch.sections.some((s) => s.title.toLowerCase().includes(trimmed)))
-      ) {
-        results.push({
-          type: 'chapter',
-          title: `Ch ${ch.chapterNumber}: ${ch.title}`,
-          sub: `${book.title} · ${ch.readingTimeMinutes} min read`,
-          url: `/read/${book.slug}?chapter=${ch.slug}`,
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const response = await fetch('/api/search?q=' + encodeURIComponent(query.trim()), {
+          signal: controller.signal,
+          cache: 'no-store',
         });
+        if (!response.ok) throw new Error('Search request failed');
+        const payload = await response.json() as { results?: SearchResult[] };
+        if (!controller.signal.aborted) setResults(Array.isArray(payload.results) ? payload.results : []);
+      } catch {
+        if (!controller.signal.aborted) setResults([]);
+      } finally {
+        if (!controller.signal.aborted) setIsSearching(false);
       }
-    });
-  });
+    }, 180);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isOpen, query]);
+
+  if (!isOpen) return null;
 
   return (
     <div
       className={styles.backdrop}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
       }}
       role="dialog"
       aria-modal="true"
@@ -82,39 +83,29 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             ref={inputRef}
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="Search books, chapters, topics..."
             className={styles.input}
           />
-          <button
-            type="button"
-            className={styles.closeBtn}
-            onClick={onClose}
-            aria-label="Close search"
-          >
+          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close search">
             <X size={20} />
           </button>
         </div>
 
-        <div className={styles.resultsList}>
+        <div className={styles.resultsList} aria-live="polite" aria-busy={isSearching}>
           {results.length === 0 ? (
             <div className={styles.emptyState}>
-              No matching books or chapters found for &ldquo;{query}&rdquo;
+              {isSearching ? 'Searching the library…' : query.trim() ? 'No matching books or chapters found for “' + query + '”' : 'No published books are available yet.'}
             </div>
           ) : (
-            results.slice(0, 8).map((res, i) => (
-              <Link
-                key={i}
-                href={res.url}
-                className={styles.resultItem}
-                onClick={onClose}
-              >
+            results.map((result, index) => (
+              <Link key={result.type + '-' + result.url + '-' + index} href={result.url} className={styles.resultItem} onClick={onClose}>
                 <div className={styles.resultIcon}>
-                  {res.type === 'book' ? <BookOpen size={18} /> : <FileText size={18} />}
+                  {result.type === 'book' ? <BookOpen size={18} /> : <FileText size={18} />}
                 </div>
                 <div className={styles.resultDetails}>
-                  <span className={styles.resultTitle}>{res.title}</span>
-                  <span className={styles.resultSub}>{res.sub}</span>
+                  <span className={styles.resultTitle}>{result.title}</span>
+                  <span className={styles.resultSub}>{result.sub}</span>
                 </div>
               </Link>
             ))
