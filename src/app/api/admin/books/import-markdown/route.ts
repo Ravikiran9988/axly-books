@@ -33,10 +33,9 @@ export async function POST(request: Request) {
     }
     const markdown = await file.text();
     if (!markdown.trim()) return NextResponse.json({ error: 'The Markdown file contains no readable text.' }, { status: 400 });
-    const parsedChapters = splitMarkdownIntoChapters(markdown);
-    if (parsedChapters.length > 100) return NextResponse.json({ error: 'A book can contain at most 100 sections/chapters.' }, { status: 413 });
-
     const title = field(form, 'title') || file.name.replace(/\.md$/i, '').replace(/[_-]+/g, ' ').trim();
+    const parsedChapters = splitMarkdownIntoChapters(markdown, title);
+    if (parsedChapters.length > 100) return NextResponse.json({ error: 'A book can contain at most 100 sections/chapters.' }, { status: 413 });
     const slug = slugify(field(form, 'slug') || title);
     const subtitle = field(form, 'subtitle');
     const category = field(form, 'category', 'General') || 'General';
