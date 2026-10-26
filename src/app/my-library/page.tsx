@@ -11,40 +11,86 @@ import {
   BookmarkX,
   Library,
 } from 'lucide-react';
-import { PUBLISHED_BOOKS } from '@/data/booksData';
 import { progressService } from '@/services/progressService';
 import { Bookmark as BookmarkType, ReadingProgress } from '@/types/reading';
 import styles from './library.module.css';
 
+interface LibraryBook {
+  id: string;
+  slug: string;
+  title: string;
+  coverImage?: string;
+  coverImageUrl?: string;
+  allowOnlineReading?: boolean;
+}
+
 export default function MyLibraryPage() {
   const [allProgress, setAllProgress] = useState<Record<string, ReadingProgress>>({});
   const [bookmarks, setBookmarks] = useState<BookmarkType[]>([]);
+  const [books, setBooks] = useState<LibraryBook[]>([]);
+  const [loadingBooks, setLoadingBooks] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const refresh = () => {
       setAllProgress(progressService.getAllProgress());
       setBookmarks(progressService.getBookmarks());
     };
 
     refresh();
-    const unsub = progressService.subscribe(refresh);
-    return () => unsub();
+    const unsubscribe = progressService.subscribe(refresh);
+
+    // Use the live catalogue instead of PUBLISHED_BOOKS. That static file is
+    // intentionally empty in production, so matching progress against it made
+    // every reader's shelf appear empty even when a book card showed progress.
+    const loadBooks = async () => {
+      try {
+        const response = await fetch('/api/books', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Could not load the published book catalogue.');
+        const data = await response.json();
+        const catalogue = Array.isArray(data.books)
+          ? data.books.filter(
+              (book: unknown): book is LibraryBook =>
+                Boolean(
+                  book &&
+                  typeof book === 'object' &&
+                  'slug' in book &&
+                  typeof book.slug === 'string' &&
+                  'title' in book &&
+                  typeof book.title === 'string'
+                )
+            )
+          : [];
+        if (!cancelled) setBooks(catalogue);
+      } catch {
+        if (!cancelled) setBooks([]);
+      } finally {
+        if (!cancelled) setLoadingBooks(false);
+      }
+    };
+
+    void loadBooks();
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   const handleRemoveBookmark = (id: string) => {
     progressService.removeBookmark(id);
   };
 
-  // Match progress with published books
+  // Match saved progress against the live published catalogue, not static seed data.
+  const booksBySlug = new Map(books.map((book) => [book.slug, book]));
   const activeBooks = Object.values(allProgress)
-    .map((prog) => {
-      const book = PUBLISHED_BOOKS.find((b) => b.slug === prog.bookSlug);
-      return book ? { book, progress: prog } : null;
+    .map((progress) => {
+      const book = booksBySlug.get(progress.bookSlug);
+      return book && book.allowOnlineReading !== false
+        ? { book, progress }
+        : null;
     })
-    .filter(Boolean) as Array<{
-    book: (typeof PUBLISHED_BOOKS)[0];
-    progress: ReadingProgress;
-  }>;
+    .filter((entry): entry is { book: LibraryBook; progress: ReadingProgress } => entry !== null);
 
   return (
     <div className={`container ${styles.container}`}>
@@ -64,20 +110,21 @@ export default function MyLibraryPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>
           <BookOpen size={20} color="var(--color-brand-cyan)" />
-          <span>Currently Reading ({activeBooks.length})</span>
+          <span>Currently Reading ({loadingBooks ? '…' : activeBooks.length})</span>
         </h2>
 
-        {activeBooks.length > 0 ? (
+        {loadingBooks ? (
+          <div className={styles.emptyState} role="status">Loading your library…</div>
+        ) : activeBooks.length > 0 ? (
           <div className={styles.inProgressGrid}>
             {activeBooks.map(({ book, progress }) => {
-              const currentChapter =
-                book.chapters.find((c) => c.slug === progress.lastChapterSlug) || book.chapters[0];
+
 
               return (
                 <div key={book.id} className={styles.progressCard}>
                   <div className={styles.miniCover}>
                     <Image
-                      src={book.coverImage || '/images/ml-deep-learning-cover.jpg'}
+                      src={book.coverImage || book.coverImageUrl || '/images/ml-deep-learning-cover.jpg'}
                       alt={book.title}
                       width={90}
                       height={135}
@@ -88,7 +135,8 @@ export default function MyLibraryPage() {
                   <div className={styles.progressDetails}>
                     <h3 className={styles.bookName}>{book.title}</h3>
                     <span className={styles.chapterStatus}>
-                      Chapter {progress.lastChapterNumber}: {currentChapter.title}
+                      Chapter {progress.lastChapterNumber}
+                      {progress.lastChapterTitle ? `: ${progress.lastChapterTitle}` : ''}
                     </span>
 
                     <div className={styles.progressBarWrap}>
