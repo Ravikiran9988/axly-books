@@ -85,9 +85,9 @@ async function BookDetailContent({ params }: BookPageProps) {
           {/* Interactive Start/Continue Reading CTA (Client Component) */}
           <BookActions book={book} />
           <BookShareAction title={book.title} slug={book.slug} />
-          {book.allowPdfDownload && book.originalPdfUrl && (
+          {book.allowPdfDownload && (book.originalPdfUrl || book.totalChapters === 0) && (
             <a
-              href={book.originalPdfUrl}
+              href={book.originalPdfUrl || '/api/books/' + encodeURIComponent(book.slug) + '/pdf'}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-secondary"

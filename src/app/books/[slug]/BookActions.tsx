@@ -33,7 +33,7 @@ export default function BookActions({ book }: BookActionsProps) {
 
   return (
     <div className={styles.quickActions}>
-      {hasProgress && (
+      {hasProgress && book.chapters.length > 0 && (
         <div className={styles.progressNotice}>
           <div className={styles.progressNoticeHeader}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -64,12 +64,12 @@ export default function BookActions({ book }: BookActionsProps) {
         </div>
       )}
 
-      <Link href={continueUrl} className="btn btn-primary btn-lg" style={{ width: '100%' }}>
+      {book.chapters.length > 0 && <Link href={continueUrl} className="btn btn-primary btn-lg" style={{ width: '100%' }}>
         <BookOpen size={18} />
         <span>{hasProgress ? 'Continue Reading' : 'Start Reading'}</span>
-      </Link>
+      </Link>}
 
-      {hasProgress && (
+      {hasProgress && book.chapters.length > 0 && (
         <Link
           href={`/read/${book.slug}?chapter=${book.chapters[0]?.slug}`}
           className="btn btn-secondary btn-sm"

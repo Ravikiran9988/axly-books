@@ -72,7 +72,7 @@ export default function PdfImportForm() {
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <UploadCloud size={24} color="var(--color-brand-cyan)" />
           <div><h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Upload and import</h2>
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Text and chapter headings are detected automatically. Review extraction results because PDF layouts differ.</p>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>PDF is stored privately for reader downloads only. No online-reading chapters are generated.</p>
           </div>
         </div>
         {error && <div className={styles.alertBox + ' ' + styles.alertError} role="alert" style={{ marginBottom: '1rem' }}><AlertTriangle size={16} /><span>{error}</span></div>}
@@ -80,7 +80,7 @@ export default function PdfImportForm() {
           <div>
             <div className={styles.alertBox + ' ' + styles.alertSuccess} role="status" style={{ marginBottom: '1.25rem' }}><CheckCircle2 size={18} /><span>{result.message}</span></div>
             <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', fontWeight: 700 }}>{result.book.title}</h3>
-            <p style={{ color: 'var(--text-muted)', margin: '0.4rem 0 1rem', fontSize: '0.9rem' }}>{result.pageCount} pages · {result.chapters.length} draft chapters · {result.importedTextCharacters.toLocaleString()} characters extracted</p>
+            <p style={{ color: 'var(--text-muted)', margin: '0.4rem 0 1rem', fontSize: '0.9rem' }}>Download-only PDF · {result.book.allowPdfDownload ? 'PDF downloads enabled' : 'PDF downloads disabled until enabled'}</p>
             <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '1.25rem' }}>
               {result.chapters.map((chapter) => (
                 <div key={chapter.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', padding: '0.85rem 1rem', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -94,11 +94,11 @@ export default function PdfImportForm() {
               ))}
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <Link href={'/admin/books/' + result.book.id + '/chapters'} className="btn btn-primary btn-sm">Review and edit chapters</Link>
+              {result.chapters.length > 0 && <Link href={'/admin/books/' + result.book.id + '/chapters'} className="btn btn-primary btn-sm">Review and edit chapters</Link>}
               <Link href="/admin/books" className="btn btn-ghost btn-sm">Back to book list</Link>
               <a href={'/api/books/' + encodeURIComponent(result.book.slug) + '/pdf'} className="btn btn-ghost btn-sm">Download original PDF (admin)</a>
             </div>
-            <p style={{ marginTop: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>The book and all imported chapters are drafts. Nothing is visible to readers until you publish it.</p>
+            <p style={{ marginTop: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>The book is a draft. Nothing is visible to readers until you publish it and enable PDF downloads.</p>
           </div>
         ) : (
           <form onSubmit={submit} style={{ display: 'grid', gap: '1rem' }}>
