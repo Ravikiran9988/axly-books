@@ -37,6 +37,7 @@ interface BookItem {
   isPublished: boolean;
   totalChapters: number;
   allowPdfDownload: boolean;
+  allowOnlineReading?: boolean;
   originalPdfPath: string | null;
 }
 
@@ -103,7 +104,8 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
     publishedYear: new Date().getFullYear(),
     coverImageUrl: '',
     isPublished: false,
-      allowPdfDownload: false,
+    allowPdfDownload: false,
+    allowOnlineReading: true,
   });
 
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -126,6 +128,7 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
       coverImageUrl: '',
       isPublished: false,
       allowPdfDownload: false,
+      allowOnlineReading: true,
     });
     setIsCreateOpen(true);
   };
@@ -146,6 +149,7 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
       coverImageUrl: book.coverImageUrl,
       isPublished: book.isPublished,
       allowPdfDownload: book.allowPdfDownload,
+      allowOnlineReading: book.allowOnlineReading ?? true,
     });
   };
 
@@ -664,6 +668,21 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
                   />
                 </div>
 
+                <div className={`form-group ${styles.formFull}`}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.allowOnlineReading}
+                      onChange={(e) => setFormData({ ...formData, allowOnlineReading: e.target.checked })}
+                    />
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                      Allow online reading
+                    </span>
+                  </label>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                    When enabled, public readers can open published chapters in the online reader. Turn this off to keep the book page/PDF available without exposing chapter content.
+                  </p>
+                </div>
 
                 {!isCreateOpen && editingBook && editingBook.allowPdfDownload && editingBook.originalPdfPath && (
                   <div className={styles.formFull}>
