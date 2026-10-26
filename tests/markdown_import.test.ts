@@ -26,14 +26,14 @@ print("hello")
 `;
 const parsed = splitMarkdownIntoChapters(h1Manuscript);
 assert.equal(parsed.length, 3, 'H1 headings should define chapters and preserve preface content as its own section');
-assert.equal(parsed[0].title, 'Introduction');
+assert.equal(parsed[0].title, 'Preface');
 assert.match(parsed[0].content, /\*\*opening\*\*/);
-assert.equal(parsed[1].title, 'Preface');
+assert.equal(parsed[1].title, 'Chapter 1: Foundations');
 assert.match(parsed[1].content, /## Attention/, 'H2 subheadings must be preserved inside the chapter body');
 assert.match(parsed[1].content, /- first item/);
 assert.match(parsed[1].content, /\x60\x60\x60python/);
-assert.equal(parsed[2].title, 'Chapter 1: Foundations');
-assert.match(parsed[2].content, /Chapter 2: Applications/);
+assert.equal(parsed[2].title, 'Chapter 2: Applications');
+assert.match(parsed[2].content, /\[Read more\]\(https:\/\/example.com\)/);
 
 // When no H1 exists, H2 headings provide useful chapter boundaries.
 const h2Only = splitMarkdownIntoChapters('## Section One\n\nFirst body\n\n## Section Two\n\nSecond body');
@@ -42,7 +42,6 @@ assert.equal(h2Only[0].title, 'Section One');
 assert.equal(h2Only[1].title, 'Section Two');
 
 // If a manuscript has no headings, do not fabricate chapter divisions.
-const unheaded = '# not a level-one heading?';
 const fullBook = splitMarkdownIntoChapters('Plain manuscript text.\n\nSecond paragraph.');
 assert.deepEqual(fullBook, [{ title: 'Full Book', content: 'Plain manuscript text.\n\nSecond paragraph.' }]);
 assert.deepEqual(splitMarkdownIntoChapters('   '), []);
