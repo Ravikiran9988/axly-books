@@ -10,8 +10,10 @@ import {
   ExternalLink,
   Code2,
   Clock,
+  Download,
 } from 'lucide-react';
 import { getServerPublishedBooks } from '@/services/serverBookService';
+import BookShareAction from './books/[slug]/BookShareAction';
 import styles from './page.module.css';
 
 export default function HomePage() {
@@ -117,24 +119,45 @@ async function HomePageContent() {
                     </p>
 
                     <div className={styles.spotlightMeta}>
-                      <span className={styles.spotlightMetaItem}>
-                        <BookOpen size={13} />
-                        {featuredBook.totalChapters} Chapters
-                      </span>
-                      <span className={styles.spotlightMetaItem}>
-                        <Clock size={13} />
-                        ~{Math.round(featuredBook.estimatedReadingTimeMinutes / 60)}h Read
-                      </span>
+                      {featuredBook.chapters.length > 0 ? (
+                        <>
+                          <span className={styles.spotlightMetaItem}>
+                            <BookOpen size={13} />
+                            {featuredBook.chapters.length} Chapters
+                          </span>
+                          <span className={styles.spotlightMetaItem}>
+                            <Clock size={13} />
+                            ~{Math.round(featuredBook.estimatedReadingTimeMinutes / 60)}h Read
+                          </span>
+                        </>
+                      ) : (
+                        <span className={styles.spotlightMetaItem}>
+                          <Download size={13} />
+                          {featuredBook.allowPdfDownload && featuredBook.originalPdfUrl ? 'Downloadable PDF' : 'Content coming soon'}
+                        </span>
+                      )}
                     </div>
 
                     <div className={styles.spotlightActions}>
-                      <Link
-                        href={`/read/${featuredBook.slug}`}
-                        className={`btn btn-primary ${styles.spotlightReadBtn}`}
-                      >
-                        <BookOpen size={15} />
-                        <span>Start Reading</span>
-                      </Link>
+                      {featuredBook.chapters.length > 0 && (
+                        <Link
+                          href={`/read/${featuredBook.slug}`}
+                          className={`btn btn-primary ${styles.spotlightReadBtn}`}
+                        >
+                          <BookOpen size={15} />
+                          <span>Start Reading</span>
+                        </Link>
+                      )}
+                      {featuredBook.allowPdfDownload && featuredBook.originalPdfUrl && (
+                        <Link
+                          href={`/api/books/${encodeURIComponent(featuredBook.slug)}/pdf`}
+                          className={`btn btn-primary ${styles.spotlightReadBtn}`}
+                        >
+                          <Download size={15} />
+                          <span>Download PDF</span>
+                        </Link>
+                      )}
+                      <BookShareAction title={featuredBook.title} slug={featuredBook.slug} />
                       <Link
                         href={`/books/${featuredBook.slug}`}
                         className={`btn btn-secondary ${styles.spotlightDetailsBtn}`}

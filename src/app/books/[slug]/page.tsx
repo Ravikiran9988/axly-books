@@ -87,13 +87,11 @@ async function BookDetailContent({ params }: BookPageProps) {
           <BookShareAction title={book.title} slug={book.slug} />
           {book.allowPdfDownload && book.originalPdfUrl && (
             <a
-              href={book.originalPdfUrl || '/api/books/' + encodeURIComponent(book.slug) + '/pdf'}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`/api/books/${encodeURIComponent(book.slug)}/pdf`}
               className="btn btn-secondary"
               style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.75rem', width: '100%' }}
             >
-              <Download size={16} /> Download original PDF
+              <Download size={16} /> Download PDF
             </a>
           )}
         </div>
@@ -122,11 +120,11 @@ async function BookDetailContent({ params }: BookPageProps) {
           <div className={styles.metaGrid}>
             <div className={styles.metaItem}>
               <span className={styles.metaLabel}>{book.chapters.length > 0 ? 'Total Chapters' : 'Format'}</span>
-              <span className={styles.metaVal}>{book.chapters.length > 0 ? `${book.totalChapters} Chapters` : (book.originalPdfUrl ? 'Download-only PDF' : 'No reader content')}</span>
+              <span className={styles.metaVal}>{book.chapters.length > 0 ? `${book.totalChapters} Chapters` : (book.allowPdfDownload && book.originalPdfUrl ? 'Download-only PDF' : 'No reader content')}</span>
             </div>
             <div className={styles.metaItem}>
               <span className={styles.metaLabel}>{book.chapters.length > 0 ? 'Reading Time' : 'Availability'}</span>
-              <span className={styles.metaVal}>{book.chapters.length > 0 ? `~${hours} Hours` : (book.originalPdfUrl ? 'PDF download' : 'Not available')}</span>
+              <span className={styles.metaVal}>{book.chapters.length > 0 ? `~${hours} Hours` : (book.allowPdfDownload && book.originalPdfUrl ? 'PDF download' : 'Not available')}</span>
             </div>
             <div className={styles.metaItem}>
               <span className={styles.metaLabel}>Edition</span>
