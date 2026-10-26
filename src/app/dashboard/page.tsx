@@ -19,8 +19,6 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import styles from './dashboard.module.css';
 
-export const instant = false;
-
 export const metadata = {
   title: 'Reader Dashboard — AXLY Books',
   description: 'Your personalized reading space, bookmarks, and progress tracking on AXLY Books.',
