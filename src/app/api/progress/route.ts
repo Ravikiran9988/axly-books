@@ -9,6 +9,7 @@ interface StoredProgressItem {
   bookSlug: string;
   lastChapterNumber: number;
   lastChapterSlug: string;
+  lastChapterTitle?: string;
   percentComplete: number;
   lastReadTimestamp: number;
 }
@@ -62,6 +63,7 @@ export async function GET(request: Request) {
             bookSlug: r.book.slug,
             lastChapterNumber: r.chapter.chapterNumber,
             lastChapterSlug: r.chapter.slug,
+            lastChapterTitle: r.chapter.title,
             percentComplete: r.progress.progressPercentage,
             lastReadTimestamp: new Date(r.progress.lastReadAt).getTime(),
           },
@@ -84,6 +86,7 @@ export async function GET(request: Request) {
             bookSlug: r.book.slug,
             lastChapterNumber: r.chapter.chapterNumber,
             lastChapterSlug: r.chapter.slug,
+            lastChapterTitle: r.chapter.title,
             percentComplete: r.progress.progressPercentage,
             lastReadTimestamp: new Date(r.progress.lastReadAt).getTime(),
           };
@@ -131,7 +134,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { bookSlug, chapterSlug, chapterNumber, progressPercentage, lastReadAnchor } =
+    const { bookSlug, chapterSlug, chapterNumber, chapterTitle, progressPercentage, lastReadAnchor } =
       parseResult.data;
     const now = new Date();
 
@@ -190,6 +193,7 @@ export async function POST(request: Request) {
           bookSlug,
           lastChapterNumber: chapter.chapterNumber,
           lastChapterSlug: chapter.slug,
+          lastChapterTitle: chapter.title,
           percentComplete: progressPercentage,
           lastReadTimestamp: now.getTime(),
         },
@@ -202,6 +206,7 @@ export async function POST(request: Request) {
       bookSlug,
       lastChapterNumber: chapterNumber,
       lastChapterSlug: chapterSlug,
+      lastChapterTitle: chapterTitle || `Chapter ${chapterNumber}`,
       percentComplete: progressPercentage,
       lastReadTimestamp: now.getTime(),
     };
