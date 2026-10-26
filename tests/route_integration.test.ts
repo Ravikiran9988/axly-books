@@ -6,7 +6,7 @@ import { POST as registerHandler } from '../src/app/api/auth/register/route';
 import { POST as loginHandler } from '../src/app/api/auth/login/route';
 import { GET as meHandler } from '../src/app/api/auth/me/route';
 import { POST as logoutHandler } from '../src/app/api/auth/logout/route';
-import { POST as forgotPasswordHandler } from '../src/app/api/auth/forgot-password/route';
+import { POST as forgotPasswordHandler, createAndSendResetEmail } from '../src/app/api/auth/forgot-password/route';
 import { POST as resetPasswordHandler } from '../src/app/api/auth/reset-password/route';
 
 import { GET as adminOverviewHandler } from '../src/app/api/admin/overview/route';
@@ -411,11 +411,13 @@ async function runRealRouteIntegrationTests() {
   // =========================================================================
   console.log('\n▶ Scenario 5: Password Recovery Security & Hash Lifecycle');
   {
-    // 5.1 Request reset token
+    // 5.1 Request a reset without an email provider configured.
+    // The endpoint accepts requests uniformly but must not create a usable token
+    // unless the deferred email workflow can actually run.
+    const priorResetHashes = [...inMemoryStore.resets.keys()].sort();
     const forgotReq = createJsonRequest('http://localhost:3000/api/auth/forgot-password', 'POST', {
       email: readerEmail,
     });
-    // Keep tests hermetic even if a developer has a real Resend key in their shell.
     const forgotRes = await (async () => {
       const previousResendKey = process.env.RESEND_API_KEY;
       const previousAxlyResendKey = process.env.AXLY_BOOKS_RESEND_API_KEY;
@@ -442,103 +444,75 @@ async function runRealRouteIntegrationTests() {
     const forgotData = await forgotRes.json();
     assert.strictEqual(forgotData.requestAccepted, true, 'Request acceptance must be distinct from email delivery');
     assert(!forgotData.message.includes('have been dispatched'), 'Response must not claim email was dispatched');
+    assert.deepStrictEqual(
+      [...inMemoryStore.resets.keys()].sort(),
+      priorResetHashes,
+      'A missing email provider must not create a usable reset token'
+    );
 
-    // Find the generated reset token from inMemoryStore for verification
-    let resetRawToken = '';
-    for (const [hash, resetRec] of inMemoryStore.resets.entries()) {
-      if (resetRec.userId === readerUserId && !resetRec.used) {
-        // Find raw token by matching hash
-        resetRawToken = hash; // in memory store key is hash
-        break;
-      }
-    }
-    assert(resetRawToken.length > 0, 'Password reset token should be registered in store');
-
-    // 5.2 Reset password with invalid token
+    // 5.2 Reset password with invalid token.
     const invalidResetReq = createJsonRequest('http://localhost:3000/api/auth/reset-password', 'POST', {
       token: 'completely-invalid-token-12345',
       newPassword: 'BrandNewSecurePassword2026!',
     });
     const invalidResetRes = await resetPasswordHandler(invalidResetReq);
     assert.strictEqual(invalidResetRes.status, 400, 'Invalid reset token must be rejected with 400');
-    console.log('  ✔ Invalid password reset token safely rejected.');
+    console.log('  ✔ Reset requests return a generic response and no token is stored without delivery configuration.');
 
-    // 5.3 Provider non-2xx must not be treated as a successful delivery.
-    // The public response remains generic to avoid account-enumeration leaks.
+    // 5.3 Provider non-2xx must not be treated as successful delivery.
+    // Test the deferred worker directly because Next.after() completes outside this
+    // handler's synchronous return path in production.
     const previousNodeEnv = process.env.NODE_ENV;
     const previousDatabaseUrl = process.env.DATABASE_URL;
-    const previousResendKey = process.env.RESEND_API_KEY;
-    const previousAppUrl = process.env.NEXT_PUBLIC_APP_URL;
     const originalFetch = globalThis.fetch;
     const existingResetHashes = [...inMemoryStore.resets.keys()].sort();
 
     try {
       Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, enumerable: true, writable: true });
       delete process.env.DATABASE_URL;
-      process.env.RESEND_API_KEY = 're_test_provider_failure';
-      process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
       globalThis.fetch = (async () => new Response('provider unavailable', { status: 503 })) as typeof fetch;
 
-      const providerFailureReq = createJsonRequest('http://localhost:3000/api/auth/forgot-password', 'POST', {
-        email: readerEmail,
-      });
-      const providerFailureRes = await forgotPasswordHandler(providerFailureReq);
-      assert.strictEqual(providerFailureRes.status, 202, 'Reset request response must remain generic when provider fails');
-      const providerFailureData = await providerFailureRes.json();
-      assert.strictEqual(providerFailureData.requestAccepted, true);
-      assert(!providerFailureData.message.includes('have been dispatched'), 'Must not claim a failed email was dispatched');
+      await createAndSendResetEmail(
+        readerEmail,
+        're_test_provider_failure',
+        'http://localhost:3000',
+        'AXLY Books <onboarding@resend.dev>'
+      );
       assert.deepStrictEqual(
         [...inMemoryStore.resets.keys()].sort(),
         existingResetHashes,
         'Undelivered reset token must be deleted when provider rejects the email'
       );
-      console.log('  ✔ Resend non-2xx response is checked; undelivered token is invalidated without account enumeration.');
+      console.log('  ✔ Resend non-2xx response is checked and undelivered reset tokens are invalidated.');
     } finally {
       globalThis.fetch = originalFetch;
       if (previousNodeEnv === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
       else Object.defineProperty(process.env, 'NODE_ENV', { value: previousNodeEnv, configurable: true, enumerable: true, writable: true });
       if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
       else process.env.DATABASE_URL = previousDatabaseUrl;
-      if (previousResendKey === undefined) delete process.env.RESEND_API_KEY;
-      else process.env.RESEND_API_KEY = previousResendKey;
-      if (previousAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
-      else process.env.NEXT_PUBLIC_APP_URL = previousAppUrl;
     }
   }
 
   // =========================================================================
-  // SCENARIO 6: PUBLIC BOOK DISCOVERY & VISIBILITY ENFORCEMENT
+  // SCENARIO 6: PUBLIC CATALOGUE DOES NOT DEPEND ON DEMO SEED DATA
   // =========================================================================
   console.log('\n▶ Scenario 6: Public Book Discovery & Visibility Enforcement');
   {
-    // 6.1 Public visitor queries published catalogue
     const publicReq = createJsonRequest('http://localhost:3000/api/books', 'GET');
     const publicRes = await booksGetHandler(publicReq);
     assert.strictEqual(publicRes.status, 200, 'Public catalogue must be accessible to visitors');
     const publicData = await publicRes.json();
     assert(publicData.success === true, 'Public books response must indicate success');
-    assert(publicData.books.length > 0, 'Public catalogue must contain published books');
-    for (const b of publicData.books) {
-      assert.strictEqual(b.isPublished, true, 'Public visitor MUST ONLY see published books');
-    }
-    console.log('  ✔ Public library catalogue returns exclusively published books.');
+    assert(Array.isArray(publicData.books), 'Public catalogue must return a books array');
+    assert.strictEqual(publicData.books.length, 0, 'The static fallback must not reintroduce demo publications');
+    console.log('  ✔ Public catalogue returns a valid empty state when no real database publications exist.');
 
-    // 6.2 Public visitor loads book by slug
-    const slugReq = createJsonRequest('http://localhost:3000/api/books/ml-deep-learning-fundamentals', 'GET');
-    const slugRes = await bookSlugHandler(slugReq, { params: Promise.resolve({ slug: 'ml-deep-learning-fundamentals' }) });
-    assert.strictEqual(slugRes.status, 200, 'Published book must be viewable by visitor');
-    const slugData = await slugRes.json();
-    assert.strictEqual(slugData.book.slug, 'ml-deep-learning-fundamentals');
-    assert.strictEqual(slugData.book.author, 'Slayer');
-    assert.strictEqual(slugData.book.authorRealName, 'Medicharla Ravi Kiran');
-    assert.strictEqual(slugData.book.isFree, true);
-    console.log('  ✔ Visitor retrieves published book details with author attribution & free access.');
-
-    // 6.3 Non-existent or unpublished book returns 404 to visitor
-    const missingReq = createJsonRequest('http://localhost:3000/api/books/non-existent-draft-slug', 'GET');
-    const missingRes = await bookSlugHandler(missingReq, { params: Promise.resolve({ slug: 'non-existent-draft-slug' }) });
-    assert.strictEqual(missingRes.status, 404, 'Non-existent or draft books must return 404 to visitors');
-    console.log('  ✔ Non-existent and unpublished draft books safely hidden behind 404.');
+    const legacyDemoReq = createJsonRequest('http://localhost:3000/api/books/ml-deep-learning-fundamentals', 'GET');
+    const legacyDemoRes = await bookSlugHandler(legacyDemoReq, {
+      params: Promise.resolve({ slug: 'ml-deep-learning-fundamentals' }),
+    });
+    assert.strictEqual(legacyDemoRes.status, 404, 'Removed demo publication must not be served from static fallback');
+    console.log('  ✔ Removed sample book is not exposed by the public detail API.');
   }
 
   console.log('\n🎉 ALL GENUINE ROUTE INTEGRATION TESTS PASSED PERFECTLY!\n');

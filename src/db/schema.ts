@@ -8,7 +8,7 @@ import {
   real,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 // --- Users Table ---
 export const users = pgTable('users', {
@@ -43,9 +43,11 @@ export const passwordResets = pgTable('password_resets', {
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   usedAt: timestamp('used_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  // The SQL migration removes historical duplicates before creating this index.
+  uniqueIndex('password_resets_active_user_idx').on(table.userId).where(sql`${table.usedAt} IS NULL`),
+]);
 
-// --- Authors Table ---
 export const authors = pgTable('authors', {
   id: text('id').primaryKey(),
   penName: text('pen_name').notNull().unique(), // 'Slayer'

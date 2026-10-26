@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq, or } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
+import { isBookPublishable } from '@/lib/publicationRules';
 
 export async function PATCH(
   request: Request,
@@ -46,11 +47,15 @@ export async function PATCH(
           .select({ id: schema.chapters.id, isPublished: schema.chapters.isPublished })
           .from(schema.chapters)
           .where(eq(schema.chapters.bookId, book.id));
-        const publishedChapters = chapters.filter((chapter) => chapter.isPublished);
-
-        if (publishedChapters.length === 0) {
+        const hasPublishedChapter = chapters.some((chapter) => chapter.isPublished);
+        if (!isBookPublishable({
+          totalChapters: chapters.length,
+          hasPublishedChapter,
+          allowPdfDownload: book.allowPdfDownload,
+          originalPdfPath: book.originalPdfPath,
+        })) {
           return NextResponse.json(
-            { error: 'Cannot publish a book without at least one published chapter. Publish a chapter first, then try again.' },
+            { error: 'Publish at least one chapter for online reading, or enable downloads for a private original PDF.' },
             { status: 400 }
           );
         }

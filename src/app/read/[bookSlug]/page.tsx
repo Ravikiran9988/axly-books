@@ -31,7 +31,7 @@ export default async function ReaderPage({ params }: ReaderPageProps) {
   const { bookSlug } = await params;
   const book = await getServerBookBySlug(bookSlug);
 
-  if (!book) {
+  if (!book || book.chapters.length === 0) {
     notFound();
   }
 

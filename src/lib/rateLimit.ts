@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { isIP } from 'node:net';
 import { db, isDatabaseConfigured } from '@/db';
 
 interface RateLimitRecord {
@@ -165,18 +166,16 @@ export async function checkRateLimitAsync(
  * headers and validate the result; configure trusted proxy handling at deploy time.
  */
 export function getClientIp(headers: Headers): string {
-  const vercelIp = headers.get('x-vercel-ip');
-  if (vercelIp && isValidIpFormat(vercelIp.trim())) return vercelIp.trim();
-
-  const cfIp = headers.get('cf-connecting-ip');
-  if (cfIp && isValidIpFormat(cfIp.trim())) return cfIp.trim();
-
-  const realIp = headers.get('x-real-ip');
-  if (realIp && isValidIpFormat(realIp.trim())) return realIp.trim();
-
-  const forwarded = headers.get('x-forwarded-for');
-  if (forwarded) {
-    const candidate = forwarded.split(',')[0]?.trim();
+  // Vercel overwrites these headers at its edge, making them safer for rate limiting
+  // than a caller-supplied arbitrary header. Do not trust x-vercel-ip: that prefix is
+  // used for geolocation headers (for example, x-vercel-ip-country), not the client IP.
+  const trustedCandidates = [
+    headers.get('x-real-ip'),
+    headers.get('x-vercel-forwarded-for'),
+    headers.get('x-forwarded-for'),
+  ];
+  for (const value of trustedCandidates) {
+    const candidate = value?.split(',')[0]?.trim();
     if (candidate && isValidIpFormat(candidate)) return candidate;
   }
 
@@ -184,8 +183,5 @@ export function getClientIp(headers: Headers): string {
 }
 
 function isValidIpFormat(ip: string): boolean {
-  if (!ip || ip.length > 45) return false;
-  const isIpv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
-  const isIpv6 = ip.includes(':') && /^[0-9a-fA-F:]+$/.test(ip);
-  return isIpv4 || isIpv6;
+  return isIP(ip) !== 0;
 }

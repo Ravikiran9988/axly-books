@@ -1,7 +1,10 @@
 import { MetadataRoute } from 'next';
-import { PUBLISHED_BOOKS } from '@/data/booksData';
+import { connection } from 'next/server';
+import { getServerPublishedBooks } from '@/services/serverBookService';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Database-backed sitemap entries require request-time IO with Cache Components enabled.
+  await connection();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://books.axly.in';
   const lastModified = new Date();
 
@@ -45,14 +48,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   const bookRoutes: MetadataRoute.Sitemap = [];
-  PUBLISHED_BOOKS.forEach((book) => {
+  const books = await getServerPublishedBooks();
+  books.forEach((book) => {
     bookRoutes.push({
       url: `${baseUrl}/books/${book.slug}`,
       lastModified,
       changeFrequency: 'weekly',
       priority: 0.9,
     });
-    bookRoutes.push({
+    if (book.chapters.length > 0) bookRoutes.push({
       url: `${baseUrl}/read/${book.slug}`,
       lastModified,
       changeFrequency: 'weekly',

@@ -5,6 +5,7 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 import { bookUpdateSchema } from '@/lib/validations';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
+import { isBookPublishable } from '@/lib/publicationRules';
 
 export async function GET(
   request: Request,
@@ -111,18 +112,18 @@ export async function PUT(
 
       // Prevent the edit endpoint from bypassing the publication guard used by the Publish action.
       if (updates.isPublished === true && !targetBook.isPublished) {
-        const publishedChapters = await db
-          .select({ id: schema.chapters.id })
+        const existingChapters = await db
+          .select({ id: schema.chapters.id, isPublished: schema.chapters.isPublished })
           .from(schema.chapters)
-          .where(and(
-            eq(schema.chapters.bookId, targetBook.id),
-            eq(schema.chapters.isPublished, true)
-          ))
-          .limit(1);
-
-        if (publishedChapters.length === 0) {
+          .where(eq(schema.chapters.bookId, targetBook.id));
+        if (!isBookPublishable({
+          totalChapters: existingChapters.length,
+          hasPublishedChapter: existingChapters.some((chapter) => chapter.isPublished),
+          allowPdfDownload: targetBook.allowPdfDownload,
+          originalPdfPath: targetBook.originalPdfPath,
+        })) {
           return NextResponse.json(
-            { error: 'Cannot publish a book without at least one published chapter. Publish a chapter first, then try again.' },
+            { error: 'Publish at least one chapter for online reading, or enable downloads for a private original PDF.' },
             { status: 400 }
           );
         }

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { put, del } from '@vercel/blob';
-import { asc, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 
@@ -14,13 +14,6 @@ function slugify(value: string): string {
 function field(form: FormData, key: string, fallback = ''): string {
   const value = form.get(key);
   return typeof value === 'string' ? value.trim() : fallback;
-}
-function uniqueSlug(base: string, taken: Set<string>): string {
-  let value = base;
-  let suffix = 2;
-  while (taken.has(value)) value = base.slice(0, 108) + '-' + suffix++;
-  taken.add(value);
-  return value;
 }
 
 export async function POST(request: Request) {
@@ -51,13 +44,14 @@ export async function POST(request: Request) {
     const slug = slugify(field(form, 'slug') || title);
     const subtitle = field(form, 'subtitle');
     const category = field(form, 'category', 'General') || 'General';
-    const description = field(form, 'description') || 'A free book imported from an original PDF. Review the extracted chapters before publishing.';
+    const description = field(form, 'description') || 'A free book provided as a downloadable original PDF.';
     const synopsis = field(form, 'synopsis') || description;
     const edition = field(form, 'edition', 'First Edition (2026)') || 'First Edition (2026)';
     const requestedYear = Number(field(form, 'publishedYear', String(new Date().getFullYear())));
     const publishedYear = Number.isInteger(requestedYear) && requestedYear >= 2000 && requestedYear <= 2100 ? requestedYear : new Date().getFullYear();
     const tags = field(form, 'tags').split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 20);
-    const allowPdfDownload = field(form, 'allowPdfDownload') === 'true';
+    // This route is explicitly the PDF-download-only import option; downloads must be enabled.
+    const allowPdfDownload = true;
     const license = field(form, 'license') === 'Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)'
       ? 'Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)'
       : 'All Rights Reserved';
@@ -90,19 +84,12 @@ export async function POST(request: Request) {
       allowPdfDownload, license, licenseUrl, originalPdfPath: uploadedPath, createdAt: now, updatedAt: now,
     });
 
-
-    const chapters = await db.select({
-      id: schema.chapters.id, chapterNumber: schema.chapters.chapterNumber, title: schema.chapters.title,
-      slug: schema.chapters.slug, summary: schema.chapters.summary,
-      estimatedReadingTimeMinutes: schema.chapters.estimatedReadingTimeMinutes,
-    }).from(schema.chapters).where(eq(schema.chapters.bookId, createdBookId)).orderBy(asc(schema.chapters.chapterNumber));
-
     return NextResponse.json({
       success: true,
       book: { id: createdBookId, slug, title, allowPdfDownload, isPublished: false },
       pageCount: 0, importedTextCharacters: 0,
       chapters: [],
-      message: 'PDF saved as a download-only draft. No online-reading chapters were created. Publish the book and enable PDF downloads when ready.',
+      message: 'PDF saved as a downloadable draft. No online-reading chapters were created. Publish the book when ready.',
     }, { status: 201 });
   } catch (error: unknown) {
     if (createdBookId) {

@@ -31,7 +31,6 @@ export default function PdfImportForm() {
   const [edition, setEdition] = useState('First Edition (2026)');
   const [publishedYear, setPublishedYear] = useState(String(new Date().getFullYear()));
   const [tags, setTags] = useState('');
-  const [allowPdfDownload, setAllowPdfDownload] = useState(false);
   const [license, setLicense] = useState('All Rights Reserved');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -55,7 +54,7 @@ export default function PdfImportForm() {
       form.set('subtitle', subtitle); form.set('category', category);
       form.set('description', description); form.set('synopsis', synopsis);
       form.set('edition', edition); form.set('publishedYear', publishedYear);
-      form.set('tags', tags); form.set('allowPdfDownload', String(allowPdfDownload));
+      form.set('tags', tags);
       form.set('license', license);
       const response = await fetch('/api/admin/books/import', { method: 'POST', body: form });
       const payload = await response.json();
@@ -80,7 +79,7 @@ export default function PdfImportForm() {
           <div>
             <div className={styles.alertBox + ' ' + styles.alertSuccess} role="status" style={{ marginBottom: '1.25rem' }}><CheckCircle2 size={18} /><span>{result.message}</span></div>
             <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', fontWeight: 700 }}>{result.book.title}</h3>
-            <p style={{ color: 'var(--text-muted)', margin: '0.4rem 0 1rem', fontSize: '0.9rem' }}>Download-only PDF · {result.book.allowPdfDownload ? 'PDF downloads enabled' : 'PDF downloads disabled until enabled'}</p>
+            <p style={{ color: 'var(--text-muted)', margin: '0.4rem 0 1rem', fontSize: '0.9rem' }}>Download-only PDF · {result.book.allowPdfDownload ? 'PDF downloads enabled' : 'PDF downloads unavailable'}</p>
             <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '1.25rem' }}>
               {result.chapters.map((chapter) => (
                 <div key={chapter.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', padding: '0.85rem 1rem', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -98,14 +97,14 @@ export default function PdfImportForm() {
               <Link href="/admin/books" className="btn btn-ghost btn-sm">Back to book list</Link>
               <a href={'/api/books/' + encodeURIComponent(result.book.slug) + '/pdf'} className="btn btn-ghost btn-sm">Download original PDF (admin)</a>
             </div>
-            <p style={{ marginTop: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>The book is a draft. Nothing is visible to readers until you publish it and enable PDF downloads.</p>
+            <p style={{ marginTop: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>The book is a draft. Nothing is visible to readers until you publish it. PDF downloads are enabled automatically for this import type.</p>
           </div>
         ) : (
           <form onSubmit={submit} style={{ display: 'grid', gap: '1rem' }}>
             <div className="form-group">
               <label className="form-label" htmlFor="pdf-file">Original PDF *</label>
               <input id="pdf-file" type="file" accept="application/pdf,.pdf" required onChange={(event) => onFileSelected(event.target.files?.[0] ?? null)} className="form-input" />
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>Maximum 4 MB. Text-based PDFs work best. Scanned/image-only PDFs require OCR first.</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>Maximum 4 MB. The original PDF is stored as-is for downloading; no text extraction or OCR is performed.</p>
               {file && <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.35rem' }}>{file.name} · {(file.size / (1024 * 1024)).toFixed(2)} MB</p>}
             </div>
             <div className={styles.formGrid}>
@@ -120,7 +119,6 @@ export default function PdfImportForm() {
               <div className="form-group" style={{ gridColumn: '1 / -1' }}><label className="form-label" htmlFor="pdf-synopsis">Synopsis *</label><textarea id="pdf-synopsis" className="form-input" rows={4} required minLength={10} maxLength={10000} value={synopsis} onChange={(e) => setSynopsis(e.target.value)} placeholder="A longer overview for the book detail page." /></div>
               <div className="form-group" style={{ gridColumn: '1 / -1' }}><label className="form-label" htmlFor="pdf-tags">Tags (comma-separated)</label><input id="pdf-tags" className="form-input" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="Python, Machine Learning, Beginners" /></div>
             </div>
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}><input type="checkbox" checked={allowPdfDownload} onChange={(e) => setAllowPdfDownload(e.target.checked)} style={{ marginTop: '0.25rem' }} />Allow readers to download the original PDF after publication</label>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>The original PDF is stored privately. This importer creates a draft; it never publishes extracted text automatically.</p>
             <button type="submit" className="btn btn-primary btn-sm" disabled={busy} style={{ justifySelf: 'start' }}><UploadCloud size={16} />{busy ? 'Importing PDF…' : 'Import PDF and create draft'}</button>
           </form>

@@ -31,14 +31,15 @@
 - Public catalogue and book detail pages for published books.
 - Chapter-based interactive reader with a chapter drawer, keyboard navigation, reading themes (dark, light, and sepia), and typography controls.
 - Reader dashboard with saved reading progress and bookmarks.
-- Original PDF link on book pages when the author enables it and configures a PDF URL.
+- Download-only PDF publications served through a permission-checked private download route when downloads are enabled.
 
 ### Book management and PDF import
 - Administrator-only CMS for creating and editing book metadata, covers, chapters, and chapter order.
 - Draft and publication status controls to keep unfinished content out of the public catalogue.
-- Import an existing searchable PDF instead of retyping the manuscript.
-- Extract PDF text in the browser, review and edit detected chapter boundaries, preview the result, and import editable chapters along with the original PDF URL.
-- English OCR fallback for scanned pages. PDF extraction and chapter detection are heuristic, so manually review the imported book before publication.
+- Exactly two import options: **PDF — download only** and **Markdown — read online**.
+- PDF uploads are stored in private Vercel Blob storage and create a draft with no reader chapters.
+- A single Markdown (`.md`) manuscript is split by H1 headings; H2 headings are used when H1 headings are absent or the only H1 repeats the book title. If there are no section headings, the manuscript remains one Full Book entry.
+- Markdown source text is preserved and rendered with a safe React Markdown renderer that does not execute embedded HTML. Review the generated chapter titles and rendered content before publication.
 
 ### Chapter discussions
 - Chapter-specific comments and one-level replies.
@@ -94,7 +95,7 @@ flowchart TD
 - npm
 - A PostgreSQL database such as Neon for persistent account, reader, and CMS data
 - A Vercel Blob token if you want to test cover uploads or PDF import
-- Resend credentials if you want to test production-style password recovery emails
+- Resend credentials and a configured sender if you want to test password recovery emails
 
 ### 1. Get the code and install dependencies
 
@@ -123,7 +124,7 @@ Optional integrations:
 
 ```env
 BLOB_READ_WRITE_TOKEN="your-vercel-blob-token"
-RESEND_API_KEY="your-resend-api-key"
+RESEND_API_KEY="your-resend-api-key" # or AXLY_BOOKS_RESEND_API_KEY
 EMAIL_FROM="AXLY Books <noreply@books.axly.in>"
 ```
 
@@ -157,26 +158,26 @@ Run the command only with the intended database configured. Public registration 
 
 ---
 
-## PDF import: workflow and limitations
+## Book import: supported formats
 
-1. Configure `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN` for the existing upload features, and a separate **private** Vercel Blob store using `PDF_BLOB_READ_WRITE_TOKEN`.
-2. Apply the database migrations with `npm run db:migrate`.
-3. Sign in as an administrator and open **Admin → Book Management → Import from PDF** (or `/admin/books/import`).
-4. Upload a text-based PDF (maximum **4 MB**), review the detected chapter titles and text, and then edit the draft chapters.
-5. Imports always create an unpublished book and unpublished chapters. Review everything before publishing.
+1. Configure `DATABASE_URL` and a separate **private** Vercel Blob store using `PDF_BLOB_READ_WRITE_TOKEN`. The public `BLOB_READ_WRITE_TOKEN` remains for existing cover/image uploads.
+2. Apply checked-in migrations with `npm run db:migrate`.
+3. Sign in as an administrator and open `/admin/books/import` to choose one of exactly two options.
+4. **PDF — download only:** Upload a PDF of at most **4 MB**. The original is stored privately, downloads are enabled automatically, and no online-reader chapters are extracted. Publish the draft when ready.
+5. **Markdown — read online:** Upload one `.md` file of at most **2 MB**. H1 headings become chapters; H2 headings are used when H1 headings are absent or the only H1 matches the book title. A manuscript without section headings stays as one Full Book entry. Review the imported draft before publishing.
 
 ### Original PDF storage and access
 
 New imports store the original PDF in a **private Vercel Blob store**. The database holds its private pathname; public APIs do not expose that pathname. Original PDF downloads go through `/api/books/[slug]/pdf`, which checks publication status and the download permission before reading private storage. Set `PDF_BLOB_READ_WRITE_TOKEN` to the token for that separate private Blob store.
 
-Previously imported PDFs that use `original_pdf_url` in a public Blob store are not migrated automatically by this change. Their existing URLs may remain accessible to anyone who has the URL, regardless of the reader-facing download toggle. Review or re-import those files if storage-level privacy is required.
+Previously imported PDFs that use `original_pdf_url` in a public Blob store remain public until you migrate them. Back up the database and both Blob stores first, then configure `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN` for the old public store, and `PDF_BLOB_READ_WRITE_TOKEN` for the private store. Run `npm run db:migrate-legacy-pdfs` for a dry run; inspect its count and ensure every listed file is safe to migrate. Then run `npm run db:migrate-legacy-pdfs -- --apply`. The script copies PDFs to private storage, updates their database path, and attempts to delete the old public blob. If deletion fails, the script reports the affected book for manual cleanup. This command is opt-in and does not run automatically during deployment.
 
 ### Import limitations
-- Server-side text extraction relies on PDF objects and text layout; it is not a full PDF renderer. Some fonts, encodings, or layouts may extract imperfectly.
-- Scanned/image-only PDFs are not OCR'd by this importer. Export a searchable PDF or run OCR before importing.
-- The import is limited to 600 pages, 80 chapters, and 1.2 million extracted characters.
-- Images, diagrams, tables, page layout, and code formatting are not reconstructed automatically.
-- Chapter-heading detection is heuristic. Review all titles, summaries, order, and text before publishing.
+- PDF uploads are stored as original files; PDF text extraction and OCR are not part of the current download-only flow.
+- PDF uploads are limited to 4 MB. Compress the file if it exceeds this cap.
+- Markdown uploads are limited to 2 MB and 100 generated chapters/sections.
+- The reader supports Markdown headings, paragraphs, emphasis, links, lists, blockquotes, fenced code blocks, horizontal rules, and basic pipe tables. Advanced Markdown extensions and raw HTML rendering are intentionally not supported; preview the manuscript before publishing.
+- The Markdown splitter is heading-based rather than AI-generated. It preserves original manuscript text and does not invent chapter titles when no headings exist.
 
 ---
 
@@ -211,7 +212,7 @@ npm test
 npm run build
 ```
 
-The automated test suite covers validation and security behavior, reader journeys, route integration, PDF-import access controls, and chapter-comment protections. A passing test suite does not verify production environment variables, applied live migrations, Blob permissions, or the deployed user experience; perform a preview smoke test before release.
+The automated test suite covers validation and security behavior, reader journeys, route integration, publication eligibility, Markdown parsing, client-IP handling, PDF-import access controls, and chapter-comment protections. CI also applies every checked-in SQL migration to a disposable PostgreSQL database before running the tests. A passing test suite does not verify production environment variables, applied live migrations, Blob permissions, or the deployed user experience; perform a preview smoke test before release.
 
 ---
 
@@ -225,7 +226,7 @@ The automated test suite covers validation and security behavior, reader journey
    - `NEXT_PUBLIC_APP_URL` — use `https://books.axly.in` for production.
    - `BLOB_READ_WRITE_TOKEN` — used for the existing public Blob uploads and cover assets.
    - `PDF_BLOB_READ_WRITE_TOKEN` — required for the separate private Blob store used by newly imported original PDFs.
-   - `RESEND_API_KEY` and `EMAIL_FROM` — required for password-reset email delivery.
+   - `RESEND_API_KEY` (or `AXLY_BOOKS_RESEND_API_KEY`), `EMAIL_FROM`, and `NEXT_PUBLIC_APP_URL` — required for password-reset email delivery in production.
 5. Register the intended administrator and run `npm run admin:promote -- email@example.com` against the production database.
 6. Configure `books.axly.in` in Vercel Domains and follow the DNS values Vercel provides.
 
@@ -241,7 +242,7 @@ The currently documented publication is:
 - **Book content licence:** [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/)
 - **Topics:** classical machine learning, linear algebra, optimization, deep neural networks, CNNs, sequence modeling, transformers, and Generative AI.
 
-The book-content licence applies to the relevant published content; it does not automatically license the AXLY Books software codebase.
+The book-content licence applies only to the relevant published content. The AXLY Books software codebase is separately marked All Rights Reserved in `LICENSE`.
 
 ## Author
 
@@ -254,4 +255,4 @@ The book-content licence applies to the relevant published content; it does not 
 
 ---
 
-AXLY Books is intended to remain a free reading platform: no advertisements, paywalls, subscriptions, or book sales.
+Password-reset requests return a uniform response before account lookup and email delivery. Email sending runs after the response; reset tokens are not written to application logs. Configure Resend and `EMAIL_FROM` in production.\n\nAXLY Books is intended to remain a free reading platform: no advertisements, paywalls, subscriptions, or book sales.

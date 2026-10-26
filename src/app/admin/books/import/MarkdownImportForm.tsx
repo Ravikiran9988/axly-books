@@ -66,7 +66,7 @@ export default function MarkdownImportForm() {
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
         <UploadCloud size={24} color="var(--color-brand-cyan)" />
         <div><h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Upload Markdown manuscript</h2>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Upload one complete .md file. Heading levels # and ## become chapter/section entries; without headings, the manuscript becomes one reading section. Review the draft before publishing.</p>
+          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Upload one complete .md file. H1 headings become chapter entries; H2 headings are used when there are no H1s or the only H1 repeats the book title. Without section headings, the manuscript stays together as one Full Book entry. Review the draft before publishing.</p>
         </div>
       </div>
       {error && <div className={styles.alertBox + ' ' + styles.alertError} role="alert" style={{ marginBottom: '1rem' }}><AlertTriangle size={16} /><span>{error}</span></div>}
