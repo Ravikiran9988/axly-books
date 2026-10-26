@@ -5,8 +5,6 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
 import BooksManager from './BooksManager';
 
-export const instant = false;
-
 export const metadata = {
   title: 'Manage Books — AXLY Admin',
   description: 'Create, edit, publish, and delete digital books on AXLY Books.',
