@@ -26,14 +26,22 @@ export default function BookActions({ book }: BookActionsProps) {
     return () => unsubscribe();
   }, [book.slug]);
 
-  const hasProgress = progress && progress.percentComplete > 0;
+  // Use the chapter array as the source of truth for reader availability.
+  // totalChapters is a denormalized counter and can lag behind imported/edited chapters.
+  const chapters = Array.isArray(book.chapters)
+    ? book.chapters.filter((chapter) => chapter.isPublished !== false)
+    : [];
+  const hasChapters = chapters.length > 0;
+  const hasProgress = Boolean(hasChapters && progress && progress.percentComplete > 0);
   const continueUrl = hasProgress
-    ? `/read/${book.slug}?chapter=${progress.lastChapterSlug}`
-    : `/read/${book.slug}?chapter=${book.chapters[0]?.slug}`;
+    ? `/read/${book.slug}?chapter=${progress!.lastChapterSlug}`
+    : hasChapters
+      ? `/read/${book.slug}?chapter=${chapters[0].slug}`
+      : `/read/${book.slug}`;
 
   return (
     <div className={styles.quickActions}>
-      {hasProgress && book.chapters.length > 0 && (
+      {hasProgress && progress && (
         <div className={styles.progressNotice}>
           <div className={styles.progressNoticeHeader}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -64,14 +72,16 @@ export default function BookActions({ book }: BookActionsProps) {
         </div>
       )}
 
-      {book.chapters.length > 0 && <Link href={continueUrl} className="btn btn-primary btn-lg" style={{ width: '100%' }}>
-        <BookOpen size={18} />
-        <span>{hasProgress ? 'Continue Reading' : 'Start Reading'}</span>
-      </Link>}
+      {hasChapters && (
+        <Link href={continueUrl} className="btn btn-primary btn-lg" style={{ width: '100%' }}>
+          <BookOpen size={18} />
+          <span>{hasProgress ? 'Continue Reading' : 'Start Reading'}</span>
+        </Link>
+      )}
 
-      {hasProgress && book.chapters.length > 0 && (
+      {hasProgress && (
         <Link
-          href={`/read/${book.slug}?chapter=${book.chapters[0]?.slug}`}
+          href={`/read/${book.slug}?chapter=${chapters[0].slug}`}
           className="btn btn-secondary btn-sm"
           style={{ width: '100%' }}
         >
