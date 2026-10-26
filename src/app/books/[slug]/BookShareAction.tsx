@@ -52,15 +52,22 @@ export default function BookShareAction({ title, slug, variant = 'full' }: BookS
   }
 
   return (
-    <div style={{ marginTop: 0, display: variant === 'compact' ? 'inline-flex' : 'block' }}>
+    <div
+      style={{
+        marginTop: 0,
+        display: variant === 'compact' ? 'flex' : 'block',
+        width: variant === 'compact' ? '100%' : undefined,
+        minWidth: 0,
+      }}
+    >
       <button
         type="button"
         onClick={handleShare}
         className={`btn btn-secondary ${variant === 'compact' ? 'btn-sm' : ''}`}
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          gap: '0.5rem', width: variant === 'full' ? '100%' : 'auto',
-          whiteSpace: 'nowrap', flexShrink: 0,
+          gap: '0.5rem', width: '100%', minWidth: 0, boxSizing: 'border-box',
+          whiteSpace: 'normal', flexShrink: 1, overflowWrap: 'anywhere',
         }}
         aria-live="polite"
         aria-label={copied ? 'Book link copied' : error ? 'Could not share book link' : `Share ${title}`}
