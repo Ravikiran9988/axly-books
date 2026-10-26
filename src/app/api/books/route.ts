@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
-import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -10,10 +9,6 @@ export async function GET(request: Request) {
     const query = searchParams.get('q')?.toLowerCase().trim() || '';
     const category = searchParams.get('category');
     const sort = searchParams.get('sort') || 'recent';
-
-    // Check if requesting user is an administrator
-    const user = await getCurrentUser(request);
-    const isAdmin = user?.role === 'admin';
 
     let booksList: Array<{
       id: string;
@@ -41,16 +36,12 @@ export async function GET(request: Request) {
     }> = [];
 
     if (isDatabaseConfigured() && db) {
-      if (isAdmin) {
-        // Admin can request all books
-        booksList = await db.select().from(schema.books);
-      } else {
-        // Public and normal readers only see published books
-        booksList = await db
-          .select()
-          .from(schema.books)
-          .where(eq(schema.books.isPublished, true));
-      }
+      // The public catalogue only exposes published books. Admin tools use
+      // /api/admin/books for draft and unpublished records.
+      booksList = await db
+        .select()
+        .from(schema.books)
+        .where(eq(schema.books.isPublished, true));
     } else {
       // In-memory / data fallback
       booksList = PUBLISHED_BOOKS.map((b) => ({
@@ -72,7 +63,7 @@ export async function GET(request: Request) {
         totalChapters: b.totalChapters,
         estimatedReadingTimeMinutes: b.estimatedReadingTimeMinutes,
         allowPdfDownload: b.allowPdfDownload,
-      })).filter((b) => (isAdmin ? true : b.isPublished));
+      })).filter((b) => b.isPublished);
     }
 
     // Apply filtering
@@ -99,22 +90,46 @@ export async function GET(request: Request) {
       booksList.sort((a, b) => (b.publishedYear || 2026) - (a.publishedYear || 2026));
     }
 
-    const mappedBooks = booksList.map((b) => ({
-      ...b,
-      // Never send private Blob paths to readers; private downloads go through an authenticated proxy route.
-      originalPdfPath: null,
-      coverImage: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
-      coverImageUrl: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
-      author: b.authorName || 'Slayer',
-      publicationStatus: b.status || 'Available Free',
-      originalPdfUrl: b.allowPdfDownload
-        ? b.originalPdfPath
-          ? `/api/books/${encodeURIComponent(b.slug)}/pdf`
-          : b.originalPdfUrl ?? null
-        : null,
-      license: b.license || 'All Rights Reserved',
-      licenseUrl: b.licenseUrl ?? null,
-    }));
+    const publishedChapterCounts = new Map<string, number>();
+    if (isDatabaseConfigured() && db && booksList.length > 0) {
+      const chapterRows = await db
+        .select({ bookId: schema.chapters.bookId })
+        .from(schema.chapters)
+        .where(eq(schema.chapters.isPublished, true));
+      for (const chapter of chapterRows) {
+        publishedChapterCounts.set(
+          chapter.bookId,
+          (publishedChapterCounts.get(chapter.bookId) ?? 0) + 1
+        );
+      }
+    }
+    const staticChapterCounts = new Map(
+      PUBLISHED_BOOKS.map((book) => [book.id, book.chapters.length] as const)
+    );
+
+    const mappedBooks = booksList.map((b) => {
+      const chapterCount = isDatabaseConfigured() && db
+        ? publishedChapterCounts.get(b.id) ?? 0
+        : staticChapterCounts.get(b.id) ?? b.totalChapters ?? 0;
+
+      return {
+        ...b,
+        // Never send private Blob paths to readers; private downloads go through an authenticated proxy route.
+        originalPdfPath: null,
+        totalChapters: chapterCount,
+        coverImage: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
+        coverImageUrl: b.coverImageUrl || '/images/ml-deep-learning-cover.jpg',
+        author: b.authorName || 'Slayer',
+        publicationStatus: b.status || 'Available Free',
+        originalPdfUrl: b.allowPdfDownload
+          ? b.originalPdfPath
+            ? `/api/books/${encodeURIComponent(b.slug)}/pdf`
+            : b.originalPdfUrl ?? null
+          : null,
+        license: b.license || 'All Rights Reserved',
+        licenseUrl: b.licenseUrl ?? null,
+      };
+    });
 
     return NextResponse.json({
       success: true,
