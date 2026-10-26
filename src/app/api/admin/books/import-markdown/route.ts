@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { asc, eq } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
+import { splitMarkdownIntoChapters } from '@/lib/markdownImport';
 
 const MAX_MARKDOWN_SIZE = 2 * 1024 * 1024;
 function slugify(value: string): string {
@@ -12,26 +13,6 @@ function slugify(value: string): string {
 function field(form: FormData, key: string, fallback = ''): string {
   const value = form.get(key);
   return typeof value === 'string' ? value.trim() : fallback;
-}
-function splitMarkdown(markdown: string) {
-  const normalized = markdown.replace(/\r\n?/g, '\n').trim();
-  const headingPattern = /^#{1,2}\s+(.+)\s*$/gm;
-  const headings = [...normalized.matchAll(headingPattern)];
-  if (!headings.length) {
-    return [{ title: 'Full Book', text: normalized }];
-  }
-  const parts: Array<{ title: string; text: string }> = [];
-  if (headings[0].index! > 0) {
-    const introduction = normalized.slice(0, headings[0].index!).trim();
-    if (introduction) parts.push({ title: 'Introduction', text: introduction });
-  }
-  headings.forEach((heading, index) => {
-    const start = heading.index! + heading[0].length;
-    const end = index + 1 < headings.length ? headings[index + 1].index! : normalized.length;
-    const text = normalized.slice(start, end).trim();
-    if (text) parts.push({ title: heading[1].trim(), text });
-  });
-  return parts.length ? parts : [{ title: 'Full Book', text: normalized }];
 }
 
 export async function POST(request: Request) {
@@ -52,7 +33,7 @@ export async function POST(request: Request) {
     }
     const markdown = await file.text();
     if (!markdown.trim()) return NextResponse.json({ error: 'The Markdown file contains no readable text.' }, { status: 400 });
-    const parsedChapters = splitMarkdown(markdown);
+    const parsedChapters = splitMarkdownIntoChapters(markdown);
     if (parsedChapters.length > 100) return NextResponse.json({ error: 'A book can contain at most 100 sections/chapters.' }, { status: 413 });
 
     const title = field(form, 'title') || file.name.replace(/\.md$/i, '').replace(/[_-]+/g, ' ').trim();
@@ -94,14 +75,11 @@ export async function POST(request: Request) {
         let suffix = 2;
         while (taken.has(chapterSlug)) chapterSlug = base + '-' + suffix++;
         taken.add(chapterSlug);
-        const wordCount = chapter.text.split(/\s+/).filter(Boolean).length;
+        const wordCount = chapter.content.split(/\s+/).filter(Boolean).length;
         return {
           id: 'ch_' + crypto.randomUUID(), bookId, chapterNumber: index + 1, title: chapter.title.slice(0, 180),
-          slug: chapterSlug, summary: chapter.text.replace(/[#>*_`\n]/g, ' ').replace(/\s+/g, ' ').slice(0, 220) || 'Imported from Markdown.',
-          content: chapter.text.split(/\n\s*\n/).map((paragraph, paragraphIndex) => ({
-            title: paragraphIndex === 0 ? 'Reading' : ' ',
-            content: paragraph.trim().replace(/^#{1,6}\s+/gm, '').replace(/^[-*+]\s+/gm, '• ').replace(/^>\s?/gm, ''),
-          })).filter((section) => section.content.length > 0),
+          slug: chapterSlug, summary: chapter.content.replace(/[#>*_`\n]/g, ' ').replace(/\s+/g, ' ').slice(0, 220) || 'Imported from Markdown.',
+          content: [{ title: 'Content', content: chapter.content }],
           estimatedReadingTimeMinutes: Math.max(1, Math.ceil(wordCount / 200)), isPublished: false, createdAt: now, updatedAt: now,
         };
       }));
@@ -116,7 +94,7 @@ export async function POST(request: Request) {
     }).from(schema.chapters).where(eq(schema.chapters.bookId, bookId)).orderBy(asc(schema.chapters.chapterNumber));
     return NextResponse.json({
       success: true, book: { id: bookId, slug, title, allowPdfDownload: false, isPublished: false },
-      chapters: chapters.map((chapter, index) => ({ ...chapter, wordCount: parsedChapters[index].text.split(/\s+/).filter(Boolean).length })),
+      chapters: chapters.map((chapter, index) => ({ ...chapter, wordCount: parsedChapters[index].content.split(/\s+/).filter(Boolean).length })),
       importedTextCharacters: markdown.length,
       message: 'Markdown manuscript imported as an unpublished online-reading draft. Review the generated chapter/section titles before publishing.',
     }, { status: 201 });
