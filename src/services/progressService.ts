@@ -153,12 +153,14 @@ class ProgressService {
     chapterNumber: number,
     chapterSlug: string,
     percentComplete: number,
-    immediate: boolean = false
+    immediate: boolean = false,
+    chapterTitle?: string
   ): ReadingProgress {
     const record: ReadingProgress = {
       bookSlug,
       lastChapterNumber: chapterNumber,
       lastChapterSlug: chapterSlug,
+      ...(chapterTitle ? { lastChapterTitle: chapterTitle } : {}),
       percentComplete: Math.min(100, Math.max(0, Math.round(percentComplete))),
       lastReadTimestamp: Date.now(),
     };
@@ -180,6 +182,7 @@ class ProgressService {
             body: JSON.stringify({
               bookSlug,
               chapterSlug,
+              chapterTitle,
               chapterNumber,
               progressPercentage: record.percentComplete,
             }),
