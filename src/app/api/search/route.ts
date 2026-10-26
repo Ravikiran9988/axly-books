@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
@@ -44,29 +44,28 @@ export async function GET(request: Request) {
         chapterNumber: schema.chapters.chapterNumber,
         summary: schema.chapters.summary,
         estimatedReadingTimeMinutes: schema.chapters.estimatedReadingTimeMinutes,
-        content: schema.chapters.content,
       })
         .from(schema.chapters)
         .innerJoin(schema.books, eq(schema.chapters.bookId, schema.books.id))
-        .where(and(eq(schema.books.isPublished, true), eq(schema.chapters.isPublished, true)))
-        .orderBy(desc(schema.chapters.chapterNumber))
-        .limit(2000);
+        .where(and(
+          eq(schema.books.isPublished, true),
+          eq(schema.chapters.isPublished, true),
+          or(
+            ilike(schema.chapters.title, `%${query}%`),
+            ilike(schema.chapters.summary, `%${query}%`),
+            sql`strpos(lower(${schema.chapters.content}::text), ${query}) > 0`
+          )
+        ))
+        .orderBy(desc(schema.chapters.createdAt))
+        .limit(30);
 
       for (const chapter of chapterRows) {
-        if (results.length >= 30) break;
-        const matches = [
-          chapter.chapterTitle,
-          chapter.summary,
-          ...(chapter.content ?? []).map((section) => section.title),
-        ].some((value) => value?.toLowerCase().includes(query));
-        if (matches) {
-          results.push({
+        results.push({
             type: 'chapter',
             title: 'Ch ' + chapter.chapterNumber + ': ' + chapter.chapterTitle,
             sub: chapter.bookTitle + ' · ' + chapter.estimatedReadingTimeMinutes + ' min read',
             url: '/read/' + chapter.bookSlug + '?chapter=' + chapter.chapterSlug,
           });
-        }
       }
     }
   } else {
