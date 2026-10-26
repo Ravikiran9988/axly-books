@@ -17,6 +17,7 @@ import {
   X,
   AlertTriangle,
   Upload,
+  BookOpenText,
 } from 'lucide-react';
 import styles from '../admin.module.css';
 
@@ -307,9 +308,13 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link href="/admin/books/import" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+          <Link href="/admin/books/import/pdf" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
             <Upload size={16} />
             <span>Import from PDF</span>
+          </Link>
+          <Link href="/admin/books/import/markdown" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <BookOpenText size={16} />
+            <span>Import Markdown</span>
           </Link>
           <button type="button" onClick={handleOpenCreate} className="btn btn-primary btn-sm">
             <Plus size={16} />
