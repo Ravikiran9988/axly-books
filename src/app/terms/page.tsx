@@ -32,19 +32,21 @@ export default function TermsPage() {
             <strong>Medicharla Ravi Kiran (Slayer)</strong>.
           </p>
           <p>
-            You are granted a non-exclusive, non-transferable, revocable license to view and read
-            these publications online for personal, educational, and non-commercial purposes.
-            Reproduction, bulk scraping, re-hosting, or commercial redistribution of published
-            manuscripts without express written authorization is strictly prohibited.
+            You are granted a non-exclusive, non-transferable, revocable license to read these
+            publications online for personal, educational, and non-commercial purposes. Where a
+            Download PDF option is provided, you may download that file for the same personal,
+            educational, non-commercial use. Downloads do not transfer copyright or grant permission
+            to re-host, reproduce, bulk-scrape, or redistribute manuscripts without written
+            authorization.
           </p>
         </section>
 
         <section className={styles.section}>
           <h2 className={styles.sectionHeading}>3. Free Access Model</h2>
           <p>
-            Currently, AXLY offers free online access to published reading materials. The platform
-            does not process credit card transactions or paid subscriptions during this initial
-            phase.
+            AXLY currently offers free online reading for books with published chapters and free
+            PDF downloads for publications where that option is available. The platform does not
+            process credit-card transactions or paid subscriptions.
           </p>
         </section>
 
