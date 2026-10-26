@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Search, X, BookOpen, FileText } from 'lucide-react';
 import styles from './SearchModal.module.css';
 
@@ -21,7 +22,10 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [resultsQuery, setResultsQuery] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultRefs = useRef(new Map<number, HTMLAnchorElement>());
+  const router = useRouter();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -67,9 +71,19 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     };
   }, [isOpen, query]);
 
-  if (!isOpen) return null;
-
   const visibleResults = resultsQuery === query.trim() ? results : [];
+  const openResult = (index: number) => {
+    const selected = visibleResults[index];
+    if (!selected) return;
+    onClose();
+    router.push(selected.url);
+  };
+
+  useEffect(() => {
+    resultRefs.current.get(activeIndex)?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, visibleResults]);
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -88,23 +102,60 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             ref={inputRef}
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setActiveIndex(0);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowDown' && visibleResults.length > 0) {
+                event.preventDefault();
+                setActiveIndex((current) => (current + 1) % visibleResults.length);
+              } else if (event.key === 'ArrowUp' && visibleResults.length > 0) {
+                event.preventDefault();
+                setActiveIndex((current) => (current - 1 + visibleResults.length) % visibleResults.length);
+              } else if (event.key === 'Enter' && visibleResults.length > 0) {
+                event.preventDefault();
+                openResult(activeIndex);
+              }
+            }}
             placeholder="Search books, chapters, topics..."
             className={styles.input}
+            aria-controls="search-results"
+            aria-activedescendant={visibleResults[activeIndex] ? `search-result-${activeIndex}` : undefined}
           />
           <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close search">
             <X size={20} />
           </button>
         </div>
 
-        <div className={styles.resultsList} aria-live="polite" aria-busy={isSearching}>
+        <div
+          id="search-results"
+          className={styles.resultsList}
+          role="listbox"
+          aria-label="Search results"
+          aria-live="polite"
+          aria-busy={isSearching}
+        >
           {visibleResults.length === 0 ? (
             <div className={styles.emptyState}>
               {isSearching ? 'Searching the library…' : query.trim() ? 'No matching books or chapters found for “' + query + '”' : 'No published books are available yet.'}
             </div>
           ) : (
             visibleResults.map((result, index) => (
-              <Link key={result.type + '-' + result.url + '-' + index} href={result.url} className={styles.resultItem} onClick={onClose}>
+              <Link
+                key={result.type + '-' + result.url + '-' + index}
+                id={`search-result-${index}`}
+                href={result.url}
+                role="option"
+                aria-selected={index === activeIndex}
+                ref={(element) => {
+                  if (element) resultRefs.current.set(index, element);
+                  else resultRefs.current.delete(index);
+                }}
+                className={`${styles.resultItem} ${index === activeIndex ? styles.resultItemActive : ''}`}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={onClose}
+              >
                 <div className={styles.resultIcon}>
                   {result.type === 'book' ? <BookOpen size={18} /> : <FileText size={18} />}
                 </div>

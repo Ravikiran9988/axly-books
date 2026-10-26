@@ -87,7 +87,7 @@
   transition: background var(--transition-fast);
 }
 
-.resultItem:hover, .resultItem:focus-visible {
+.resultItem:hover, .resultItem:focus-visible, .resultItemActive {
   background: var(--bg-surface-elevated);
   outline: none;
 }
