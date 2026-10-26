@@ -352,6 +352,38 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
     }
   };
 
+  // Publish a reviewed draft chapter without requiring a full edit.
+  const handlePublishChapter = async (chapter: ChapterItem) => {
+    if (isSubmitting || chapter.isPublished) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/admin/books/${encodeURIComponent(book.id)}/chapters/${encodeURIComponent(chapter.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chapterNumber: chapter.chapterNumber,
+          title: chapter.title,
+          slug: chapter.slug,
+          summary: chapter.summary,
+          estimatedReadingTimeMinutes: chapter.estimatedReadingTimeMinutes,
+          isPublished: true,
+          content: chapter.content,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        showToast('error', payload.error || 'Could not publish chapter.');
+        return;
+      }
+      setChapters((current) => current.map((item) => item.id === chapter.id ? { ...item, ...payload.chapter, isPublished: true } : item));
+      showToast('success', `"${chapter.title}" is published. Refresh the public book page to see the reading option.`);
+    } catch {
+      showToast('error', 'Network error while publishing chapter.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Delete Chapter
   const handleDeleteConfirm = async () => {
     if (!deletingChapter) return;
@@ -508,6 +540,18 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
                   </td>
                   <td>
                     <div className={styles.actionButtonGroup}>
+                      {!ch.isPublished && (
+                        <button
+                          type="button"
+                          onClick={() => handlePublishChapter(ch)}
+                          className={styles.btnAction}
+                          disabled={isSubmitting}
+                          title="Publish chapter so public readers can access it"
+                        >
+                          <CheckCircle size={14} />
+                          <span>Publish</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleOpenEdit(ch)}
