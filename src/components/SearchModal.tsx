@@ -19,6 +19,7 @@ interface SearchResult {
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [resultsQuery, setResultsQuery] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -36,11 +37,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setResults([]);
-      setIsSearching(false);
-      return;
-    }
+    if (!isOpen) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setIsSearching(true);
@@ -51,9 +48,15 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         });
         if (!response.ok) throw new Error('Search request failed');
         const payload = await response.json() as { results?: SearchResult[] };
-        if (!controller.signal.aborted) setResults(Array.isArray(payload.results) ? payload.results : []);
+        if (!controller.signal.aborted) {
+          setResults(Array.isArray(payload.results) ? payload.results : []);
+          setResultsQuery(query.trim());
+        }
       } catch {
-        if (!controller.signal.aborted) setResults([]);
+        if (!controller.signal.aborted) {
+          setResults([]);
+          setResultsQuery(query.trim());
+        }
       } finally {
         if (!controller.signal.aborted) setIsSearching(false);
       }
@@ -65,6 +68,8 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   }, [isOpen, query]);
 
   if (!isOpen) return null;
+
+  const visibleResults = resultsQuery === query.trim() ? results : [];
 
   return (
     <div
@@ -93,12 +98,12 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         </div>
 
         <div className={styles.resultsList} aria-live="polite" aria-busy={isSearching}>
-          {results.length === 0 ? (
+          {visibleResults.length === 0 ? (
             <div className={styles.emptyState}>
               {isSearching ? 'Searching the library…' : query.trim() ? 'No matching books or chapters found for “' + query + '”' : 'No published books are available yet.'}
             </div>
           ) : (
-            results.map((result, index) => (
+            visibleResults.map((result, index) => (
               <Link key={result.type + '-' + result.url + '-' + index} href={result.url} className={styles.resultItem} onClick={onClose}>
                 <div className={styles.resultIcon}>
                   {result.type === 'book' ? <BookOpen size={18} /> : <FileText size={18} />}
