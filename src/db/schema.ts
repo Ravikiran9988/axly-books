@@ -8,7 +8,7 @@ import {
   real,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 // --- Users Table ---
 export const users = pgTable('users', {
@@ -42,10 +42,7 @@ export const passwordResets = pgTable('password_resets', {
   tokenHash: text('token_hash').notNull().unique(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   usedAt: timestamp('used_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
 
-// --- Authors Table ---
 export const authors = pgTable('authors', {
   id: text('id').primaryKey(),
   penName: text('pen_name').notNull().unique(), // 'Slayer'
