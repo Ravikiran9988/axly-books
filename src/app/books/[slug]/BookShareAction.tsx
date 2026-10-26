@@ -6,9 +6,10 @@ import { Check, Share2 } from 'lucide-react';
 interface BookShareActionProps {
   title: string;
   slug: string;
+  variant?: 'full' | 'compact';
 }
 
-export default function BookShareAction({ title, slug }: BookShareActionProps) {
+export default function BookShareAction({ title, slug, variant = 'full' }: BookShareActionProps) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
 
@@ -51,22 +52,23 @@ export default function BookShareAction({ title, slug }: BookShareActionProps) {
   }
 
   return (
-    <div style={{ marginTop: '0.75rem' }}>
+    <div style={{ marginTop: variant === 'full' ? '0.75rem' : 0, display: variant === 'compact' ? 'inline-flex' : 'block' }}>
       <button
         type="button"
         onClick={handleShare}
-        className="btn btn-secondary"
+        className={`btn btn-secondary ${variant === 'compact' ? 'btn-sm' : ''}`}
         style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
-          width: '100%',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          gap: '0.5rem', width: variant === 'full' ? '100%' : 'auto',
+          whiteSpace: 'nowrap', flexShrink: 0,
         }}
         aria-live="polite"
+        aria-label={copied ? 'Book link copied' : error ? 'Could not share book link' : `Share ${title}`}
       >
         {copied ? <Check size={16} aria-hidden="true" /> : <Share2 size={16} aria-hidden="true" />}
-        {copied ? 'Link copied' : error ? 'Could not share link' : 'Share this book'}
+        {variant === 'compact'
+          ? copied ? 'Copied' : error ? 'Retry' : 'Share'
+          : copied ? 'Link copied' : error ? 'Could not share link' : 'Share this book'}
       </button>
     </div>
   );
