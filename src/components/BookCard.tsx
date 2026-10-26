@@ -39,16 +39,18 @@ export default function BookCard({ book }: BookCardProps) {
     };
   }, []);
 
-  const hasStarted = progress && progress.percentComplete > 0;
-  const readUrl = hasStarted
-    ? `/read/${book.slug}?chapter=${progress.lastChapterSlug}`
-    : `/read/${book.slug}`;
-
   const canDownloadPdf = Boolean(
     book.allowPdfDownload &&
     typeof book.originalPdfUrl === 'string' &&
     book.originalPdfUrl.trim().length > 0
   );
+  const chapterCount = Math.max(0, book.totalChapters || (Array.isArray(book.chapters) ? book.chapters.length : 0));
+  const canReadOnline = chapterCount > 0;
+  const hasStarted = Boolean(canReadOnline && progress && progress.percentComplete > 0);
+  const readUrl = hasStarted
+    ? `/read/${book.slug}?chapter=${progress!.lastChapterSlug}`
+    : `/read/${book.slug}`;
+  const isPrivatePdfRoute = Boolean(book.originalPdfUrl?.startsWith('/api/books/'));
 
   const getCanonicalUrl = (): string => {
     if (typeof window !== 'undefined' && window.location.origin) {
@@ -143,7 +145,7 @@ export default function BookCard({ book }: BookCardProps) {
         aria-hidden="true"
       >
         <div className={styles.badgeOverlay}>
-          <span className="badge badge-cyan">Free Online</span>
+          <span className="badge badge-cyan">{canReadOnline ? 'Free Online' : canDownloadPdf ? 'Free PDF' : 'Coming Soon'}</span>
         </div>
         <div className={styles.coverFrame}>
           <Image
@@ -173,14 +175,16 @@ export default function BookCard({ book }: BookCardProps) {
         <p className={styles.description}>{book.description}</p>
 
         <div className={styles.metaInfo}>
-          <span className={styles.metaItem}>
-            <BookOpen size={14} />
-            {book.totalChapters} Chapters
-          </span>
-          <span className={styles.metaItem}>
-            <Clock size={14} />
-            ~{Math.round(book.estimatedReadingTimeMinutes / 60)}h read
-          </span>
+          {canReadOnline ? (
+            <>
+              <span className={styles.metaItem}><BookOpen size={14} />{chapterCount} Chapters</span>
+              <span className={styles.metaItem}><Clock size={14} />~{Math.round(book.estimatedReadingTimeMinutes / 60)}h read</span>
+            </>
+          ) : canDownloadPdf ? (
+            <span className={styles.metaItem}><Download size={14} />Download-only PDF</span>
+          ) : (
+            <span className={styles.metaItem}>Content coming soon</span>
+          )}
         </div>
 
         {hasStarted && (
@@ -222,17 +226,19 @@ export default function BookCard({ book }: BookCardProps) {
           )}
 
           <div className={styles.actions}>
-            <Link href={readUrl} className={`btn btn-primary ${styles.readBtn}`}>
-              <BookOpen size={16} aria-hidden="true" />
-              <span>{hasStarted ? 'Continue Reading' : 'Read Book'}</span>
-            </Link>
+            {canReadOnline && (
+              <Link href={readUrl} className={`btn btn-primary ${styles.readBtn}`}>
+                <BookOpen size={16} aria-hidden="true" />
+                <span>{hasStarted ? 'Continue Reading' : 'Read Book'}</span>
+              </Link>
+            )}
 
             <div className={styles.secondaryActions}>
               {canDownloadPdf && (
                 <a
                   href={book.originalPdfUrl!}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  target={isPrivatePdfRoute ? undefined : '_blank'}
+                  rel={isPrivatePdfRoute ? undefined : 'noopener noreferrer'}
                   download
                   className={`btn btn-secondary ${styles.iconBtn}`}
                   title={`Download PDF: ${book.title}`}

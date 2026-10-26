@@ -13,10 +13,11 @@ import {
   Settings,
   Shield,
   Compass,
+  Download,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { db, schema, isDatabaseConfigured } from '@/db';
-import { PUBLISHED_BOOKS } from '@/data/booksData';
+import { getServerPublishedBooks } from '@/services/serverBookService';
 import styles from './dashboard.module.css';
 
 export const metadata = {
@@ -103,6 +104,8 @@ export default async function ReaderDashboardPage() {
   }
 
   const latestRead = progressRecords.length > 0 ? progressRecords[0] : null;
+  const recommendedBooks = progressRecords.length === 0 ? await getServerPublishedBooks() : [];
+  const recommendedBook = recommendedBooks[0] || null;
 
   return (
     <div className={styles.dashboardContainer}>
@@ -297,35 +300,47 @@ export default async function ReaderDashboardPage() {
         )}
       </section>
 
-      {/* Featured Book Callout if reader hasn't read any book */}
-      {progressRecords.length === 0 && PUBLISHED_BOOKS.length > 0 && (
+      {/* Featured publication chosen from the current published catalogue */}
+      {progressRecords.length === 0 && recommendedBook && (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               <Compass size={20} color="var(--color-brand-blue)" />
-              <span>Recommended Start</span>
+              <span>Recommended Publication</span>
             </h2>
           </div>
           <div className={styles.continueCard}>
             <Image
-              src={PUBLISHED_BOOKS[0].coverImage || '/images/ml-deep-learning-cover.jpg'}
-              alt={PUBLISHED_BOOKS[0].title}
+              src={recommendedBook.coverImage || '/images/ml-deep-learning-cover.jpg'}
+              alt={recommendedBook.title}
               width={100}
               height={140}
               className={styles.continueCover}
             />
             <div className={styles.continueDetails}>
-              <h3 className={styles.continueBookTitle}>{PUBLISHED_BOOKS[0].title}</h3>
+              <h3 className={styles.continueBookTitle}>{recommendedBook.title}</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                {PUBLISHED_BOOKS[0].subtitle}
+                {recommendedBook.subtitle}
               </p>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-                {PUBLISHED_BOOKS[0].description}
+                {recommendedBook.description}
               </p>
-              <div style={{ marginTop: '0.75rem' }}>
-                <Link href={`/read/${PUBLISHED_BOOKS[0].slug}`} className="btn btn-primary btn-sm">
-                  <BookOpen size={16} />
-                  <span>Start Reading Chapter 1</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+                {recommendedBook.chapters.length > 0 && (
+                  <Link href={`/read/${recommendedBook.slug}`} className="btn btn-primary btn-sm">
+                    <BookOpen size={16} />
+                    <span>Start Reading</span>
+                  </Link>
+                )}
+                {recommendedBook.allowPdfDownload && recommendedBook.originalPdfUrl && (
+                  <a href={recommendedBook.originalPdfUrl} className="btn btn-secondary btn-sm">
+                    <Download size={16} />
+                    <span>Download PDF</span>
+                  </a>
+                )}
+                <Link href={`/books/${recommendedBook.slug}`} className="btn btn-outline btn-sm">
+                  <ArrowRight size={16} />
+                  <span>View Details</span>
                 </Link>
               </div>
             </div>
