@@ -5,6 +5,7 @@ import { db, schema, isDatabaseConfigured } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 import { bookUpdateSchema } from '@/lib/validations';
 import { PUBLISHED_BOOKS } from '@/data/booksData';
+import { isBookPublishable } from '@/lib/publicationRules';
 
 export async function GET(
   request: Request,
@@ -112,15 +113,15 @@ export async function PUT(
       // Prevent the edit endpoint from bypassing the publication guard used by the Publish action.
       if (updates.isPublished === true && !targetBook.isPublished) {
         const existingChapters = await db
-          .select({ id: schema.chapters.id })
+          .select({ id: schema.chapters.id, isPublished: schema.chapters.isPublished })
           .from(schema.chapters)
-          .where(eq(schema.chapters.bookId, targetBook.id))
-          .limit(1);
-        const isDownloadOnlyPdf = existingChapters.length === 0
-          && targetBook.allowPdfDownload
-          && Boolean(targetBook.originalPdfPath);
-
-        if (existingChapters.length === 0 && !isDownloadOnlyPdf) {
+          .where(eq(schema.chapters.bookId, targetBook.id));
+        if (!isBookPublishable({
+          totalChapters: existingChapters.length,
+          hasPublishedChapter: existingChapters.some((chapter) => chapter.isPublished),
+          allowPdfDownload: targetBook.allowPdfDownload,
+          originalPdfPath: targetBook.originalPdfPath,
+        })) {
           return NextResponse.json(
             { error: 'Publish at least one chapter for online reading, or enable downloads for a private original PDF.' },
             { status: 400 }
