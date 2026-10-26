@@ -50,9 +50,15 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = parseResult.data.email.toLowerCase().trim();
-    // Key email-based limits with a one-way hash so clear-text addresses are not stored
-    // in the shared rate-limit table. A limit hit returns the same 202 as an unknown email.
-    const emailLimitKey = `forgot_pw_email_${hashToken(normalizedEmail)}`;
+    // Use a keyed HMAC so emails aren't stored in clear text and the rate-limit key
+    // cannot be cheaply reversed from a leaked rate_limits table. Production already
+    // requires a database and a Resend key; development uses a fixed local-only pepper.
+    const rateLimitPepper = process.env.RESEND_API_KEY
+      || process.env.AXLY_BOOKS_RESEND_API_KEY
+      || process.env.DATABASE_URL
+      || 'axly-books-development-rate-limit-pepper';
+    const emailLimitHash = crypto.createHmac('sha256', rateLimitPepper).update(normalizedEmail).digest('hex');
+    const emailLimitKey = `forgot_pw_email_${emailLimitHash}`;
     const emailRateCheck = await checkRateLimitAsync(emailLimitKey, EMAIL_RESET_LIMIT, EMAIL_RESET_WINDOW_MS);
 
     if (emailRateCheck.unavailable) {
