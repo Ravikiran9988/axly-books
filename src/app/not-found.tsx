@@ -50,7 +50,7 @@ export default function NotFound() {
         style={{
           fontSize: 'clamp(2rem, 4vw, 2.75rem)',
           fontWeight: 700,
-          color: '#ffffff',
+          color: 'var(--text-primary)',
           marginBottom: '1rem',
         }}
       >
