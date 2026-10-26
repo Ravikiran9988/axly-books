@@ -50,6 +50,7 @@ export const resetPasswordSchema = z.object({
 export const progressUpdateSchema = z.object({
   bookSlug: z.string().min(1, { message: 'Book identifier is required.' }),
   chapterSlug: z.string().min(1, { message: 'Chapter identifier is required.' }),
+  chapterTitle: z.string().max(300).optional(),
   chapterNumber: z.number().int().min(1, { message: 'Chapter number must be at least 1.' }),
   progressPercentage: z
     .number()
