@@ -115,7 +115,44 @@ async function runBookCardTests() {
 
   }
 
-  // Test 6: CSS Aspect-Ratio and Cover proportions verification
+  // Test 6: Online-reading access control
+  {
+    const readerDisabledBook: Book = {
+      ...mockBookWithPdf,
+      id: 'book-test-reader-disabled',
+      slug: 'reader-disabled',
+      allowOnlineReading: false,
+    };
+    const html = renderToString(React.createElement(BookCard, { book: readerDisabledBook }));
+    assert.ok(!html.includes('Read Book'), 'Read Book must be hidden when online reading is disabled');
+    assert.ok(html.includes('Download PDF of Deep Learning Mastery'), 'Disabling online reading must not remove the PDF download option');
+
+    const { default: BookActions } = await import('../src/app/books/[slug]/BookActions');
+    const chapterBook: Book = {
+      ...mockBookWithoutPdf,
+      allowOnlineReading: true,
+      chapters: [{
+        id: 'chapter-1',
+        chapterNumber: 1,
+        title: 'Introduction',
+        slug: 'introduction',
+        readingTimeMinutes: 5,
+        summary: 'Introduction to the book.',
+        isPublished: true,
+        sections: [{ title: 'Introduction', content: 'Sample chapter content.' }],
+      }],
+    };
+    const enabledReaderHtml = renderToString(React.createElement(BookActions, { book: chapterBook }));
+    assert.ok(enabledReaderHtml.includes('Start Reading'), 'Start Reading must appear when online reading is enabled and chapters exist');
+
+    const disabledReaderHtml = renderToString(
+      React.createElement(BookActions, { book: { ...chapterBook, allowOnlineReading: false } })
+    );
+    assert.ok(!disabledReaderHtml.includes('Start Reading'), 'Start Reading must be hidden when online reading is disabled');
+    console.log('  ✔ Online reader actions follow the allowOnlineReading setting and PDF downloads remain independent.');
+  }
+
+  // Test 7: CSS Aspect-Ratio and Cover proportions verification
   {
     const cssPath = path.join(__dirname, '../src/components/BookCard.module.css');
     const cssContent = fs.readFileSync(cssPath, 'utf8');
