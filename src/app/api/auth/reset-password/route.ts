@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq, and, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import { db, schema, isDatabaseConfigured } from '@/db';
 import { resetPasswordSchema } from '@/lib/validations';
 import { hashPassword, hashToken, inMemoryStore } from '@/lib/auth';
@@ -58,25 +58,40 @@ export async function POST(request: Request) {
       const resetRecord = resetRecords[0];
       const newHash = await hashPassword(newPassword);
 
-      // Update user password
-      await db
-        .update(schema.users)
-        .set({
-          passwordHash: newHash,
-          updatedAt: now,
-        })
-        .where(eq(schema.users.id, resetRecord.userId));
-
-      // Mark token as used
-      await db
-        .update(schema.passwordResets)
-        .set({
-          usedAt: now,
-        })
-        .where(eq(schema.passwordResets.id, resetRecord.id));
-
-      // Invalidate all active sessions for security
-      await db.delete(schema.sessions).where(eq(schema.sessions.userId, resetRecord.userId));
+      // Claim the reset token and update the password in one SQL statement. The
+      // conditional UPDATE makes redemption single-use even for concurrent requests.
+      // Data-modifying CTEs also ensure sessions are revoked only if the token was claimed.
+      const rawResult = await db.execute(sql`
+        WITH claimed_token AS (
+          UPDATE "password_resets"
+          SET "used_at" = ${now}
+          WHERE "id" = ${resetRecord.id}
+            AND "token_hash" = ${tokenHash}
+            AND "expires_at" > ${now}
+            AND "used_at" IS NULL
+          RETURNING "user_id"
+        ),
+        updated_user AS (
+          UPDATE "users"
+          SET "password_hash" = ${newHash}, "updated_at" = ${now}
+          WHERE "id" IN (SELECT "user_id" FROM claimed_token)
+          RETURNING "id"
+        ),
+        revoked_sessions AS (
+          DELETE FROM "sessions"
+          WHERE "user_id" IN (SELECT "id" FROM updated_user)
+          RETURNING "id"
+        )
+        SELECT COUNT(*)::int AS updated_count FROM updated_user
+      `);
+      const resultRows = (rawResult as unknown as { rows?: Array<{ updated_count: number | string }> }).rows
+        ?? (Array.isArray(rawResult) ? rawResult as unknown as Array<{ updated_count: number | string }> : []);
+      if (Number(resultRows[0]?.updated_count ?? 0) !== 1) {
+        return NextResponse.json(
+          { error: 'The password reset token is invalid or has expired.' },
+          { status: 400 }
+        );
+      }
 
       return NextResponse.json({
         success: true,
@@ -98,15 +113,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User account not found.' }, { status: 404 });
     }
 
+    // Consume the token before awaiting bcrypt so two concurrent requests cannot both
+    // pass the same in-memory token check. Failure is fail-closed: the token stays consumed.
+    record.used = true;
     const newHash = await hashPassword(newPassword);
     user.passwordHash = newHash;
-    record.used = true;
 
-    // Invalidate sessions in memory
+    // Invalidate all other unused reset links and sessions for this user.
+    for (const [hash, reset] of inMemoryStore.resets.entries()) {
+      if (reset.userId === record.userId && !reset.used) inMemoryStore.resets.delete(hash);
+    }
     for (const [hash, sess] of inMemoryStore.sessions.entries()) {
-      if (sess.userId === record.userId) {
-        inMemoryStore.sessions.delete(hash);
-      }
+      if (sess.userId === record.userId) inMemoryStore.sessions.delete(hash);
     }
 
     return NextResponse.json({
