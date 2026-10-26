@@ -69,7 +69,7 @@ export default function BookActions({ book }: BookActionsProps) {
         <span>{hasProgress ? 'Continue Reading' : 'Start Reading'}</span>
       </Link>}
 
-      {hasProgress && (
+      {hasProgress && book.chapters.length > 0 && (
         <Link
           href={`/read/${book.slug}?chapter=${book.chapters[0]?.slug}`}
           className="btn btn-secondary btn-sm"
