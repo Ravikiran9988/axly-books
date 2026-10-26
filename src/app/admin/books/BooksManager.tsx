@@ -92,11 +92,11 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
     subtitle: '',
     description: '',
     synopsis: '',
-    category: 'Artificial Intelligence & Machine Learning',
-    tags: 'Machine Learning, Deep Learning, Python',
-    edition: 'First Edition (2026)',
-    publishedYear: 2026,
-    coverImageUrl: '/images/ml-deep-learning-cover.jpg',
+    category: '',
+    tags: '',
+    edition: '',
+    publishedYear: new Date().getFullYear(),
+    coverImageUrl: '',
     isPublished: false,
   });
 
@@ -113,11 +113,11 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
       subtitle: '',
       description: '',
       synopsis: '',
-      category: 'Artificial Intelligence & Machine Learning',
-      tags: 'Machine Learning, Deep Learning, Python',
-      edition: 'First Edition (2026)',
-      publishedYear: 2026,
-      coverImageUrl: '/images/ml-deep-learning-cover.jpg',
+      category: '',
+      tags: '',
+      edition: '',
+      publishedYear: new Date().getFullYear(),
+      coverImageUrl: '',
       isPublished: false,
     });
     setIsCreateOpen(true);
@@ -382,11 +382,15 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
                   <td>
                     <div className={styles.bookTitleCol}>
                       <Image
-                        src={book.coverImageUrl || '/images/ml-deep-learning-cover.jpg'}
+                        src={book.coverImageUrl || '/images/book-cover-placeholder.svg'}
                         alt={book.title}
                         width={44}
                         height={60}
                         className={styles.bookThumbnail}
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = '/images/book-cover-placeholder.svg';
+                        }}
                       />
                       <div>
                         <div className={styles.bookTitleText}>{book.title}</div>
@@ -563,7 +567,7 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
                       required
                       value={formData.coverImageUrl}
                       onChange={(e) => setFormData({ ...formData, coverImageUrl: e.target.value })}
-                      placeholder="/images/ml-deep-learning-cover.jpg or https://..."
+                      placeholder="Upload a cover or enter an HTTPS image URL"
                       className="form-input"
                       style={{ flex: 1 }}
                     />
@@ -590,7 +594,7 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
                     </label>
                   </div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
-                    Enter an HTTPS link/local path, or click &ldquo;Upload File&rdquo; to store in Vercel Blob (JPEG, PNG, WebP up to 5MB).
+                    Upload a cover image or enter a valid HTTPS image URL. Avoid local paths unless the image exists in the deployed public folder. JPEG, PNG, or WebP up to 5MB.
                   </span>
                 </div>
 

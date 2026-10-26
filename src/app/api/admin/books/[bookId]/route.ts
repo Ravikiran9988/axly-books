@@ -123,7 +123,7 @@ export async function PUT(
           originalPdfPath: targetBook.originalPdfPath,
         })) {
           return NextResponse.json(
-            { error: 'Publish at least one chapter for online reading, or enable downloads for a private original PDF.' },
+            { error: 'This book has no published chapter. Open Chapters, publish at least one chapter, then try again. For PDF-only books, enable downloads and attach a private original PDF.' },
             { status: 400 }
           );
         }
