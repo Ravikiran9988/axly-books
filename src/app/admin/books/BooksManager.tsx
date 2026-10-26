@@ -665,7 +665,7 @@ export default function BooksManager({ initialBooks }: BooksManagerProps) {
                 </div>
 
 
-                {!isCreateOpen && editingBook && editingBook.totalChapters === 0 && editingBook.allowPdfDownload && editingBook.originalPdfPath && (
+                {!isCreateOpen && editingBook && editingBook.allowPdfDownload && editingBook.originalPdfPath && (
                   <div className={styles.formFull}>
                     <ExistingBookMarkdownManager bookId={editingBook.id} bookSlug={editingBook.slug} bookTitle={editingBook.title} />
                   </div>
