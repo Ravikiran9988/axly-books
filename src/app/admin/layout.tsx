@@ -13,8 +13,6 @@ import {
 import { getCurrentUser } from '@/lib/auth';
 import styles from './admin.module.css';
 
-export const instant = false;
-
 export const metadata = {
   title: 'Admin Dashboard — AXLY Books',
   description: 'Authorized Content Management System for AXLY Books.',
