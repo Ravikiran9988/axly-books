@@ -67,6 +67,7 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
   const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([]);
   const [previewChapter, setPreviewChapter] = useState<ChapterItem | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkPublishing, setIsBulkPublishing] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -280,6 +281,54 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
     }
   };
 
+  const handlePublishSelected = async () => {
+    if (!selectedChapterIds.length || isBulkPublishing || isBulkDeleting || isSubmitting) return;
+    const chapterIds = [...selectedChapterIds];
+    const draftCount = chapters.filter(
+      (chapter) => chapterIds.includes(chapter.id) && !chapter.isPublished
+    ).length;
+    if (draftCount === 0) {
+      showToast('success', 'All selected chapters are already published.');
+      return;
+    }
+    if (!window.confirm(`Publish ${draftCount} selected draft chapter${draftCount === 1 ? '' : 's'}? They will become visible to public readers if the book is published and online reading is enabled.`)) return;
+
+    setIsBulkPublishing(true);
+    setFeedback(null);
+    try {
+      const response = await fetch(
+        `/api/admin/books/${encodeURIComponent(book.id)}/chapters/bulk-publish`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chapterIds }),
+        }
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        showToast('error', payload.error || 'Could not publish the selected chapters.');
+        return;
+      }
+
+      const publishedIds = new Set<string>(
+        Array.isArray(payload.publishedChapterIds) ? payload.publishedChapterIds : chapterIds
+      );
+      setChapters((current) =>
+        current.map((chapter) =>
+          publishedIds.has(chapter.id) ? { ...chapter, isPublished: true } : chapter
+        )
+      );
+      showToast(
+        'success',
+        payload.message || `Published ${payload.publishedCount ?? publishedIds.size} selected chapters.`
+      );
+    } catch {
+      showToast('error', 'Network error while publishing chapters. Refresh and try again.');
+    } finally {
+      setIsBulkPublishing(false);
+    }
+  };
+
   // Submit Create Chapter
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -482,16 +531,25 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
       {chapters.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem', marginBottom: '0.85rem' }}>
           <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{selectedChapterIds.length} of {chapters.length} selected</span>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={toggleSelectAllChapters} disabled={isBulkDeleting}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={toggleSelectAllChapters} disabled={isBulkDeleting || isBulkPublishing}>
             {allChaptersSelected ? <Square size={15} /> : <CheckSquare size={15} />}
             {allChaptersSelected ? 'Clear selection' : 'Select all'}
           </button>
           {!allChaptersSelected && selectedChapterIds.length > 0 && (
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedChapterIds([])} disabled={isBulkDeleting}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedChapterIds([])} disabled={isBulkDeleting || isBulkPublishing}>
               <EyeOff size={15} /> Clear selection
             </button>
           )}
-          <button type="button" className="btn btn-sm" onClick={handleDeleteSelected} disabled={!selectedChapterIds.length || isBulkDeleting}
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={handlePublishSelected}
+            disabled={!selectedChapterIds.some((id) => chapters.some((chapter) => chapter.id === id && !chapter.isPublished)) || isBulkPublishing || isBulkDeleting || isSubmitting}
+          >
+            <CheckCircle size={15} />
+            {isBulkPublishing ? `Publishing ${selectedChapterIds.length} chapters…` : `Publish selected (${selectedChapterIds.length})`}
+          </button>
+          <button type="button" className="btn btn-sm" onClick={handleDeleteSelected} disabled={!selectedChapterIds.length || isBulkDeleting || isBulkPublishing}
             style={{ background: 'var(--status-error)', color: '#fff', border: 0 }}>
             <Trash2 size={15} /> {isBulkDeleting ? `Deleting ${selectedChapterIds.length} chapters…` : `Delete selected (${selectedChapterIds.length})`}
           </button>
@@ -503,7 +561,7 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
         <table className={styles.table}>
           <thead>
             <tr>
-              <th><input type="checkbox" aria-label={allChaptersSelected ? 'Clear all chapter selections' : 'Select all chapters'} checked={allChaptersSelected} onChange={toggleSelectAllChapters} disabled={chapters.length === 0 || isBulkDeleting} /></th>
+              <th><input type="checkbox" aria-label={allChaptersSelected ? 'Clear all chapter selections' : 'Select all chapters'} checked={allChaptersSelected} onChange={toggleSelectAllChapters} disabled={chapters.length === 0 || isBulkDeleting || isBulkPublishing} /></th>
               <th>#</th>
               <th>Chapter Title & Slug</th>
               <th>Sections</th>
@@ -522,7 +580,7 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
             ) : (
               chapters.map((ch) => (
                 <tr key={ch.id}>
-                  <td><input type="checkbox" aria-label={`Select chapter ${ch.chapterNumber}: ${ch.title}`} checked={selectedChapterIds.includes(ch.id)} onChange={() => toggleChapterSelection(ch.id)} disabled={isBulkDeleting} /></td>
+                  <td><input type="checkbox" aria-label={`Select chapter ${ch.chapterNumber}: ${ch.title}`} checked={selectedChapterIds.includes(ch.id)} onChange={() => toggleChapterSelection(ch.id)} disabled={isBulkDeleting || isBulkPublishing} /></td>
                   <td style={{ fontWeight: 700, width: '40px' }}>{ch.chapterNumber}</td>
                   <td>
                     <div>
