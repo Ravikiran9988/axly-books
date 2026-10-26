@@ -64,7 +64,7 @@ async function HomePageContent() {
             <div className={styles.heroFeatures}>
               <div className={styles.heroFeatureItem}>
                 <CheckCircle2 size={16} className={styles.heroFeatureIcon} />
-                <span>100% Free Online Reading</span>
+                <span>Free Online Reading & PDF Downloads</span>
               </div>
               <div className={styles.heroFeatureItem}>
                 <CheckCircle2 size={16} className={styles.heroFeatureIcon} />
@@ -150,14 +150,14 @@ async function HomePageContent() {
                       )}
                       {featuredBook.allowPdfDownload && featuredBook.originalPdfUrl && (
                         <Link
-                          href={`/api/books/${encodeURIComponent(featuredBook.slug)}/pdf`}
+                          href={featuredBook.originalPdfUrl!}
                           className={`btn btn-primary ${styles.spotlightReadBtn}`}
                         >
                           <Download size={15} />
                           <span>Download PDF</span>
                         </Link>
                       )}
-                      <BookShareAction title={featuredBook.title} slug={featuredBook.slug} />
+                      <BookShareAction title={featuredBook.title} slug={featuredBook.slug} variant="compact" />
                       <Link
                         href={`/books/${featuredBook.slug}`}
                         className={`btn btn-secondary ${styles.spotlightDetailsBtn}`}
