@@ -236,6 +236,9 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
   };
 
   const allChaptersSelected = chapters.length > 0 && selectedChapterIds.length === chapters.length;
+  const selectedDraftCount = chapters.filter(
+    (chapter) => selectedChapterIds.includes(chapter.id) && !chapter.isPublished
+  ).length;
 
   const toggleChapterSelection = (chapterId: string) => {
     setSelectedChapterIds((current) => current.includes(chapterId) ? current.filter((id) => id !== chapterId) : [...current, chapterId]);
@@ -531,6 +534,11 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
       {chapters.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem', marginBottom: '0.85rem' }}>
           <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{selectedChapterIds.length} of {chapters.length} selected</span>
+          {selectedChapterIds.length > 0 && (
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+              {selectedDraftCount} draft{selectedDraftCount === 1 ? '' : 's'} ready to publish
+            </span>
+          )}
           <button type="button" className="btn btn-secondary btn-sm" onClick={toggleSelectAllChapters} disabled={isBulkDeleting || isBulkPublishing}>
             {allChaptersSelected ? <Square size={15} /> : <CheckSquare size={15} />}
             {allChaptersSelected ? 'Clear selection' : 'Select all'}
@@ -544,10 +552,21 @@ export default function ChaptersManager({ book, initialChapters }: ChaptersManag
             type="button"
             className="btn btn-primary btn-sm"
             onClick={handlePublishSelected}
-            disabled={!selectedChapterIds.some((id) => chapters.some((chapter) => chapter.id === id && !chapter.isPublished)) || isBulkPublishing || isBulkDeleting || isSubmitting}
+            disabled={selectedChapterIds.length === 0 || selectedDraftCount === 0 || isBulkPublishing || isBulkDeleting || isSubmitting}
+            title={
+              selectedChapterIds.length === 0
+                ? 'Select chapters to enable bulk publishing.'
+                : selectedDraftCount === 0
+                  ? 'All selected chapters are already published.'
+                  : `Publish ${selectedDraftCount} selected draft chapters.`
+            }
           >
             <CheckCircle size={15} />
-            {isBulkPublishing ? `Publishing ${selectedChapterIds.length} chapters…` : `Publish selected (${selectedChapterIds.length})`}
+            {isBulkPublishing
+              ? `Publishing ${selectedDraftCount} drafts…`
+              : selectedDraftCount > 0
+                ? `Publish selected drafts (${selectedDraftCount})`
+                : 'Publish selected'}
           </button>
           <button type="button" className="btn btn-sm" onClick={handleDeleteSelected} disabled={!selectedChapterIds.length || isBulkDeleting || isBulkPublishing}
             style={{ background: 'var(--status-error)', color: '#fff', border: 0 }}>
