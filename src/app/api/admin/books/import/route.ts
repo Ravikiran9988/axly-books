@@ -84,9 +84,6 @@ export async function POST(request: Request) {
       allowPdfDownload, license, licenseUrl, originalPdfPath: uploadedPath, createdAt: now, updatedAt: now,
     });
 
-
-
-
     return NextResponse.json({
       success: true,
       book: { id: createdBookId, slug, title, allowPdfDownload, isPublished: false },
