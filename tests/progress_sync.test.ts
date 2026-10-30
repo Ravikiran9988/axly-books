@@ -40,12 +40,14 @@ async function run() {
       createdAt: 100, excerpt: 'Guest note',
     }]));
 
-    const calls: Array<{ url: string; method: string; body?: any }> = [];
+    const calls: Array<{ url: string; method: string; body?: Record<string, string | number | boolean | undefined> }> = [];
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       const method = (init?.method || 'GET').toUpperCase();
-      let body: any;
-      if (typeof init?.body === 'string') body = JSON.parse(init.body);
+      const body: Record<string, string | number | boolean | undefined> =
+        typeof init?.body === 'string'
+          ? JSON.parse(init.body) as Record<string, string | number | boolean | undefined>
+          : {};
       calls.push({ url, method, body });
 
       if (method === 'GET' && url === '/api/progress') {
