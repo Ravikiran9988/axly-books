@@ -133,7 +133,7 @@ export async function POST(request: Request) {
 
       const bookmarkId = `bm_${crypto.randomUUID()}`;
 
-      await db
+      const [inserted] = await db
         .insert(schema.bookmarks)
         .values({
           id: bookmarkId,
@@ -144,24 +144,43 @@ export async function POST(request: Request) {
           note: note || null,
           createdAt: now,
         })
-        .onConflictDoNothing();
+        .onConflictDoNothing()
+        .returning({ id: schema.bookmarks.id });
+
+      // On a unique-key conflict, return the stored record and its real ID.
+      const [storedBookmark] = await db
+        .select()
+        .from(schema.bookmarks)
+        .where(and(
+          eq(schema.bookmarks.userId, user.id),
+          eq(schema.bookmarks.bookId, book.id),
+          eq(schema.bookmarks.chapterId, chapter.id)
+        ))
+        .limit(1);
+
+      if (!storedBookmark) {
+        return NextResponse.json(
+          { error: 'The bookmark could not be saved. Please try again.' },
+          { status: 500 }
+        );
+      }
 
       return NextResponse.json(
         {
           success: true,
           bookmark: {
-            id: bookmarkId,
+            id: storedBookmark.id,
             bookSlug,
             bookTitle: book.title,
             chapterNumber: chapter.chapterNumber,
             chapterSlug: chapter.slug,
             chapterTitle: chapter.title,
-            anchor,
-            note,
-            createdAt: now.getTime(),
+            anchor: storedBookmark.anchor,
+            note: storedBookmark.note,
+            createdAt: new Date(storedBookmark.createdAt).getTime(),
           },
         },
-        { status: 201 }
+        { status: inserted ? 201 : 200 }
       );
     }
 
