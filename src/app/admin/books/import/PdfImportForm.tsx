@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, FileText, UploadCloud } from 'lucide-react';
 import styles from '../../admin.module.css';
+import { slugifyBookTitle } from '@/lib/slugify';
 
 interface ImportedChapter {
   id: string; chapterNumber: number; title: string; slug: string; summary: string;
@@ -14,11 +15,6 @@ interface ImportResult {
   book: { id: string; slug: string; title: string; allowPdfDownload: boolean; isPublished: boolean };
   pageCount: number; importedTextCharacters: number; chapters: ImportedChapter[]; message: string;
 }
-function slugify(value: string): string {
-  return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-}
-
 export default function PdfImportForm() {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
@@ -41,7 +37,7 @@ export default function PdfImportForm() {
     if (!next) return;
     const derived = next.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
     if (!title.trim()) setTitle(derived);
-    if (!slugEdited) setSlug(slugify(derived));
+    if (!slugEdited) setSlug(slugifyBookTitle(derived));
   };
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -108,7 +104,7 @@ export default function PdfImportForm() {
               {file && <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.35rem' }}>{file.name} · {(file.size / (1024 * 1024)).toFixed(2)} MB</p>}
             </div>
             <div className={styles.formGrid}>
-              <div className="form-group"><label className="form-label" htmlFor="pdf-title">Book title *</label><input id="pdf-title" className="form-input" required minLength={2} maxLength={150} value={title} onChange={(e) => { setTitle(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)); }} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="pdf-title">Book title *</label><input id="pdf-title" className="form-input" required minLength={2} maxLength={150} value={title} onChange={(e) => { setTitle(e.target.value); if (!slugEdited) setSlug(slugifyBookTitle(e.target.value)); }} /></div>
               <div className="form-group"><label className="form-label" htmlFor="pdf-slug">URL slug *</label><input id="pdf-slug" className="form-input" required maxLength={100} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" value={slug} onChange={(e) => { setSlug(e.target.value); setSlugEdited(true); }} /></div>
               <div className="form-group"><label className="form-label" htmlFor="pdf-subtitle">Subtitle</label><input id="pdf-subtitle" className="form-input" maxLength={200} value={subtitle} onChange={(e) => setSubtitle(e.target.value)} /></div>
               <div className="form-group"><label className="form-label" htmlFor="pdf-category">Category *</label><input id="pdf-category" className="form-input" required minLength={2} maxLength={100} value={category} onChange={(e) => setCategory(e.target.value)} /></div>
@@ -119,7 +115,7 @@ export default function PdfImportForm() {
               <div className="form-group" style={{ gridColumn: '1 / -1' }}><label className="form-label" htmlFor="pdf-synopsis">Synopsis *</label><textarea id="pdf-synopsis" className="form-input" rows={4} required minLength={10} maxLength={10000} value={synopsis} onChange={(e) => setSynopsis(e.target.value)} placeholder="A longer overview for the book detail page." /></div>
               <div className="form-group" style={{ gridColumn: '1 / -1' }}><label className="form-label" htmlFor="pdf-tags">Tags (comma-separated)</label><input id="pdf-tags" className="form-input" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="Python, Machine Learning, Beginners" /></div>
             </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>The original PDF is stored privately. This importer creates a draft; it never publishes extracted text automatically.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>The original PDF is stored privately. This importer creates a download-only draft and does not extract text or chapters.</p>
             <button type="submit" className="btn btn-primary btn-sm" disabled={busy} style={{ justifySelf: 'start' }}><UploadCloud size={16} />{busy ? 'Importing PDF…' : 'Import PDF and create draft'}</button>
           </form>
         )}
@@ -127,9 +123,10 @@ export default function PdfImportForm() {
       <section style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '1.25rem 1.5rem', background: 'var(--bg-surface)' }}>
         <h2 style={{ fontSize: '1rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '0.5rem' }}>What gets imported?</h2>
         <ul style={{ paddingLeft: '1.25rem', color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.75 }}>
-          <li>Selectable text and detected chapter headings</li><li>Editable chapter drafts, summaries and estimated reading times</li>
-          <li>Original PDF stored privately for later download</li><li>Image and diagram extraction is not included in this first importer version</li>
-          <li>Scanned PDFs need OCR before upload</li>
+          <li>Book metadata and the original PDF file</li>
+          <li>Original PDF stored in private Blob storage and delivered through the permission-checked download route</li>
+          <li>No chapters are generated by this import option; it creates a download-only draft</li>
+          <li>PDF text extraction, OCR, chapter detection, and image or diagram extraction are not included in the current PDF flow</li>
         </ul>
       </section>
     </div>
