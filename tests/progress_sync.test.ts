@@ -40,7 +40,7 @@ async function run() {
       createdAt: 100, excerpt: 'Guest note',
     }]));
 
-    const calls: Array<{ url: string; method: string; body?: Record<string, string | number | boolean | undefined> }> = [];
+    const calls: Array<{ url: string; method: string; body: Record<string, string | number | boolean | undefined> }> = [];
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       const method = (init?.method || 'GET').toUpperCase();
