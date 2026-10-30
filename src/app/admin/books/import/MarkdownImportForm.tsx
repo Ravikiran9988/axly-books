@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, FileText, UploadCloud } from 'lucide-react';
 import styles from '../../admin.module.css';
+import { slugifyBookTitle } from '@/lib/slugify';
 
 interface ImportResult {
   success: boolean;
@@ -12,10 +13,6 @@ interface ImportResult {
   importedTextCharacters: number;
   message: string;
 }
-function slugify(value: string) {
-  return value.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-}
-
 export default function MarkdownImportForm() {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
@@ -38,7 +35,7 @@ export default function MarkdownImportForm() {
     if (!next) return;
     const derived = next.name.replace(/\.(md|zip)$/i, '').replace(/[_-]+/g, ' ').trim();
     if (!title.trim()) setTitle(derived);
-    if (!slugEdited) setSlug(slugify(derived));
+    if (!slugEdited) setSlug(slugifyBookTitle(derived));
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -94,7 +91,7 @@ export default function MarkdownImportForm() {
           {file && <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.35rem' }}>{file.name} · {(file.size / 1024).toFixed(1)} KB</p>}
         </div>
         <div className={styles.formGrid}>
-          <div className="form-group"><label className="form-label" htmlFor="md-title">Book title *</label><input id="md-title" className="form-input" required minLength={2} maxLength={150} value={title} onChange={e => { setTitle(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)); }} /></div>
+          <div className="form-group"><label className="form-label" htmlFor="md-title">Book title *</label><input id="md-title" className="form-input" required minLength={2} maxLength={150} value={title} onChange={e => { setTitle(e.target.value); if (!slugEdited) setSlug(slugifyBookTitle(e.target.value)); }} /></div>
           <div className="form-group"><label className="form-label" htmlFor="md-slug">URL slug *</label><input id="md-slug" className="form-input" required maxLength={100} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" value={slug} onChange={e => { setSlug(e.target.value); setSlugEdited(true); }} /></div>
           <div className="form-group"><label className="form-label" htmlFor="md-subtitle">Subtitle</label><input id="md-subtitle" className="form-input" maxLength={200} value={subtitle} onChange={e => setSubtitle(e.target.value)} /></div>
           <div className="form-group"><label className="form-label" htmlFor="md-category">Category *</label><input id="md-category" className="form-input" required minLength={2} maxLength={100} value={category} onChange={e => setCategory(e.target.value)} /></div>

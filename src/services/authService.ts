@@ -1,4 +1,5 @@
 import { ReaderUser, AuthState } from '@/types/user';
+import { progressService } from '@/services/progressService';
 
 type AuthListener = (state: AuthState) => void;
 
@@ -6,6 +7,7 @@ class AuthService {
   private listeners: Set<AuthListener> = new Set();
   private currentUser: ReaderUser | null = null;
   private isInitialized = false;
+  private sessionCheck: Promise<ReaderUser | null> | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -40,7 +42,13 @@ class AuthService {
     });
   }
 
-  public async checkSession(): Promise<ReaderUser | null> {
+  public checkSession(): Promise<ReaderUser | null> {
+    if (this.sessionCheck) return this.sessionCheck;
+    this.sessionCheck = this.loadSession();
+    return this.sessionCheck;
+  }
+
+  private async loadSession(): Promise<ReaderUser | null> {
     try {
       const res = await fetch('/api/auth/me', {
         headers: { 'Content-Type': 'application/json' },
@@ -50,17 +58,34 @@ class AuthService {
       if (res.ok) {
         const data = await res.json();
         this.currentUser = data.user || null;
+        if (this.currentUser) {
+          await this.syncReaderData(this.currentUser.id);
+        } else {
+          // A missing/expired session must not leave another account's private
+          // local reading cache visible in the signed-out experience.
+          progressService.clearForLogout();
+        }
       } else {
         this.currentUser = null;
       }
     } catch {
-      // In case of network disconnection or offline
+      // In case of network disconnection or offline.
       this.currentUser = null;
     } finally {
       this.isInitialized = true;
       this.notify();
     }
     return this.currentUser;
+  }
+
+  private async syncReaderData(userId: string): Promise<void> {
+    try {
+      await progressService.syncFromServer(userId);
+    } catch (error) {
+      // Reader-data migration is best-effort and must never turn a successful
+      // login or restored session into an authentication failure.
+      console.error('Reader data synchronization failed:', error);
+    }
   }
 
   public getAuthState(): AuthState {
@@ -88,6 +113,7 @@ class AuthService {
       }
 
       this.currentUser = data.user;
+      await this.syncReaderData(data.user.id);
       this.notify();
       return { success: true, user: data.user };
     } catch {
@@ -115,6 +141,7 @@ class AuthService {
       }
 
       this.currentUser = data.user;
+      await this.syncReaderData(data.user.id);
       this.notify();
       return { success: true, user: data.user };
     } catch {
@@ -131,6 +158,7 @@ class AuthService {
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
+      progressService.clearForLogout();
       this.currentUser = null;
       this.notify();
     }

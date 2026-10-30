@@ -13,7 +13,7 @@
     "db:verify": "tsx scripts/verifyDb.ts",
     "db:seed": "tsx src/db/seed.ts",
     "admin:promote": "tsx scripts/promoteAdmin.ts",
-    "test": "tsx tests/phase2.test.ts && tsx tests/e2e_integration.test.ts && tsx tests/route_integration.test.ts && tsx tests/p3_launch_readiness.test.ts && tsx tests/p4_comments_security.test.ts && tsx tests/publication_consistency.test.ts && tsx tests/pdf_import.test.ts && tsx tests/book_card_actions.test.ts && tsx tests/markdown_import.test.ts && tsx tests/markdown_zip_import.test.ts && tsx tests/publication_rules.test.ts && tsx tests/rate_limit_ip.test.ts",
+    "test": "tsx tests/phase2.test.ts && tsx tests/e2e_integration.test.ts && tsx tests/route_integration.test.ts && tsx tests/p3_launch_readiness.test.ts && tsx tests/p4_comments_security.test.ts && tsx tests/publication_consistency.test.ts && tsx tests/pdf_import.test.ts && tsx tests/book_card_actions.test.ts && tsx tests/markdown_import.test.ts && tsx tests/markdown_zip_import.test.ts && tsx tests/publication_rules.test.ts && tsx tests/rate_limit_ip.test.ts && tsx tests/progress_sync.test.ts && tsx tests/slugify.test.ts && tsx tests/chapter_ordering.test.ts",
     "test:e2e": "tsx tests/e2e_integration.test.ts",
     "test:routes": "tsx tests/route_integration.test.ts",
     "db:migrate-legacy-pdfs": "tsx scripts/migrateLegacyPdfs.ts"
