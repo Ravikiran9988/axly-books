@@ -1,4 +1,5 @@
 import { ReaderUser, AuthState } from '@/types/user';
+import { progressService } from '@/services/progressService';
 
 type AuthListener = (state: AuthState) => void;
 
@@ -50,6 +51,7 @@ class AuthService {
       if (res.ok) {
         const data = await res.json();
         this.currentUser = data.user || null;
+        if (this.currentUser) await progressService.syncFromServer(this.currentUser.id);
       } else {
         this.currentUser = null;
       }
@@ -88,6 +90,7 @@ class AuthService {
       }
 
       this.currentUser = data.user;
+      await progressService.syncFromServer(data.user.id);
       this.notify();
       return { success: true, user: data.user };
     } catch {
@@ -115,6 +118,7 @@ class AuthService {
       }
 
       this.currentUser = data.user;
+      await progressService.syncFromServer(data.user.id);
       this.notify();
       return { success: true, user: data.user };
     } catch {
@@ -131,6 +135,7 @@ class AuthService {
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
+      progressService.clearForLogout();
       this.currentUser = null;
       this.notify();
     }
