@@ -58,7 +58,13 @@ class AuthService {
       if (res.ok) {
         const data = await res.json();
         this.currentUser = data.user || null;
-        if (this.currentUser) await this.syncReaderData(this.currentUser.id);
+        if (this.currentUser) {
+          await this.syncReaderData(this.currentUser.id);
+        } else {
+          // A missing/expired session must not leave another account's private
+          // local reading cache visible in the signed-out experience.
+          progressService.clearForLogout();
+        }
       } else {
         this.currentUser = null;
       }
